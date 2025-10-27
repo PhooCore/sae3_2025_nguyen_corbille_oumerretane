@@ -17,7 +17,6 @@ public class Usager {
         this.prenomUsager = prenomUsager;
         this.mailUsager = mailUsager;
         this.motDePasse = motDePasse;
-        this.dateInscription = LocalDateTime.now();
     }
 
     //Le constructeur vide est essentiel pour que ton DAO puisse créer
@@ -45,9 +44,6 @@ public class Usager {
         return motDePasse; 
     }
     
-    public LocalDateTime getDateInscription() { 
-        return dateInscription; 
-    }
 
 
     public void setIdUsager(int idUsager) { 
@@ -70,7 +66,4 @@ public class Usager {
         this.motDePasse = motDePasse; 
     }
     
-    public void setDateInscription(LocalDateTime dateInscription) { 
-        this.dateInscription = dateInscription; 
-    }
 }

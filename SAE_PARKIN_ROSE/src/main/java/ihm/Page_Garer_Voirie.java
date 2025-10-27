@@ -1,5 +1,3 @@
-
-
 package ihm;
 
 import javax.swing.*;
@@ -9,20 +7,26 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import dao.TarifDAO;
+import dao.UsagerDAO;
 import modèle.Tarif;
+import modèle.Usager;
 import java.util.List;
 
 public class Page_Garer_Voirie extends JFrame {
     private static final long serialVersionUID = 1L;
     private JPanel contentPanel;
-    private JTextField txtNom, txtPrenom, txtEmail, txtPlaque;
+    private JLabel lblNom, lblPrenom, lblEmail, lblPlaque;
     private JComboBox<String> comboZone, comboHeures, comboMinutes;
     private JLabel lblCout;
     private JRadioButton radioVoiture, radioMoto, radioCamion;
     private ButtonGroup groupeTypeVehicule;
     private List<Tarif> listeTarifs;
+    private String emailUtilisateur;
+    private Usager usager;
 
-    public Page_Garer_Voirie() {
+    public Page_Garer_Voirie(String email) {
+        this.emailUtilisateur = email;
+        this.usager = UsagerDAO.getUsagerByEmail(email);
         initializeUI();
         initializeData();
         initializeEventListeners();
@@ -49,22 +53,25 @@ public class Page_Garer_Voirie extends JFrame {
         JPanel panelPrincipal = new JPanel();
         panelPrincipal.setLayout(new BoxLayout(panelPrincipal, BoxLayout.Y_AXIS));
         
-        // Informations personnelles
+        // Informations personnelles (affichage seulement)
         JPanel panelInfos = new JPanel();
         panelInfos.setLayout(new GridLayout(3, 2, 10, 10));
         panelInfos.setBorder(BorderFactory.createTitledBorder("Vos informations"));
         
         panelInfos.add(new JLabel("Nom:"));
-        txtNom = new JTextField();
-        panelInfos.add(txtNom);
+        lblNom = new JLabel(usager != null ? usager.getNomUsager() : "Non connecté");
+        lblNom.setFont(new Font("Arial", Font.BOLD, 14));
+        panelInfos.add(lblNom);
         
         panelInfos.add(new JLabel("Prénom:"));
-        txtPrenom = new JTextField();
-        panelInfos.add(txtPrenom);
+        lblPrenom = new JLabel(usager != null ? usager.getPrenomUsager() : "Non connecté");
+        lblPrenom.setFont(new Font("Arial", Font.BOLD, 14));
+        panelInfos.add(lblPrenom);
         
         panelInfos.add(new JLabel("Email:"));
-        txtEmail = new JTextField();
-        panelInfos.add(txtEmail);
+        lblEmail = new JLabel(usager != null ? usager.getMailUsager() : "Non connecté");
+        lblEmail.setFont(new Font("Arial", Font.BOLD, 14));
+        panelInfos.add(lblEmail);
         
         panelPrincipal.add(panelInfos);
         panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
@@ -92,9 +99,15 @@ public class Page_Garer_Voirie extends JFrame {
         panelVehicule.add(panelType, BorderLayout.NORTH);
         
         JPanel panelPlaque = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panelPlaque.add(new JLabel("Plaque:"));
-        txtPlaque = new JTextField(10);
-        panelPlaque.add(txtPlaque);
+        panelPlaque.add(new JLabel("Plaque d'immatriculation:"));
+        lblPlaque = new JLabel();
+        lblPlaque.setFont(new Font("Arial", Font.PLAIN, 14));
+        panelPlaque.add(lblPlaque);
+        
+        // Bouton pour modifier la plaque
+        JButton btnModifierPlaque = new JButton("Modifier");
+        btnModifierPlaque.addActionListener(e -> modifierPlaque());
+        panelPlaque.add(btnModifierPlaque);
         
         panelVehicule.add(panelPlaque, BorderLayout.SOUTH);
         
@@ -145,6 +158,15 @@ public class Page_Garer_Voirie extends JFrame {
         contentPanel.add(panelBoutons, BorderLayout.SOUTH);
     }
     
+    private void modifierPlaque() {
+        String nouvellePlaque = JOptionPane.showInputDialog(this, 
+            "Entrez la plaque d'immatriculation:", 
+            lblPlaque.getText());
+        
+        if (nouvellePlaque != null && !nouvellePlaque.trim().isEmpty()) {
+            lblPlaque.setText(nouvellePlaque.trim());
+        }
+    }
 
     private void initializeData() {
         // Charger les tarifs depuis la base de données
@@ -156,6 +178,11 @@ public class Page_Garer_Voirie extends JFrame {
             model.addElement(tarif.getAffichage());
         }
         comboZone.setModel(model);
+        
+        // Initialiser la plaque si vide
+        if (lblPlaque.getText().isEmpty()) {
+            lblPlaque.setText("Non définie");
+        }
     }
     
     private void initializeEventListeners() {
@@ -174,7 +201,9 @@ public class Page_Garer_Voirie extends JFrame {
         JButton btnAnnuler = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(0);
         btnAnnuler.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                Page_Test pageTest = new Page_Test("", "", "");
+                Page_Test pageTest = new Page_Test(emailUtilisateur, 
+                    usager.getNomUsager(), 
+                    usager.getPrenomUsager());
                 pageTest.setVisible(true);
                 dispose();
             }
@@ -211,23 +240,11 @@ public class Page_Garer_Voirie extends JFrame {
     }
     
     private boolean validerFormulaire() {
-        if (txtNom.getText().trim().isEmpty() ||
-            txtPrenom.getText().trim().isEmpty() ||
-            txtEmail.getText().trim().isEmpty() ||
-            txtPlaque.getText().trim().isEmpty()) {
-            
+        // Vérifier que la plaque est définie
+        if (lblPlaque.getText().equals("Non définie") || lblPlaque.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this,
-                "Veuillez remplir tous les champs",
-                "Champs manquants",
-                JOptionPane.WARNING_MESSAGE);
-            return false;
-        }
-        
-        String email = txtEmail.getText().trim();
-        if (!email.contains("@") || !email.contains(".")) {
-            JOptionPane.showMessageDialog(this,
-                "Email invalide",
-                "Erreur",
+                "Veuillez définir une plaque d'immatriculation",
+                "Plaque manquante",
                 JOptionPane.WARNING_MESSAGE);
             return false;
         }
@@ -278,10 +295,10 @@ public class Page_Garer_Voirie extends JFrame {
         }
         
         String message = "Stationnement confirmé :\n\n" +
-            "Nom: " + txtNom.getText() + "\n" +
-            "Prénom: " + txtPrenom.getText() + "\n" +
-            "Email: " + txtEmail.getText() + "\n" +
-            "Véhicule: " + getTypeVehicule() + " - " + txtPlaque.getText() + "\n" +
+            "Nom: " + usager.getNomUsager() + "\n" +
+            "Prénom: " + usager.getPrenomUsager() + "\n" +
+            "Email: " + usager.getMailUsager() + "\n" +
+            "Véhicule: " + getTypeVehicule() + " - " + lblPlaque.getText() + "\n" +
             "Zone: " + nomZone + "\n" +
             "Durée: " + comboHeures.getSelectedItem() + "h" + comboMinutes.getSelectedItem() + "min\n" +
             "Coût: " + lblCout.getText();
@@ -291,7 +308,9 @@ public class Page_Garer_Voirie extends JFrame {
             "Confirmation",
             JOptionPane.INFORMATION_MESSAGE);
         
-        Page_Test pageTest = new Page_Test(txtEmail.getText(), txtNom.getText(), txtPrenom.getText());
+        Page_Test pageTest = new Page_Test(emailUtilisateur, 
+            usager.getNomUsager(), 
+            usager.getPrenomUsager());
         pageTest.setVisible(true);
         dispose();
     }
@@ -304,7 +323,8 @@ public class Page_Garer_Voirie extends JFrame {
     
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            new Page_Garer_Voirie().setVisible(true);
+            // Utilise un email qui existe dans ta base
+            new Page_Garer_Voirie("hello@gmail.com").setVisible(true);
         });
     }
 }

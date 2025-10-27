@@ -69,9 +69,6 @@ public class UsagerDAO {
                     usager.setPrenomUsager(rs.getString("prenom_usager"));
                     usager.setMailUsager(rs.getString("mail_usager"));
                     usager.setMotDePasse(rs.getString("mot_de_passe"));
-                    if (rs.getTimestamp("date_inscription") != null) {
-                        usager.setDateInscription(rs.getTimestamp("date_inscription").toLocalDateTime());
-                    }
                     return usager;
                 }
             }

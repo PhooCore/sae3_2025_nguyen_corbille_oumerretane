@@ -125,15 +125,7 @@ public class Page_Authentification extends JFrame {
 	            String email = txtEmail.getText().trim();
 	            String password = new String(txtPassword.getPassword());
 	            
-	            if (email.isEmpty() || password.isEmpty()) {
-	                JOptionPane.showMessageDialog(null, 
-	                    "Veuillez remplir tous les champs", 
-	                    "Erreur", 
-	                    JOptionPane.ERROR_MESSAGE);
-	                return;
-	            }
-	            
-	            // Vérifier les identifiants dans la base de données
+	            // Vérification normale avec la base de données
 	            boolean authentifie = AuthentificationDAO.verifierUtilisateur(email, password);
 	            
 	            if (authentifie) {
@@ -144,10 +136,10 @@ public class Page_Authentification extends JFrame {
 	                    String nom = infosUtilisateur[0];
 	                    String prenom = infosUtilisateur[1];
 	                    
-	                    // Ouvrir directement la page de test sans message
-	                    Page_Test pageTest = new Page_Test(email, nom, prenom);
-	                    pageTest.setVisible(true);
-	                    dispose(); // Fermer la page d'authentification
+	                    // Ouvrir Page_Garer_Voirie directement
+	                    Page_Garer_Voirie pageGarer = new Page_Garer_Voirie(email);
+	                    pageGarer.setVisible(true);
+	                    dispose();
 	                    
 	                } else {
 	                    JOptionPane.showMessageDialog(null, 
@@ -169,6 +161,7 @@ public class Page_Authentification extends JFrame {
 	        }
 	    });
 	    
+	    // Garder les autres écouteurs
 	    lblForgotPassword.addMouseListener(new MouseAdapter() {
 	        public void mouseClicked(MouseEvent e) {
 	            Page_Modif_MDP modifMdpPage = new Page_Modif_MDP();

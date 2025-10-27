@@ -115,16 +115,16 @@ public class Page_Bienvenue extends JFrame {
 	/**
 	 * Launch the application.
 	 */
+	// Dans ta méthode main de Page_Bienvenue
 	public static void main(String[] args) {
-		java.awt.EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					Page_Bienvenue frame = new Page_Bienvenue();
-					frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
+	    java.awt.EventQueue.invokeLater(new Runnable() {
+	        public void run() {
+	            try {
+	                new Page_Bienvenue().setVisible(true);
+	            } catch (Exception e) {
+	                e.printStackTrace();
+	            }
+	        }
+	    });
 	}
 }
