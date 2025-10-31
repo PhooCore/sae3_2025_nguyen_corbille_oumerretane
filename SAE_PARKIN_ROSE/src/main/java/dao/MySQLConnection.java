@@ -7,8 +7,8 @@ import java.sql.SQLException;
 public class MySQLConnection {
 
     // Pour l'accès distant - à partager avec les autres
-    private static final String URL = "jdbc:mysql://2a01:cb19:8965:5100:91ba:1016:385c:67c1:3306/parkinrosebdd";
-    private static final String USER = "admin_parkinrose";
+    private static final String URL = "jdbc:mysql://127.0.0.1/parkinrosebdd";
+    private static final String USER = "root";
     private static final String PASSWORD = "$iutinfo";
     
     

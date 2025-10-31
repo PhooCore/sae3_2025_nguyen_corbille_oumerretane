@@ -60,6 +60,7 @@ public class UsagerDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setString(1, email);
+            System.out.println("Recherche usager avec email: " + email); // Debug
             
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -69,12 +70,16 @@ public class UsagerDAO {
                     usager.setPrenomUsager(rs.getString("prenom_usager"));
                     usager.setMailUsager(rs.getString("mail_usager"));
                     usager.setMotDePasse(rs.getString("mot_de_passe"));
+                    System.out.println("Usager trouvé: " + usager.getNomUsager() + " (ID: " + usager.getIdUsager() + ")"); // Debug
                     return usager;
+                } else {
+                    System.out.println("Aucun usager trouvé pour cet email"); // Debug
                 }
             }
             
         } catch (SQLException e) {
             System.err.println("Erreur lors de la récupération de l'usager: " + e.getMessage());
+            e.printStackTrace();
         }
         return null;
     }

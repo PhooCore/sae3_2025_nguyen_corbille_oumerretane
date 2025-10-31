@@ -6,8 +6,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+
+import dao.StationnementDAO;
 import dao.TarifDAO;
 import dao.UsagerDAO;
+import modèle.Stationnement;
 import modèle.Tarif;
 import modèle.Usager;
 import java.util.List;
@@ -249,6 +252,23 @@ public class Page_Garer_Voirie extends JFrame {
             return false;
         }
         
+        // VÉRIFICATION IMPORTANTE : Stationnement actif existant
+        if (StationnementDAO.vehiculeAStationnementActif(lblPlaque.getText().trim())) {
+            Stationnement stationnementActif = StationnementDAO.getStationnementActif(lblPlaque.getText().trim());
+            
+            String message = "Vous avez déjà un stationnement actif !\n\n" +
+                            "Plaque: " + stationnementActif.getPlaqueImmatriculation() + "\n" +
+                            "Zone: " + stationnementActif.getZone() + "\n" +
+                            "Début: " + stationnementActif.getDateCreation().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + "\n" +
+                            "Statut: " + stationnementActif.getStatut();
+            
+            JOptionPane.showMessageDialog(this,
+                message,
+                "Stationnement actif existant",
+                JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        
         if (!validerDureeMaximale()) {
             return false;
         }
@@ -303,16 +323,37 @@ public class Page_Garer_Voirie extends JFrame {
             "Durée: " + comboHeures.getSelectedItem() + "h" + comboMinutes.getSelectedItem() + "min\n" +
             "Coût: " + lblCout.getText();
         
-        JOptionPane.showMessageDialog(this,
-            message,
+        int choix = JOptionPane.showConfirmDialog(this,
+            message + "\n\nVoulez-vous procéder au paiement ?",
             "Confirmation",
-            JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.YES_NO_OPTION);
         
-        Page_Test pageTest = new Page_Test(emailUtilisateur, 
-            usager.getNomUsager(), 
-            usager.getPrenomUsager());
-        pageTest.setVisible(true);
-        dispose();
+        if (choix == JOptionPane.YES_OPTION) {
+            String coutText = lblCout.getText().replace(" €", "").replace(",", ".");
+            double montant = Double.parseDouble(coutText);
+            
+
+         // Au lieu de Page_Paiement, utilisez Page_Paiement_Complet
+            Page_Paiement pagePaiement = new Page_Paiement(
+                montant,
+                emailUtilisateur,
+                getTypeVehicule(),
+                lblPlaque.getText(),
+                nomZone,
+                Integer.parseInt(comboHeures.getSelectedItem().toString()),
+                Integer.parseInt(comboMinutes.getSelectedItem().toString())
+            );
+            pagePaiement.setVisible(true);
+            dispose();
+
+            dispose();
+        } else {
+            Page_Test pageTest = new Page_Test(emailUtilisateur, 
+                usager.getNomUsager(), 
+                usager.getPrenomUsager());
+            pageTest.setVisible(true);
+            dispose();
+        }
     }
     
     private String getTypeVehicule() {
@@ -323,8 +364,7 @@ public class Page_Garer_Voirie extends JFrame {
     
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            // Utilise un email qui existe dans ta base
-            new Page_Garer_Voirie("hello@gmail.com").setVisible(true);
+            new Page_Garer_Voirie("pho@gmail.com").setVisible(true);
         });
     }
 }
