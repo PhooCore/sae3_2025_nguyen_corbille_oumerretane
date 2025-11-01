@@ -8,7 +8,6 @@ import java.sql.SQLException;
 public class AuthentificationDAO {
     
      //Vérifie si l'email et le mot de passe correspondent à un utilisateur
-
     public static boolean verifierUtilisateur(String email, String motDePasse) {
         String sql = "SELECT id_usager FROM Usager WHERE mail_usager = ? AND mot_de_passe = ?";
         

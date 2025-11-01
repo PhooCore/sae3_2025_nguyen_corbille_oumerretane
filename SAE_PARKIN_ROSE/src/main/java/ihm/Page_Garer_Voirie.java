@@ -17,6 +17,8 @@ import java.util.List;
 
 public class Page_Garer_Voirie extends JFrame {
     private static final long serialVersionUID = 1L;
+    
+    // Déclaration des composants de l'interface
     private JPanel contentPanel;
     private JLabel lblNom, lblPrenom, lblEmail, lblPlaque;
     private JComboBox<String> comboZone, comboHeures, comboMinutes;
@@ -27,15 +29,22 @@ public class Page_Garer_Voirie extends JFrame {
     private String emailUtilisateur;
     private Usager usager;
 
+    /**
+     * Constructeur de la page de stationnement en voirie
+     * @param email l'email de l'utilisateur connecté
+     */
     public Page_Garer_Voirie(String email) {
         this.emailUtilisateur = email;
-        this.usager = UsagerDAO.getUsagerByEmail(email);
-        initializeUI();
-        initializeData();
-        initializeEventListeners();
+        this.usager = UsagerDAO.getUsagerByEmail(email); // Récupération des infos utilisateur
+        initialisePage();      // Initialisation de l'interface
+        initialiseDonnees();   // Chargement des données
+        initializeEventListeners(); // Configuration des événements
     }
     
-    private void initializeUI() {
+    /**
+     * Initialise l'interface utilisateur
+     */
+    private void initialisePage() {
         this.setTitle("Stationnement en Voirie");
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setSize(800, 600);
@@ -47,18 +56,18 @@ public class Page_Garer_Voirie extends JFrame {
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         this.setContentPane(contentPanel);
         
-        // Titre
+        // Titre de la page
         JLabel lblTitre = new JLabel("Préparer un Stationnement en voirie", SwingConstants.CENTER);
         lblTitre.setFont(new Font("Arial", Font.BOLD, 18));
         contentPanel.add(lblTitre, BorderLayout.NORTH);
         
-        // Panel principal
+        // Panel principal avec layout vertical
         JPanel panelPrincipal = new JPanel();
         panelPrincipal.setLayout(new BoxLayout(panelPrincipal, BoxLayout.Y_AXIS));
         
-        // Informations personnelles (affichage seulement)
+        // Section : Informations personnelles (lecture seule)
         JPanel panelInfos = new JPanel();
-        panelInfos.setLayout(new GridLayout(3, 2, 10, 10));
+        panelInfos.setLayout(new GridLayout(3, 2, 10, 10)); // 3 lignes, 2 colonnes
         panelInfos.setBorder(BorderFactory.createTitledBorder("Vos informations"));
         
         panelInfos.add(new JLabel("Nom:"));
@@ -77,17 +86,18 @@ public class Page_Garer_Voirie extends JFrame {
         panelInfos.add(lblEmail);
         
         panelPrincipal.add(panelInfos);
-        panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
+        panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15))); // Espacement
         
-        // Véhicule
+        // Section : Véhicule
         JPanel panelVehicule = new JPanel();
         panelVehicule.setLayout(new BorderLayout());
         panelVehicule.setBorder(BorderFactory.createTitledBorder("Véhicule"));
         
+        // Boutons radio pour le type de véhicule
         JPanel panelType = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        groupeTypeVehicule = new ButtonGroup();
+        groupeTypeVehicule = new ButtonGroup(); // Groupe pour boutons radio mutuellement exclusifs
         
-        radioVoiture = new JRadioButton("Voiture", true);
+        radioVoiture = new JRadioButton("Voiture", true); // Sélectionné par défaut
         radioMoto = new JRadioButton("Moto");
         radioCamion = new JRadioButton("Camion");
         
@@ -101,6 +111,7 @@ public class Page_Garer_Voirie extends JFrame {
         
         panelVehicule.add(panelType, BorderLayout.NORTH);
         
+        // Section plaque d'immatriculation
         JPanel panelPlaque = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panelPlaque.add(new JLabel("Plaque d'immatriculation:"));
         lblPlaque = new JLabel();
@@ -117,7 +128,7 @@ public class Page_Garer_Voirie extends JFrame {
         panelPrincipal.add(panelVehicule);
         panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
         
-        // Zone et durée
+        // Section : Stationnement (zone, durée, coût)
         JPanel panelStationnement = new JPanel();
         panelStationnement.setLayout(new GridLayout(3, 2, 10, 10));
         panelStationnement.setBorder(BorderFactory.createTitledBorder("Stationnement"));
@@ -149,7 +160,7 @@ public class Page_Garer_Voirie extends JFrame {
         
         contentPanel.add(panelPrincipal, BorderLayout.CENTER);
         
-        // Boutons
+        // Boutons de navigation
         JPanel panelBoutons = new JPanel(new FlowLayout());
         
         JButton btnAnnuler = new JButton("Annuler");
@@ -161,6 +172,9 @@ public class Page_Garer_Voirie extends JFrame {
         contentPanel.add(panelBoutons, BorderLayout.SOUTH);
     }
     
+    /**
+     * Ouvre une boîte de dialogue pour modifier la plaque d'immatriculation
+     */
     private void modifierPlaque() {
         String nouvellePlaque = JOptionPane.showInputDialog(this, 
             "Entrez la plaque d'immatriculation:", 
@@ -171,14 +185,17 @@ public class Page_Garer_Voirie extends JFrame {
         }
     }
 
-    private void initializeData() {
+    /**
+     * Charge les données depuis la base de données
+     */
+    private void initialiseDonnees() {
         // Charger les tarifs depuis la base de données
         listeTarifs = TarifDAO.TouslesTarifs();
         
-        // ComboBox avec les tarifs
+        // Peupler la liste déroulante des zones avec les tarifs
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
         for (Tarif tarif : listeTarifs) {
-            model.addElement(tarif.getAffichage());
+            model.addElement(tarif.getAffichage()); // Format : "Zone Jaune - 1.50€/h (max 2h30)"
         }
         comboZone.setModel(model);
         
@@ -188,8 +205,11 @@ public class Page_Garer_Voirie extends JFrame {
         }
     }
     
+    /**
+     * Initialise les écouteurs d'événements
+     */
     private void initializeEventListeners() {
-        // Calcul du coût
+        // Calcul automatique du coût quand les paramètres changent
         ItemListener calculateurCout = new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
                 calculerCout();
@@ -200,19 +220,17 @@ public class Page_Garer_Voirie extends JFrame {
         comboHeures.addItemListener(calculateurCout);
         comboMinutes.addItemListener(calculateurCout);
         
-        // Bouton Annuler
+        // Bouton Annuler - retour à la page principale
         JButton btnAnnuler = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(0);
         btnAnnuler.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                Page_Test pageTest = new Page_Test(emailUtilisateur, 
-                    usager.getNomUsager(), 
-                    usager.getPrenomUsager());
-                pageTest.setVisible(true);
+                Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
+                pagePrincipale.setVisible(true);
                 dispose();
             }
         });
         
-        // Bouton Valider
+        // Bouton Valider - validation du formulaire
         JButton btnValider = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(1);
         btnValider.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -223,13 +241,15 @@ public class Page_Garer_Voirie extends JFrame {
         });
     }
     
+    /**
+     * Calcule le coût du stationnement en fonction de la zone et de la durée
+     */
     private void calculerCout() {
         try {
             int heures = Integer.parseInt(comboHeures.getSelectedItem().toString());
             int minutes = Integer.parseInt(comboMinutes.getSelectedItem().toString());
             int dureeTotaleMinutes = (heures * 60) + minutes;
             
-
             int index = comboZone.getSelectedIndex();
             if (index >= 0 && index < listeTarifs.size()) {
                 Tarif tarif = listeTarifs.get(index);
@@ -238,10 +258,14 @@ public class Page_Garer_Voirie extends JFrame {
             }
             
         } catch (Exception e) {
-            lblCout.setText("0.00 €");
+            lblCout.setText("0.00 €"); // Valeur par défaut en cas d'erreur
         }
     }
     
+    /**
+     * Valide le formulaire avant soumission
+     * @return true si le formulaire est valide, false sinon
+     */
     private boolean validerFormulaire() {
         // Vérifier que la plaque est définie
         if (lblPlaque.getText().equals("Non définie") || lblPlaque.getText().trim().isEmpty()) {
@@ -252,7 +276,7 @@ public class Page_Garer_Voirie extends JFrame {
             return false;
         }
         
-        // VÉRIFICATION IMPORTANTE : Stationnement actif existant
+        // Vérifier qu'aucun stationnement n'est déjà actif pour ce véhicule
         if (StationnementDAO.vehiculeAStationnementActif(lblPlaque.getText().trim())) {
             Stationnement stationnementActif = StationnementDAO.getStationnementActif(lblPlaque.getText().trim());
             
@@ -269,6 +293,7 @@ public class Page_Garer_Voirie extends JFrame {
             return false;
         }
         
+        // Vérifier que la durée ne dépasse pas le maximum autorisé
         if (!validerDureeMaximale()) {
             return false;
         }
@@ -276,6 +301,10 @@ public class Page_Garer_Voirie extends JFrame {
         return true;
     }
     
+    /**
+     * Vérifie que la durée sélectionnée ne dépasse pas la durée maximale autorisée pour la zone
+     * @return true si la durée est valide, false sinon
+     */
     private boolean validerDureeMaximale() {
         int heures = Integer.parseInt(comboHeures.getSelectedItem().toString());
         int minutes = Integer.parseInt(comboMinutes.getSelectedItem().toString());
@@ -297,6 +326,11 @@ public class Page_Garer_Voirie extends JFrame {
         return true;
     }
     
+    /**
+     * Formate une durée en minutes en format lisible (ex: 150 → "2h30")
+     * @param minutes la durée en minutes
+     * @return la durée formatée
+     */
     private String formatDuree(int minutes) {
         int heures = minutes / 60;
         int mins = minutes % 60;
@@ -307,6 +341,9 @@ public class Page_Garer_Voirie extends JFrame {
         }
     }
     
+    /**
+     * Affiche une confirmation avant de procéder au paiement
+     */
     private void afficherConfirmation() {
         int index = comboZone.getSelectedIndex();
         String nomZone = "";
@@ -314,6 +351,7 @@ public class Page_Garer_Voirie extends JFrame {
             nomZone = listeTarifs.get(index).getNomZone();
         }
         
+        // Récapitulatif du stationnement
         String message = "Stationnement confirmé :\n\n" +
             "Nom: " + usager.getNomUsager() + "\n" +
             "Prénom: " + usager.getPrenomUsager() + "\n" +
@@ -323,17 +361,18 @@ public class Page_Garer_Voirie extends JFrame {
             "Durée: " + comboHeures.getSelectedItem() + "h" + comboMinutes.getSelectedItem() + "min\n" +
             "Coût: " + lblCout.getText();
         
+        // Demande de confirmation pour le paiement
         int choix = JOptionPane.showConfirmDialog(this,
             message + "\n\nVoulez-vous procéder au paiement ?",
             "Confirmation",
             JOptionPane.YES_NO_OPTION);
         
         if (choix == JOptionPane.YES_OPTION) {
+            // Conversion du coût en double
             String coutText = lblCout.getText().replace(" €", "").replace(",", ".");
             double montant = Double.parseDouble(coutText);
             
-
-         // Au lieu de Page_Paiement, utilisez Page_Paiement_Complet
+            // Redirection vers la page de paiement
             Page_Paiement pagePaiement = new Page_Paiement(
                 montant,
                 emailUtilisateur,
@@ -345,26 +384,34 @@ public class Page_Garer_Voirie extends JFrame {
             );
             pagePaiement.setVisible(true);
             dispose();
-
-            dispose();
         } else {
-            Page_Test pageTest = new Page_Test(emailUtilisateur, 
-                usager.getNomUsager(), 
-                usager.getPrenomUsager());
-            pageTest.setVisible(true);
+            // Retour à la page principale si annulation
+            Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
+            pagePrincipale.setVisible(true);
             dispose();
         }
     }
     
+    /**
+     * Retourne le type de véhicule sélectionné
+     * @return le type de véhicule
+     */
     private String getTypeVehicule() {
         if (radioVoiture.isSelected()) return "Voiture";
         if (radioMoto.isSelected()) return "Moto";
         return "Camion";
     }
     
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new Page_Garer_Voirie("pho@gmail.com").setVisible(true);
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                try {
+                    new Page_Bienvenue().setVisible(true);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         });
     }
 }

@@ -38,10 +38,10 @@ public class Page_Paiement extends JFrame {
         this.dureeHeures = dureeHeures;
         this.dureeMinutes = dureeMinutes;
         
-        initializeUI();
+        initialisePage();
     }
     
-    private void initializeUI() {
+    private void initialisePage() {
         this.setTitle("Paiement du stationnement");
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         this.setSize(500, 500);
@@ -131,6 +131,7 @@ public class Page_Paiement extends JFrame {
         }
     }
     
+ // Dans la méthode traiterPaiement() de Page_Paiement_Complet
     private void traiterPaiement() {
         // Validation des champs
         if (!validerFormulaire()) {
@@ -173,9 +174,9 @@ public class Page_Paiement extends JFrame {
                         "Paiement réussi",
                         JOptionPane.INFORMATION_MESSAGE);
                         
-                    // Retour à la page principale
-                    Page_Test pageTest = new Page_Test(emailUtilisateur, usager.getNomUsager(), usager.getPrenomUsager());
-                    pageTest.setVisible(true);
+                    // RETOUR À LA PAGE PRINCIPALE (modification importante)
+                    Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
+                    pagePrincipale.setVisible(true);
                     this.dispose();
                 } else {
                     JOptionPane.showMessageDialog(this,
@@ -221,4 +222,18 @@ public class Page_Paiement extends JFrame {
         
         return true;
     }
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+	    java.awt.EventQueue.invokeLater(new Runnable() {
+	        public void run() {
+	            try {
+	                new Page_Bienvenue().setVisible(true);
+	            } catch (Exception e) {
+	                e.printStackTrace();
+	            }
+	        }
+	    });
+	}
 }

@@ -1,5 +1,3 @@
-
-
 package ihm;
 
 import java.awt.*;
@@ -10,88 +8,108 @@ import modèle.Usager;
 public class Page_Inscription extends JFrame {
 
     private static final long serialVersionUID = 1L;
+    
+    // Déclaration des composants de formulaire
     private JTextField textFieldNom;
     private JTextField textFieldPrenom;
     private JTextField textFieldEmail;
     private JPasswordField passwordField;
     private JPasswordField passwordFieldConfirm;
 
+    /**
+     * Constructeur de la page d'inscription
+     * Interface pour créer un nouveau compte utilisateur
+     */
     public Page_Inscription() {
         setTitle("Création de compte");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
-        setLocationRelativeTo(null);
+        setLocationRelativeTo(null); // Centre la fenêtre
 
+        // Panel principal avec layout BorderLayout
         JPanel mainPanel = new JPanel();
         mainPanel.setBackground(Color.WHITE);
         mainPanel.setLayout(new BorderLayout(0, 0));
         setContentPane(mainPanel);
 
+        // Panel de retour en haut
         JPanel panelRetour = new JPanel();
         panelRetour.setBackground(Color.WHITE);
         FlowLayout flowLayout = (FlowLayout) panelRetour.getLayout();
-        flowLayout.setAlignment(FlowLayout.LEFT);
+        flowLayout.setAlignment(FlowLayout.LEFT); // Alignement à gauche
         mainPanel.add(panelRetour, BorderLayout.NORTH);
         
+        // Bouton retour vers la page de connexion
         JButton btnRetour = new JButton("← Retour");
         btnRetour.addActionListener(e -> retourLogin());
         btnRetour.setFont(new Font("Arial", Font.PLAIN, 14));
         btnRetour.setBackground(Color.WHITE);
-        btnRetour.setFocusPainted(false);
+        btnRetour.setFocusPainted(false); // Désactive l'effet de focus
         panelRetour.add(btnRetour);
 
+        // Panel central pour le formulaire
         JPanel formPanel = new JPanel();
         formPanel.setBackground(Color.WHITE);
         mainPanel.add(formPanel, BorderLayout.CENTER);
-        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS)); // Layout vertical
         
 
+        // Titre de la page
         JLabel lblTitre = new JLabel("Créer un compte");
-        lblTitre.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblTitre.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
         lblTitre.setFont(new Font("Arial", Font.BOLD, 28));
         formPanel.add(lblTitre);
         
+        // Espacement après le titre
         Component verticalStrut = Box.createRigidArea(new Dimension(0, 30));
         formPanel.add(verticalStrut);
         
 
+        // Panel pour le champ Nom
         JPanel panelNom = new JPanel();
         panelNom.setBackground(Color.WHITE);
-        panelNom.setMaximumSize(new Dimension(500, 50));
+        panelNom.setMaximumSize(new Dimension(500, 50)); // Taille maximale fixe
         formPanel.add(panelNom);
-        panelNom.setLayout(new BoxLayout(panelNom, BoxLayout.X_AXIS));
+        panelNom.setLayout(new BoxLayout(panelNom, BoxLayout.X_AXIS)); // Layout horizontal
         
+        // Espacement gauche
         Component horizontalStrut = Box.createRigidArea(new Dimension(10, 0));
         panelNom.add(horizontalStrut);
         
+        // Label "Nom"
         JLabel lblNom = new JLabel("Nom");
         lblNom.setPreferredSize(new Dimension(120, 30));
         lblNom.setMinimumSize(new Dimension(120, 30));
-        lblNom.setMaximumSize(new Dimension(120, 30));
+        lblNom.setMaximumSize(new Dimension(120, 30)); // Taille fixe pour l'alignement
         lblNom.setFont(new Font("Arial", Font.PLAIN, 16));
         panelNom.add(lblNom);
         
+        // Espacement entre label et champ
         Component horizontalStrut_1 = Box.createRigidArea(new Dimension(20, 0));
         panelNom.add(horizontalStrut_1);
         
+        // Champ de saisie pour le nom
         textFieldNom = new JTextField();
         textFieldNom.setPreferredSize(new Dimension(300, 40));
         textFieldNom.setMinimumSize(new Dimension(300, 40));
-        textFieldNom.setMaximumSize(new Dimension(300, 40));
+        textFieldNom.setMaximumSize(new Dimension(300, 40)); // Taille fixe
         textFieldNom.setFont(new Font("Arial", Font.PLAIN, 16));
         textFieldNom.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY),
-            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+            BorderFactory.createLineBorder(Color.GRAY), // Bordure grise
+            BorderFactory.createEmptyBorder(8, 12, 8, 12) // Padding interne
         ));
         panelNom.add(textFieldNom);
         
+        // Espacement droit
         Component horizontalStrut_2 = Box.createRigidArea(new Dimension(10, 0));
         panelNom.add(horizontalStrut_2);
         
+        // Espacement vertical entre les champs
         Component verticalStrut_1 = Box.createRigidArea(new Dimension(0, 15));
         formPanel.add(verticalStrut_1);
         
 
+        // Panel pour le champ Prénom (structure identique au champ Nom)
         JPanel panelPrenom = new JPanel();
         panelPrenom.setBackground(Color.WHITE);
         panelPrenom.setMaximumSize(new Dimension(500, 50));
@@ -129,6 +147,7 @@ public class Page_Inscription extends JFrame {
         formPanel.add(verticalStrut_2);
         
 
+        // Panel pour le champ Email
         JPanel panelEmail = new JPanel();
         panelEmail.setBackground(Color.WHITE);
         panelEmail.setMaximumSize(new Dimension(500, 50));
@@ -166,6 +185,7 @@ public class Page_Inscription extends JFrame {
         formPanel.add(verticalStrut_3);
         
 
+        // Panel pour le champ Mot de passe
         JPanel panelPassword = new JPanel();
         panelPassword.setBackground(Color.WHITE);
         panelPassword.setMaximumSize(new Dimension(500, 50));
@@ -185,7 +205,7 @@ public class Page_Inscription extends JFrame {
         Component horizontalStrut_10 = Box.createRigidArea(new Dimension(20, 0));
         panelPassword.add(horizontalStrut_10);
         
-        passwordField = new JPasswordField();
+        passwordField = new JPasswordField(); // Champ masqué pour le mot de passe
         passwordField.setPreferredSize(new Dimension(300, 40));
         passwordField.setMinimumSize(new Dimension(300, 40));
         passwordField.setMaximumSize(new Dimension(300, 40));
@@ -203,6 +223,7 @@ public class Page_Inscription extends JFrame {
         formPanel.add(verticalStrut_4);
         
 
+        // Panel pour la confirmation du mot de passe
         JPanel panelConfirm = new JPanel();
         panelConfirm.setBackground(Color.WHITE);
         panelConfirm.setMaximumSize(new Dimension(500, 50));
@@ -236,41 +257,52 @@ public class Page_Inscription extends JFrame {
         Component horizontalStrut_14 = Box.createRigidArea(new Dimension(10, 0));
         panelConfirm.add(horizontalStrut_14);
         
+        // Espacement avant le bouton
         Component verticalStrut_5 = Box.createRigidArea(new Dimension(0, 30));
         formPanel.add(verticalStrut_5);
         
 
+        // Bouton de création de compte
         JButton btnCreerCompte = new JButton("CRÉER MON COMPTE");
-        btnCreerCompte.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btnCreerCompte.addActionListener(e -> creerCompte());
+        btnCreerCompte.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+        btnCreerCompte.addActionListener(e -> creerCompte()); // Action au clic
         btnCreerCompte.setFont(new Font("Arial", Font.BOLD, 18));
-        btnCreerCompte.setBackground(new Color(80, 80, 80));
+        btnCreerCompte.setBackground(new Color(80, 80, 80)); // Gris foncé
         btnCreerCompte.setForeground(Color.WHITE);
         btnCreerCompte.setFocusPainted(false);
-        btnCreerCompte.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30));
+        btnCreerCompte.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30)); // Padding généreux
         formPanel.add(btnCreerCompte);
         
+        // Espace flexible pour pousser le contenu vers le haut
         Component verticalGlue = Box.createVerticalGlue();
         formPanel.add(verticalGlue);
     }
 
+    /**
+     * Retourne à la page de connexion
+     */
     private void retourLogin() {
         Page_Authentification loginPage = new Page_Authentification();
         loginPage.setVisible(true);
-        this.dispose();
+        this.dispose(); // Ferme la page actuelle
     }
 
+    /**
+     * Crée un nouveau compte utilisateur après validation
+     */
     private void creerCompte() {
-        // Récupération des valeurs AVEC LES BONS NOMS DE VARIABLES
+        // Récupération et nettoyage des valeurs des champs
         String nom = textFieldNom.getText().trim();
         String prenom = textFieldPrenom.getText().trim();
         String email = textFieldEmail.getText().trim();
         
-        // Récupération des mots de passe AVEC LES BONS NOMS DE VARIABLES
+        // Récupération des mots de passe (conversion de char[] en String)
         String motDePasse = new String(passwordField.getPassword());
         String confirmation = new String(passwordFieldConfirm.getPassword());
 
-        // Validation
+        // === VALIDATION DU FORMULAIRE ===
+
+        // Vérification des champs obligatoires
         if (nom.isEmpty() || prenom.isEmpty() || email.isEmpty() || motDePasse.isEmpty()) {
             JOptionPane.showMessageDialog(this, 
                 "Veuillez remplir tous les champs", 
@@ -279,6 +311,7 @@ public class Page_Inscription extends JFrame {
             return;
         }
 
+        // Vérification de la correspondance des mots de passe
         if (!motDePasse.equals(confirmation)) {
             JOptionPane.showMessageDialog(this, 
                 "Les mots de passe ne correspondent pas", 
@@ -287,6 +320,7 @@ public class Page_Inscription extends JFrame {
             return;
         }
 
+        // Validation de la longueur minimale du mot de passe
         if (motDePasse.length() < 4) {
             JOptionPane.showMessageDialog(this, 
                 "Le mot de passe doit contenir au moins 4 caractères", 
@@ -295,7 +329,7 @@ public class Page_Inscription extends JFrame {
             return;
         }
 
-        // Vérifier si l'email existe déjà
+        // Vérification de l'unicité de l'email
         if (UsagerDAO.emailExisteDeja(email)) {
             JOptionPane.showMessageDialog(this, 
                 "Cet email est déjà utilisé", 
@@ -304,23 +338,27 @@ public class Page_Inscription extends JFrame {
             return;
         }
 
-        // Créer l'objet Usager
+        // === CRÉATION DU COMPTE ===
+
+        // Création de l'objet Usager avec les données validées
         Usager nouvelUsager = new Usager(nom, prenom, email, motDePasse);
 
-        // Sauvegarder en base
+        // Sauvegarde en base de données
         boolean succes = UsagerDAO.ajouterUsager(nouvelUsager);
 
         if (succes) {
+            // Message de succès
             JOptionPane.showMessageDialog(this, 
                 "Compte créé avec succès !", 
                 "Succès", 
                 JOptionPane.INFORMATION_MESSAGE);
             
-            // Rediriger vers la page de connexion
+            // Redirection vers la page de connexion
             Page_Authentification authPage = new Page_Authentification();
             authPage.setVisible(true);
-            dispose();
+            dispose(); // Ferme la page d'inscription
         } else {
+            // Message d'erreur en cas d'échec
             JOptionPane.showMessageDialog(this, 
                 "Erreur lors de la création du compte", 
                 "Erreur", 
@@ -328,15 +366,11 @@ public class Page_Inscription extends JFrame {
         }
     }
 
-    /**
-     * Launch the application.
-     */
     public static void main(String[] args) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 try {
-                    Page_Bienvenue frame = new Page_Bienvenue();
-                    frame.setVisible(true);
+                    new Page_Bienvenue().setVisible(true);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

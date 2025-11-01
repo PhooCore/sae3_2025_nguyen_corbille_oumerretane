@@ -1,5 +1,7 @@
 package modèle;
 
+import java.time.LocalDateTime;
+
 public class Paiement {
     private String idPaiement;
     private String nomCarte;
@@ -7,7 +9,8 @@ public class Paiement {
     private String codeSecretCarte;
     private String idAbonnement;
     private double montant;
-    private int idUsager; // Ajout de l'ID utilisateur
+    private int idUsager;
+    private LocalDateTime datePaiement; // Nouveau champ
 
     public Paiement(String nomCarte, String numeroCarte, String codeSecretCarte, double montant, int idUsager) {
         this.nomCarte = nomCarte;
@@ -15,11 +18,12 @@ public class Paiement {
         this.codeSecretCarte = codeSecretCarte;
         this.montant = montant;
         this.idUsager = idUsager;
-        this.idAbonnement = "ABO_SIMPLE"; // Paiement ponctuel
+        this.idAbonnement = "ABO_SIMPLE";
         this.idPaiement = "PAI_" + System.currentTimeMillis();
+        this.datePaiement = LocalDateTime.now();
     }
 
-
+    // Getters et Setters
     public String getIdPaiement() { return idPaiement; }
     public void setIdPaiement(String idPaiement) { this.idPaiement = idPaiement; }
     
@@ -37,6 +41,10 @@ public class Paiement {
     
     public double getMontant() { return montant; }
     public void setMontant(double montant) { this.montant = montant; }
+    
     public int getIdUsager() { return idUsager; }
     public void setIdUsager(int idUsager) { this.idUsager = idUsager; }
+    
+    public LocalDateTime getDatePaiement() { return datePaiement; }
+    public void setDatePaiement(LocalDateTime datePaiement) { this.datePaiement = datePaiement; }
 }
