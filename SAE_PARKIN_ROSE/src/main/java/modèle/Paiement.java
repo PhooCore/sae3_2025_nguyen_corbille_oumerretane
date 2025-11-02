@@ -10,8 +10,11 @@ public class Paiement {
     private String idAbonnement;
     private double montant;
     private int idUsager;
-    private LocalDateTime datePaiement; // Nouveau champ
+    private LocalDateTime datePaiement;
+    private String methodePaiement;
+    private String statut;
 
+    // Constructeur complet
     public Paiement(String nomCarte, String numeroCarte, String codeSecretCarte, double montant, int idUsager) {
         this.nomCarte = nomCarte;
         this.numeroCarte = numeroCarte;
@@ -19,8 +22,14 @@ public class Paiement {
         this.montant = montant;
         this.idUsager = idUsager;
         this.idAbonnement = "ABO_SIMPLE";
-        this.idPaiement = "PAI_" + System.currentTimeMillis();
+        this.idPaiement = "PAY_" + System.currentTimeMillis();
         this.datePaiement = LocalDateTime.now();
+        this.methodePaiement = "CARTE";
+        this.statut = "REUSSI";
+    }
+
+    // Constructeur vide pour le DAO
+    public Paiement() {
     }
 
     // Getters et Setters
@@ -47,4 +56,10 @@ public class Paiement {
     
     public LocalDateTime getDatePaiement() { return datePaiement; }
     public void setDatePaiement(LocalDateTime datePaiement) { this.datePaiement = datePaiement; }
+    
+    public String getMethodePaiement() { return methodePaiement; }
+    public void setMethodePaiement(String methodePaiement) { this.methodePaiement = methodePaiement; }
+    
+    public String getStatut() { return statut; }
+    public void setStatut(String statut) { this.statut = statut; }
 }

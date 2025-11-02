@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.time.format.DateTimeFormatter;
 
 import dao.StationnementDAO;
 import dao.TarifDAO;
@@ -276,20 +277,23 @@ public class Page_Garer_Voirie extends JFrame {
             return false;
         }
         
-        // Vérifier qu'aucun stationnement n'est déjà actif pour ce véhicule
-        if (StationnementDAO.vehiculeAStationnementActif(lblPlaque.getText().trim())) {
-            Stationnement stationnementActif = StationnementDAO.getStationnementActif(lblPlaque.getText().trim());
+        // Vérifier si l'utilisateur a déjà un stationnement actif
+        Stationnement stationnementActif = StationnementDAO.getStationnementActifByUsager(usager.getIdUsager());
+        if (stationnementActif != null) {
+            String message = "Vous avez déjà un stationnement " + stationnementActif.getTypeStationnement() + " actif !\n\n" +
+                            "Véhicule: " + stationnementActif.getTypeVehicule() + " - " + stationnementActif.getPlaqueImmatriculation() + "\n";
             
-            String message = "Vous avez déjà un stationnement actif !\n\n" +
-                            "Plaque: " + stationnementActif.getPlaqueImmatriculation() + "\n" +
-                            "Zone: " + stationnementActif.getZone() + "\n" +
-                            "Début: " + stationnementActif.getDateCreation().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) + "\n" +
-                            "Statut: " + stationnementActif.getStatut();
+            if (stationnementActif.estVoirie()) {
+                message += "Zone: " + stationnementActif.getZone() + "\n" +
+                          "Début: " + stationnementActif.getDateCreation().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+            } else if (stationnementActif.estParking()) {
+                message += "Parking: " + stationnementActif.getZone() + "\n" +
+                          "Arrivée: " + stationnementActif.getHeureArrivee().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+            }
             
-            JOptionPane.showMessageDialog(this,
-                message,
-                "Stationnement actif existant",
-                JOptionPane.WARNING_MESSAGE);
+            message += "\n\nVeuillez terminer ce stationnement avant d'en créer un nouveau.";
+            
+            JOptionPane.showMessageDialog(this, message, "Stationnement actif", JOptionPane.WARNING_MESSAGE);
             return false;
         }
         

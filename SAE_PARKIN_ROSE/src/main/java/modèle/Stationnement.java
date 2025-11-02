@@ -12,13 +12,20 @@ public class Stationnement {
     private int dureeMinutes;
     private double cout;
     private LocalDateTime dateCreation;
-    private LocalDateTime dateFin; // Nouveau champ
+    private LocalDateTime dateFin;
+    private LocalDateTime heureArrivee;
+    private LocalDateTime heureDepart;
     private String statut;
+    private String typeStationnement;
+    private String statutPaiement;
     private String idPaiement;
 
-    // Constructeurs
-    public Stationnement() {}
+    // CONSTRUCTEUR PAR DÉFAUT - AJOUT IMPORTANT
+    public Stationnement() {
+        // Constructeur vide nécessaire pour le DAO
+    }
 
+    // Constructeur pour voirie (paiement immédiat)
     public Stationnement(int idUsager, String typeVehicule, String plaqueImmatriculation, 
                         String zone, int dureeHeures, int dureeMinutes, double cout, String idPaiement) {
         this.idUsager = idUsager;
@@ -31,6 +38,23 @@ public class Stationnement {
         this.idPaiement = idPaiement;
         this.dateCreation = LocalDateTime.now();
         this.statut = "ACTIF";
+        this.typeStationnement = "VOIRIE";
+        this.statutPaiement = "PAYE";
+    }
+
+    // Constructeur pour parking (paiement différé)
+    public Stationnement(int idUsager, String typeVehicule, String plaqueImmatriculation, 
+                        String nomParking, LocalDateTime heureArrivee) {
+        this.idUsager = idUsager;
+        this.typeVehicule = typeVehicule;
+        this.plaqueImmatriculation = plaqueImmatriculation;
+        this.zone = nomParking;
+        this.heureArrivee = heureArrivee;
+        this.dateCreation = LocalDateTime.now();
+        this.statut = "ACTIF";
+        this.typeStationnement = "PARKING";
+        this.statutPaiement = "NON_PAYE";
+        this.cout = 0.0;
     }
 
     // Getters et Setters
@@ -64,32 +88,51 @@ public class Stationnement {
     public LocalDateTime getDateFin() { return dateFin; }
     public void setDateFin(LocalDateTime dateFin) { this.dateFin = dateFin; }
 
+    public LocalDateTime getHeureArrivee() { return heureArrivee; }
+    public void setHeureArrivee(LocalDateTime heureArrivee) { this.heureArrivee = heureArrivee; }
+
+    public LocalDateTime getHeureDepart() { return heureDepart; }
+    public void setHeureDepart(LocalDateTime heureDepart) { this.heureDepart = heureDepart; }
+
     public String getStatut() { return statut; }
     public void setStatut(String statut) { this.statut = statut; }
+
+    public String getTypeStationnement() { return typeStationnement; }
+    public void setTypeStationnement(String typeStationnement) { this.typeStationnement = typeStationnement; }
+
+    public String getStatutPaiement() { return statutPaiement; }
+    public void setStatutPaiement(String statutPaiement) { this.statutPaiement = statutPaiement; }
 
     public String getIdPaiement() { return idPaiement; }
     public void setIdPaiement(String idPaiement) { this.idPaiement = idPaiement; }
 
-    // Méthode utilitaire pour obtenir la durée totale en minutes
+    // Méthodes utilitaires
+    public boolean estParking() {
+        return "PARKING".equals(typeStationnement);
+    }
+    
+    public boolean estVoirie() {
+        return "VOIRIE".equals(typeStationnement);
+    }
+
     public int getDureeTotaleMinutes() {
         return (dureeHeures * 60) + dureeMinutes;
     }
 
-    // Vérifie si le stationnement est encore actif
     public boolean estActif() {
-        return "ACTIF".equals(statut) && (dateFin == null || LocalDateTime.now().isBefore(dateFin));
+        return "ACTIF".equals(statut);
     }
 
     @Override
     public String toString() {
         return "Stationnement{" +
                 "id=" + idStationnement +
+                ", type='" + typeStationnement + '\'' +
                 ", véhicule='" + typeVehicule + '\'' +
                 ", plaque='" + plaqueImmatriculation + '\'' +
                 ", zone='" + zone + '\'' +
-                ", durée=" + dureeHeures + "h" + dureeMinutes +
-                ", coût=" + cout + "€" +
                 ", statut='" + statut + '\'' +
+                ", paiement='" + statutPaiement + '\'' +
                 '}';
     }
 }

@@ -4,7 +4,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
 import dao.StationnementDAO;
+import dao.TarifParkingDAO;
 import dao.UsagerDAO;
 import modèle.Stationnement;
 import modèle.Usager;
@@ -15,28 +20,27 @@ public class Page_Stationnement_En_Cours extends JFrame {
     private String emailUtilisateur;
     private Stationnement stationnementActif;
     private JPanel panelInfo;
-    private JButton btnStopper;
+    private JButton btnArreter;
     private Timer timer;
 
     public Page_Stationnement_En_Cours(String email) {
         this.emailUtilisateur = email;
         chargerStationnementActif();
         initialisePage();
+        startAutoRefresh();
     }
     
     private void chargerStationnementActif() {
-        // Récupérer l'utilisateur
         Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
         if (usager != null) {
-            // Utiliser la nouvelle méthode de vérification
             stationnementActif = StationnementDAO.getStationnementActifValideByUsager(usager.getIdUsager());
         }
     }
     
     private void initialisePage() {
         this.setTitle("Stationnement en cours");
-        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // IMPORTANT: DISPOSE au lieu de EXIT
-        this.setSize(500, 400);
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        this.setSize(600, 500);
         this.setLocationRelativeTo(null);
         
         JPanel mainPanel = new JPanel();
@@ -64,29 +68,21 @@ public class Page_Stationnement_En_Cours extends JFrame {
         JButton btnRetour = new JButton("Retour");
         btnRetour.addActionListener(e -> retourAccueil());
         
-        btnStopper = new JButton("Stopper le stationnement");
-        btnStopper.setBackground(Color.RED);
-        btnStopper.setForeground(Color.WHITE);
-        btnStopper.setFocusPainted(false);
-        btnStopper.addActionListener(e -> stopperStationnement());
+        btnArreter = new JButton("Arrêter le stationnement");
+        btnArreter.setBackground(Color.RED);
+        btnArreter.setForeground(Color.WHITE);
+        btnArreter.setFocusPainted(false);
+        btnArreter.addActionListener(e -> arreterStationnement());
         
         panelBoutons.add(btnRetour);
         if (stationnementActif != null) {
-            panelBoutons.add(btnStopper);
+            panelBoutons.add(btnArreter);
         }
         
         mainPanel.add(panelBoutons, BorderLayout.SOUTH);
         
         this.setContentPane(mainPanel);
         afficherInformationsStationnement();
-        
-	     // Timer pour la mise à jour automatique de l'affichage
-	     // - Actualise les informations toutes les 30 secondes (30000 ms)
-	     // - Met à jour le temps restant en temps réel
-	     // - Détecte automatiquement si le stationnement a été terminé (via un autre appareil ou expiration)
-	     // - Évite à l'utilisateur d'avoir à rafraîchir manuellement la page
-	     timer = new Timer(30000, e -> mettreAJourAffichage());
-	     timer.start();
     }
     
     private void afficherInformationsStationnement() {
@@ -98,27 +94,55 @@ public class Page_Stationnement_En_Cours extends JFrame {
             lblAucun.setForeground(Color.GRAY);
             panelInfo.add(lblAucun);
         } else {
-            // Affichage des informations du stationnement
-            ajouterLigneInfo("Véhicule:", stationnementActif.getTypeVehicule() + " - " + stationnementActif.getPlaqueImmatriculation());
-            ajouterLigneInfo("Zone:", stationnementActif.getZone());
-            ajouterLigneInfo("Début:", stationnementActif.getDateCreation().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
-            ajouterLigneInfo("Durée prévue:", stationnementActif.getDureeHeures() + "h" + stationnementActif.getDureeMinutes() + "min");
-            ajouterLigneInfo("Coût:", String.format("%.2f", stationnementActif.getCout()) + " €");
-            ajouterLigneInfo("Statut:", stationnementActif.getStatut());
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             
-            // Calcul du temps restant
-            if (stationnementActif.getDateFin() != null) {
-                long minutesRestantes = java.time.Duration.between(
-                    java.time.LocalDateTime.now(), 
-                    stationnementActif.getDateFin()
-                ).toMinutes();
+            // Informations communes
+            ajouterLigneInfo("Véhicule:", stationnementActif.getTypeVehicule() + " - " + stationnementActif.getPlaqueImmatriculation());
+            
+            if (stationnementActif.estVoirie()) {
+                // Stationnement voirie
+                ajouterLigneInfo("Type:", "Voirie");
+                ajouterLigneInfo("Zone:", stationnementActif.getZone());
+                ajouterLigneInfo("Début:", stationnementActif.getDateCreation().format(formatter));
+                ajouterLigneInfo("Durée prévue:", stationnementActif.getDureeHeures() + "h" + stationnementActif.getDureeMinutes() + "min");
+                ajouterLigneInfo("Coût:", String.format("%.2f", stationnementActif.getCout()) + " €");
+                ajouterLigneInfo("Statut paiement:", stationnementActif.getStatutPaiement());
                 
-                if (minutesRestantes > 0) {
-                    ajouterLigneInfo("Temps restant:", minutesRestantes + " minutes");
-                } else {
-                    ajouterLigneInfo("Temps restant:", "Temps écoulé");
+                // Calcul du temps restant
+                if (stationnementActif.getDateFin() != null) {
+                    long minutesRestantes = java.time.Duration.between(LocalDateTime.now(), stationnementActif.getDateFin()).toMinutes();
+                    if (minutesRestantes > 0) {
+                        long heures = minutesRestantes / 60;
+                        long minutes = minutesRestantes % 60;
+                        ajouterLigneInfo("Temps restant:", String.format("%dh%02d", heures, minutes));
+                    } else {
+                        ajouterLigneInfo("Temps restant:", "Temps écoulé");
+                    }
                 }
+                
+            } else if (stationnementActif.estParking()) {
+                // Stationnement parking
+                ajouterLigneInfo("Type:", "Parking");
+                ajouterLigneInfo("Parking:", stationnementActif.getZone());
+                ajouterLigneInfo("Arrivée:", stationnementActif.getHeureArrivee().format(formatter));
+                ajouterLigneInfo("Statut paiement:", stationnementActif.getStatutPaiement());
+                
+                // Calcul du temps écoulé
+                long minutesEcoulees = java.time.Duration.between(stationnementActif.getHeureArrivee(), LocalDateTime.now()).toMinutes();
+                long heures = minutesEcoulees / 60;
+                long minutes = minutesEcoulees % 60;
+                ajouterLigneInfo("Temps écoulé:", String.format("%dh%02d", heures, minutes));
+                
+                // Estimation du coût
+                double coutEstime = TarifParkingDAO.calculerCoutParking(
+                    stationnementActif.getHeureArrivee(), 
+                    LocalDateTime.now(), 
+                    getParkingIdFromName(stationnementActif.getZone())
+                );
+                ajouterLigneInfo("Coût estimé:", String.format("%.2f €", coutEstime));
             }
+            
+            ajouterLigneInfo("Statut:", stationnementActif.getStatut());
         }
         
         panelInfo.revalidate();
@@ -143,36 +167,20 @@ public class Page_Stationnement_En_Cours extends JFrame {
         panelInfo.add(ligne);
     }
     
-    private void mettreAJourAffichage() {
-        // Recharger les données et mettre à jour l'affichage
-        chargerStationnementActif();
-        afficherInformationsStationnement();
-        
-        // Si plus de stationnement actif, fermer la page
-        if (stationnementActif == null) {
-            JOptionPane.showMessageDialog(this, 
-                "Le stationnement a été terminé.", 
-                "Information", 
-                JOptionPane.INFORMATION_MESSAGE);
-            retourAccueil();
-        }
-    }
-    
-    private void stopperStationnement() {
-        if (stationnementActif != null) {
+    private void arreterStationnement() {
+        if (stationnementActif.estVoirie()) {
+            // Pour voirie : arrêt simple
             int confirmation = JOptionPane.showConfirmDialog(this,
-                "Êtes-vous sûr de vouloir stopper ce stationnement ?\n" +
-                "Cette action est irréversible.",
+                "Êtes-vous sûr de vouloir arrêter ce stationnement ?",
                 "Confirmation",
                 JOptionPane.YES_NO_OPTION);
                 
             if (confirmation == JOptionPane.YES_OPTION) {
                 boolean succes = StationnementDAO.terminerStationnement(stationnementActif.getIdStationnement());
-                
                 if (succes) {
-                    JOptionPane.showMessageDialog(this,
-                        "Stationnement stoppé avec succès !",
-                        "Succès",
+                    JOptionPane.showMessageDialog(this, 
+                        "Stationnement arrêté avec succès !", 
+                        "Succès", 
                         JOptionPane.INFORMATION_MESSAGE);
                     retourAccueil();
                 } else {
@@ -182,11 +190,100 @@ public class Page_Stationnement_En_Cours extends JFrame {
                         JOptionPane.ERROR_MESSAGE);
                 }
             }
+            
+        } else if (stationnementActif.estParking()) {
+            // Pour parking : demander l'heure de départ et procéder au paiement
+            demanderHeureDepartEtPayer();
         }
     }
     
+    private void demanderHeureDepartEtPayer() {
+        // Créer un panel pour la saisie de l'heure de départ
+        JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
+        
+        JSpinner spinnerHeureDepart = new JSpinner(new SpinnerDateModel());
+        JSpinner.DateEditor editor = new JSpinner.DateEditor(spinnerHeureDepart, "dd/MM/yyyy HH:mm");
+        spinnerHeureDepart.setEditor(editor);
+        spinnerHeureDepart.setValue(new java.util.Date());
+        
+        panel.add(new JLabel("Heure de départ:"));
+        panel.add(spinnerHeureDepart);
+        
+        int result = JOptionPane.showConfirmDialog(this, panel, 
+            "Heure de départ", JOptionPane.OK_CANCEL_OPTION);
+        
+        if (result == JOptionPane.OK_OPTION) {
+            java.util.Date dateDepart = (java.util.Date) spinnerHeureDepart.getValue();
+            LocalDateTime heureDepart = dateDepart.toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDateTime();
+            
+            // Calcul du coût
+            double cout = TarifParkingDAO.calculerCoutParking(
+                stationnementActif.getHeureArrivee(), 
+                heureDepart, 
+                getParkingIdFromName(stationnementActif.getZone())
+            );
+            
+            // Ouvrir la page de paiement
+            Page_Paiement pagePaiement = new Page_Paiement(
+                cout,
+                emailUtilisateur,
+                stationnementActif.getTypeVehicule(),
+                stationnementActif.getPlaqueImmatriculation(),
+                stationnementActif.getZone(),
+                0,
+                0,
+                stationnementActif.getIdStationnement(),
+                heureDepart
+            );
+            pagePaiement.setVisible(true);
+            dispose();
+        }
+    }
+    
+    private String getParkingIdFromName(String nomParking) {
+        // Mapping des noms de parking vers leurs IDs
+        switch(nomParking) {
+            case "Parking Capitole": return "PARK_CAPITOLE";
+            case "Parking Carnot": return "PARK_CARNOT";
+            case "Parking Esquirol": return "PARK_ESQUIROL";
+            case "Parking Saint-Étienne": return "PARK_SAINT_ETIENNE";
+            case "Parking Jean Jaurès": return "PARK_JEAN_JAURES";
+            case "Parking Jeanne d'Arc": return "PARK_JEANNE_DARC";
+            case "Parking Europe": return "PARK_EUROPE";
+            case "Parking Victor Hugo": return "PARK_VICTOR_HUGO";
+            case "Parking Saint-Aubin": return "PARK_SAINT_AUBIN";
+            case "Parking Saint-Cyprien": return "PARK_SAINT_CYPRIEN";
+            case "Parking Saint-Michel": return "PARK_SAINT_MICHEL";
+            case "Parking Matabiau-Ramblas": return "PARK_MATABIAU";
+            case "Parking Arnaud Bernard": return "PARK_ARNAUD_BERNARD";
+            case "Parking Carmes": return "PARK_CARMES";
+            default: return "PARK_CAPITOLE";
+        }
+    }
+    
+    private void startAutoRefresh() {
+        // Timer pour la mise à jour automatique de l'affichage
+        timer = new Timer(30000, e -> {
+            chargerStationnementActif();
+            afficherInformationsStationnement();
+            
+            // Si plus de stationnement actif, fermer la page
+            if (stationnementActif == null) {
+                JOptionPane.showMessageDialog(this, 
+                    "Le stationnement a été terminé.", 
+                    "Information", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                retourAccueil();
+            }
+        });
+        timer.start();
+    }
+    
     private void retourAccueil() {
-        // On ferme simplement cette page, la Page_Principale existe déjà
+        Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
+        pagePrincipale.setVisible(true);
         dispose();
     }
     
