@@ -112,6 +112,13 @@ public class Page_Authentification extends JFrame {
 
 		// Bouton de connexion
 		btnLogin = new JButton("SE CONNECTER");
+        btnLogin.addMouseListener(new MouseAdapter() {
+        	@Override
+        	public void mouseClicked(MouseEvent e) {
+        		Page_Accueil pA = new Page_Accueil();
+        		pA.setVisible(true);
+        	}
+        });
 		btnLogin.setFont(new Font("Arial", Font.BOLD, 18));
 		btnLogin.setForeground(Color.WHITE);
 		btnLogin.setBackground(new Color(80, 80, 80)); // Gris foncé
