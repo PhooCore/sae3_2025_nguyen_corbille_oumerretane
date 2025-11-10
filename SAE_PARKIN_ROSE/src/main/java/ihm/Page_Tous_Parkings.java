@@ -323,7 +323,7 @@ public class Page_Tous_Parkings extends JFrame {
             
         if (choix == JOptionPane.YES_OPTION) {
             // CORRECTION : Passage des paramètres nécessaires au constructeur
-            Page_Garer_Parking pageParking = new Page_Garer_Parking();//email et parking
+            Page_Garer_Parking pageParking = new Page_Garer_Parking(this.emailUtilisateur);//email et parking
             pageParking.setVisible(true);
             dispose(); // Ferme la page actuelle
         }
