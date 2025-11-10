@@ -1,19 +1,12 @@
 package dao;
 
+import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
 public class TarifParkingDAO {
-    
-    // Liste des parkings avec tarif soirée
-    private static final String[] PARKINGS_TARIF_SOIREE = {
-        "PARK_ARNAUD_BERNARD", "PARK_CARMES", "PARK_ESQUIROL", "PARK_JEAN_JAURES", 
-        "PARK_JEANNE_DARC", "PARK_EUROPE", "PARK_SAINT_AUBIN", "PARK_VICTOR_HUGO", 
-        "PARK_SAINT_CYPRIEN", "PARK_SAINT_ETIENNE", "PARK_SAINT_MICHEL", 
-        "PARK_CARNOT", "PARK_CAPITOLE", "PARK_MATABIAU"
-    };
     
     // Liste des parkings gratuits
     private static final String[] PARKINGS_GRATUITS = {
@@ -83,16 +76,27 @@ public class TarifParkingDAO {
     
     /**
      * Vérifie si le tarif soirée s'applique
+     * Basé sur le champ tarif_soiree de la table Parking
      */
     public static boolean tarifSoireeApplicable(LocalDateTime heureArrivee, LocalDateTime heureDepart, String idParking) {
         // Vérifier si le parking propose le tarif soirée
         boolean parkingEligible = false;
-        for (String parking : PARKINGS_TARIF_SOIREE) {
-            if (parking.equals(idParking)) {
-                parkingEligible = true;
-                break;
+        try {
+            // Récupérer l'information depuis la base de données
+            String sql = "SELECT tarif_soiree FROM Parking WHERE id_parking = ?";
+            try (Connection conn = MySQLConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, idParking);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    parkingEligible = rs.getBoolean("tarif_soiree");
+                }
             }
+        } catch (SQLException e) {
+            System.err.println("Erreur vérification tarif soirée: " + e.getMessage());
+            return false;
         }
+        
         if (!parkingEligible) return false;
         
         // Vérifier les horaires soirée (19h30-22h arrivée, départ avant 3h)
@@ -104,6 +108,26 @@ public class TarifParkingDAO {
                                (heureDepart.getHour() == 3 && heureDepart.getMinute() == 0);
         
         return arriveeSoiree && departAvant3h;
+    }
+    
+    /**
+     * Vérifie si le parking propose le tarif soirée
+     */
+    public static boolean proposeTarifSoiree(String idParking) {
+        try {
+            String sql = "SELECT tarif_soiree FROM Parking WHERE id_parking = ?";
+            try (Connection conn = MySQLConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, idParking);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getBoolean("tarif_soiree");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur vérification tarif soirée: " + e.getMessage());
+        }
+        return false;
     }
     
     /**
@@ -131,14 +155,81 @@ public class TarifParkingDAO {
     }
     
     /**
-     * Vérifie si le parking propose le tarif soirée
+     * Récupère le tarif horaire pour un parking
      */
-    public static boolean proposeTarifSoiree(String idParking) {
-        for (String parking : PARKINGS_TARIF_SOIREE) {
-            if (parking.equals(idParking)) {
-                return true;
-            }
+    public static double getTarifHoraire(String idParking) {
+        return getTarifQuartHeure(idParking) * 4; // 4 quarts d'heure = 1 heure
+    }
+    
+    /**
+     * Calcule la durée totale en minutes entre deux dates
+     */
+    public static long calculerDureeMinutes(LocalDateTime debut, LocalDateTime fin) {
+        return ChronoUnit.MINUTES.between(debut, fin);
+    }
+    
+    /**
+     * Formate la durée en heures et minutes
+     */
+    public static String formaterDuree(long minutes) {
+        long heures = minutes / 60;
+        long mins = minutes % 60;
+        if (heures == 0) {
+            return mins + " min";
+        } else if (mins == 0) {
+            return heures + " h";
+        } else {
+            return heures + " h " + mins + " min";
         }
-        return false;
+    }
+    
+    /**
+     * Vérifie si un parking existe
+     */
+    public static boolean parkingExiste(String idParking) {
+        String sql = "SELECT id_parking FROM Parking WHERE id_parking = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, idParking);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur vérification existence parking: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Récupère les informations complètes d'un parking
+     */
+    public static Map<String, Object> getInfosParking(String idParking) {
+        Map<String, Object> infos = new HashMap<>();
+        String sql = "SELECT libelle_parking, adresse_parking, nombre_places, hauteur_parking, tarif_soiree FROM Parking WHERE id_parking = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, idParking);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                infos.put("libelle", rs.getString("libelle_parking"));
+                infos.put("adresse", rs.getString("adresse_parking"));
+                infos.put("places", rs.getInt("nombre_places"));
+                infos.put("hauteur", rs.getDouble("hauteur_parking"));
+                infos.put("tarif_soiree", rs.getBoolean("tarif_soiree"));
+                infos.put("gratuit", estParkingGratuit(idParking));
+                infos.put("relais", estParkingRelais(idParking));
+                infos.put("tarif_horaire", getTarifHoraire(idParking));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération infos parking: " + e.getMessage());
+        }
+        
+        return infos;
     }
 }

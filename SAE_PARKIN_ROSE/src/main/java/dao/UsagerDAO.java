@@ -110,10 +110,8 @@ public class UsagerDAO {
                     usager.setMailUsager(rs.getString("mail_usager"));       // Email
                     usager.setMotDePasse(rs.getString("mot_de_passe"));      // Mot de passe
                     
-                    System.out.println("Usager trouvé: " + usager.getNomUsager() + " (ID: " + usager.getIdUsager() + ")"); // Debug
+                    
                     return usager;
-                } else {
-                    System.out.println("Aucun usager trouvé pour cet email"); // Debug
                 }
             }
             

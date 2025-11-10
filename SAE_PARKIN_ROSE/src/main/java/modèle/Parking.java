@@ -7,14 +7,16 @@ public class Parking {
     private int nombrePlaces;
     private double hauteurParking;
     private int placesDisponibles;
+    private boolean tarifSoiree;  // NOUVEAU
 
     public Parking(String idParking, String libelleParking, String adresseParking, 
-                   int nombrePlaces, double hauteurParking) {
+                   int nombrePlaces, double hauteurParking, boolean tarifSoiree) {
         this.idParking = idParking;
         this.libelleParking = libelleParking;
         this.adresseParking = adresseParking;
         this.nombrePlaces = nombrePlaces;
         this.hauteurParking = hauteurParking;
+        this.tarifSoiree = tarifSoiree;
         // Estimation des places disponibles (80% de remplissage)
         this.placesDisponibles = (int)(nombrePlaces * 0.2);
     }
@@ -26,22 +28,10 @@ public class Parking {
     public int getNombrePlaces() { return nombrePlaces; }
     public double getHauteurParking() { return hauteurParking; }
     public int getPlacesDisponibles() { return placesDisponibles; }
+    public boolean hasTarifSoiree() { return tarifSoiree; }  // NOUVEAU
     
     @Override
     public String toString() {
         return libelleParking + " - " + adresseParking;
-    }
-    
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Parking parking = (Parking) obj;
-        return idParking != null && idParking.equals(parking.idParking);
-    }
-    
-    @Override
-    public int hashCode() {
-        return idParking != null ? idParking.hashCode() : 0;
     }
 }

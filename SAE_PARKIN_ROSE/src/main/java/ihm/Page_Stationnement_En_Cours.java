@@ -275,18 +275,19 @@ public class Page_Stationnement_En_Cours extends JFrame {
             
             // Ouverture de la page de paiement avec toutes les informations
             Page_Paiement pagePaiement = new Page_Paiement(
-                cout,
-                emailUtilisateur,
-                stationnementActif.getTypeVehicule(),
-                stationnementActif.getPlaqueImmatriculation(),
-                stationnementActif.getZone(),
-                0, // Pas de durée en heures (calculée automatiquement)
-                0, // Pas de durée en minutes (calculée automatiquement)
-                stationnementActif.getIdStationnement(), // ID du stationnement existant
-                heureDepart // Heure de départ spécifiée
-            );
-            pagePaiement.setVisible(true);
-            dispose(); // Ferme la page actuelle
+            	    cout,
+            	    emailUtilisateur,
+            	    stationnementActif.getTypeVehicule(),
+            	    stationnementActif.getPlaqueImmatriculation(),
+            	    getParkingIdFromName(stationnementActif.getZone()), // ID du parking
+            	    stationnementActif.getZone(), // Nom du parking pour l'affichage
+            	    0, 
+            	    0,
+            	    stationnementActif.getIdStationnement(), // ID du stationnement existant
+            	    heureDepart // Heure de départ spécifiée
+            	);
+            	pagePaiement.setVisible(true);
+            	dispose(); // Ferme la page actuelle
         }
     }
     

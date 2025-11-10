@@ -17,7 +17,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
-public class Page_Accueil extends JPanel {
+public class Page_Accueil extends JFrame {
 	private JTextField txtRechercher;
 
 	/**

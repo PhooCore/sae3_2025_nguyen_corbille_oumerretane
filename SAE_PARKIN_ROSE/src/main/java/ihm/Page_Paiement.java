@@ -16,13 +16,13 @@ public class Page_Paiement extends JFrame {
     
     private static final long serialVersionUID = 1L;
     
-
     private double montant;                   // Montant à payer
     private String emailUtilisateur;          // Email de l'utilisateur connecté
     private Usager usager;                    // Objet utilisateur avec ses informations
     private String typeVehicule;              // Type de véhicule (Voiture, Moto, Camion)
     private String plaqueImmatriculation;     // Plaque du véhicule
-    private String zone;                      // Zone de stationnement ou nom du parking
+    private String idZone;            		  // ID de la zone (nouveau)
+    private String nomZone;                   // Nom de la zone pour l'affichage
     private int dureeHeures;                  // Durée en heures (pour voirie)
     private int dureeMinutes;                 // Durée en minutes (pour voirie)
     private Integer idStationnement;          // ID du stationnement existant (null si nouveau)
@@ -35,56 +35,53 @@ public class Page_Paiement extends JFrame {
     private JTextField txtCVV;                // Code de sécurité (CVV)
     
     /**
-     * Constructeur pour les nouveaux stationnements (voirie)
-     * Utilisé quand l'utilisateur crée un nouveau stationnement en voirie
+     * Constructeur pour les nouveaux stationnements (voirie) - ADAPTÉ
      */
     public Page_Paiement(double montant, String emailUtilisateur, String typeVehicule, 
-                        String plaqueImmatriculation, String zone, int dureeHeures, int dureeMinutes) {
-        // Appel du constructeur principal avec les paramètres manquants à null
-        this(montant, emailUtilisateur, typeVehicule, plaqueImmatriculation, zone, 
+                        String plaqueImmatriculation, String idTarification, String nomZone, 
+                        int dureeHeures, int dureeMinutes) {
+        // Appel du constructeur principal avec les paramètres adaptés
+        this(montant, emailUtilisateur, typeVehicule, plaqueImmatriculation, idTarification, nomZone,
              dureeHeures, dureeMinutes, null, null);
     }
     
     /**
-     * Constructeur principal pour tous les types de stationnements
-     * @param idStationnement null pour nouveau stationnement, valeur pour stationnement existant
-     * @param heureDepart nécessaire uniquement pour les stationnements parking
-     * @wbp.parser.constructor
+     * Constructeur principal pour tous les types de stationnements - ADAPTÉ
      */
     public Page_Paiement(double montant, String emailUtilisateur, String typeVehicule, 
-                        String plaqueImmatriculation, String zone, int dureeHeures, int dureeMinutes,
-                        Integer idStationnement, LocalDateTime heureDepart) {
+                        String plaqueImmatriculation, String idTarification, String nomZone,
+                        int dureeHeures, int dureeMinutes, Integer idStationnement, LocalDateTime heureDepart) {
         this.montant = montant;
         this.emailUtilisateur = emailUtilisateur;
-        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur); // Récupération des infos utilisateur
+        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
         this.typeVehicule = typeVehicule;
         this.plaqueImmatriculation = plaqueImmatriculation;
-        this.zone = zone;
+        this.idZone = idTarification; 
+        this.nomZone = nomZone;               
         this.dureeHeures = dureeHeures;
         this.dureeMinutes = dureeMinutes;
         this.idStationnement = idStationnement;
         this.heureDepart = heureDepart;
         
-        initialisePage(); // Initialisation de l'interface
+        initialisePage();
     }
     
     /**
      * Initialise l'interface utilisateur de la page de paiement
-     * Structure : Titre + Informations + Formulaire carte + Boutons
      */
     private void initialisePage() {
         // Configuration de la fenêtre
         this.setTitle("Paiement du stationnement");
-        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Ne ferme que cette fenêtre
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         this.setSize(550, 650);
-        this.setLocationRelativeTo(null); // Centre la fenêtre
-        this.setResizable(false); // Taille fixe
+        this.setLocationRelativeTo(null);
+        this.setResizable(false);
         
         // Panel principal avec bordures
         JPanel mainPanel = new JPanel();
         mainPanel.setBackground(Color.WHITE);
         mainPanel.setLayout(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); // Marge de 20px
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
         // === TITRE DE LA PAGE ===
         JLabel lblTitre = new JLabel("Paiement", SwingConstants.CENTER);
@@ -94,11 +91,11 @@ public class Page_Paiement extends JFrame {
         // === PANEL CENTRAL AVEC FORMULAIRE ===
         JPanel formPanel = new JPanel();
         formPanel.setBackground(Color.WHITE);
-        formPanel.setLayout(new GridLayout(0, 1, 10, 10)); // Layout vertical avec espacement
+        formPanel.setLayout(new GridLayout(0, 1, 10, 10));
         
         // Ligne 1: Affichage du montant à payer
         JLabel lblMontant = new JLabel("Montant à payer: " + String.format("%.2f", montant) + " €");
-        lblMontant.setFont(new Font("Arial", Font.BOLD, 16)); // Texte en gras
+        lblMontant.setFont(new Font("Arial", Font.BOLD, 16));
         formPanel.add(lblMontant);
         
         formPanel.add(new JLabel(" ")); // Espacement visuel
@@ -111,6 +108,16 @@ public class Page_Paiement extends JFrame {
         JLabel lblVehicule = new JLabel("Véhicule: " + plaqueImmatriculation);
         formPanel.add(lblVehicule);
         
+        // Ligne supplémentaire pour la zone
+        JLabel lblZone = new JLabel("Zone: " + nomZone); // ADAPTATION : Utilisation de nomZone
+        formPanel.add(lblZone);
+        
+        // Ligne pour la durée (uniquement pour voirie)
+        if (idStationnement == null) {
+            JLabel lblDuree = new JLabel("Durée: " + dureeHeures + "h" + dureeMinutes + "min");
+            formPanel.add(lblDuree);
+        }
+        
         formPanel.add(new JLabel(" ")); // Espacement
         
         // === FORMULAIRE DE CARTE BANCAIRE ===
@@ -119,33 +126,33 @@ public class Page_Paiement extends JFrame {
         // Champ nom sur la carte
         formPanel.add(new JLabel("Nom sur la carte:"));
         txtNomCarte = new JTextField();
-        txtNomCarte.setPreferredSize(new Dimension(300, 30)); // Taille plus grande
+        txtNomCarte.setPreferredSize(new Dimension(300, 30));
         formPanel.add(txtNomCarte);
         
         // Champ numéro de carte
         formPanel.add(new JLabel("Numéro de carte:"));
         txtNumeroCarte = new JTextField();
-        txtNumeroCarte.setPreferredSize(new Dimension(300, 30)); // Taille plus grande
+        txtNumeroCarte.setPreferredSize(new Dimension(300, 30));
         formPanel.add(txtNumeroCarte);
         
         // Panel pour date d'expiration et CVV côte à côte
-        JPanel panelDateCVV = new JPanel(new GridLayout(1, 2, 15, 10)); // Plus d'espace entre les champs
+        JPanel panelDateCVV = new JPanel(new GridLayout(1, 2, 15, 10));
         panelDateCVV.setBackground(Color.WHITE);
         
-        // Sous-panel date d'expiration - PLUS LARGE
+        // Sous-panel date d'expiration
         JPanel panelDate = new JPanel(new BorderLayout());
         panelDate.setBackground(Color.WHITE);
         panelDate.add(new JLabel("Date expiration (MM/AA):"), BorderLayout.NORTH);
         txtDateExpiration = new JTextField();
-        txtDateExpiration.setPreferredSize(new Dimension(120, 30)); // Champ plus large
+        txtDateExpiration.setPreferredSize(new Dimension(120, 30));
         panelDate.add(txtDateExpiration, BorderLayout.CENTER);
         
-        // Sous-panel CVV - PLUS LARGE
+        // Sous-panel CVV
         JPanel panelCVV = new JPanel(new BorderLayout());
         panelCVV.setBackground(Color.WHITE);
         panelCVV.add(new JLabel("CVV:"), BorderLayout.NORTH);
         txtCVV = new JTextField();
-        txtCVV.setPreferredSize(new Dimension(80, 30)); // Champ plus large
+        txtCVV.setPreferredSize(new Dimension(80, 30));
         panelCVV.add(txtCVV, BorderLayout.CENTER);
         
         // Assemblage des sous-panels
@@ -163,9 +170,9 @@ public class Page_Paiement extends JFrame {
         JButton btnPayer = new JButton("Payer maintenant");
         
         // Stylisation du bouton payer
-        btnPayer.setBackground(new Color(70, 130, 180)); // Bleu
+        btnPayer.setBackground(new Color(70, 130, 180));
         btnPayer.setForeground(Color.WHITE);
-        btnPayer.setFocusPainted(false); // Désactive l'effet de focus
+        btnPayer.setFocusPainted(false);
         
         // Actions des boutons
         btnAnnuler.addActionListener(e -> annuler());
@@ -181,7 +188,6 @@ public class Page_Paiement extends JFrame {
     
     /**
      * Gère l'annulation du paiement
-     * Demande confirmation avant de fermer la fenêtre
      */
     private void annuler() {
         int confirmation = JOptionPane.showConfirmDialog(this,
@@ -190,18 +196,17 @@ public class Page_Paiement extends JFrame {
             JOptionPane.YES_NO_OPTION);
             
         if (confirmation == JOptionPane.YES_OPTION) {
-            this.dispose(); // Ferme la fenêtre
+            this.dispose();
         }
     }
     
     /**
-     * Traite le paiement après validation du formulaire
-     * Gère deux cas : nouveau stationnement voirie et finalisation parking
+     * Traite le paiement après validation du formulaire - ADAPTÉ
      */
     private void traiterPaiement() {
         // Validation des champs du formulaire
         if (!validerFormulaire()) {
-            return; // Arrête si validation échoue
+            return;
         }
         
         try {
@@ -221,21 +226,17 @@ public class Page_Paiement extends JFrame {
                 boolean operationReussie = false;
                 
                 if (idStationnement == null) {
-                    // === CAS 1 : NOUVEAU STATIONNEMENT VOIRIE ===
-                    // Création d'un nouveau stationnement après paiement réussi
-                    operationReussie = PaiementDAO.creerStationnementApresPaiement(
+                    operationReussie = StationnementDAO.creerStationnementVoirie(
                         usager.getIdUsager(),
                         typeVehicule,
                         plaqueImmatriculation,
-                        zone,
+                        idZone,      
                         dureeHeures,
                         dureeMinutes,
                         montant,
                         paiement.getIdPaiement()
                     );
                 } else {
-                    // === CAS 2 : STATIONNEMENT PARKING EXISTANT ===
-                    // Finalisation d'un stationnement parking avec paiement
                     operationReussie = StationnementDAO.terminerStationnementParking(
                         idStationnement,
                         heureDepart,
@@ -245,8 +246,8 @@ public class Page_Paiement extends JFrame {
                 }
                 
                 if (operationReussie) {
-                    afficherConfirmation(); // Message de succès
-                    retourAccueil();        // Retour à l'accueil
+                    afficherConfirmation();
+                    retourAccueil();
                 } else {
                     JOptionPane.showMessageDialog(this,
                         "Erreur lors de la mise à jour du stationnement",
@@ -261,17 +262,16 @@ public class Page_Paiement extends JFrame {
             }
             
         } catch (Exception e) {
-            // Gestion des erreurs imprévues
             JOptionPane.showMessageDialog(this,
                 "Erreur lors du traitement du paiement: " + e.getMessage(),
                 "Erreur",
                 JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace(); // Log pour le débogage
+            e.printStackTrace();
         }
     }
     
     /**
-     * Affiche un message de confirmation adapté au type de stationnement
+     * Affiche un message de confirmation adapté au type de stationnement - ADAPTÉ
      */
     private void afficherConfirmation() {
         String message;
@@ -279,14 +279,14 @@ public class Page_Paiement extends JFrame {
             // Message pour nouveau stationnement voirie
             message = "Paiement effectué avec succès !\n" +
                      "Stationnement confirmé pour " + plaqueImmatriculation + "\n" +
-                     "Zone: " + zone + "\n" +
+                     "Zone: " + nomZone + "\n" +  
                      "Durée: " + dureeHeures + "h" + dureeMinutes + "min\n" +
                      "Montant: " + String.format("%.2f", montant) + " €";
         } else {
             // Message pour stationnement parking terminé
             message = "Paiement effectué avec succès !\n" +
                      "Stationnement terminé pour " + plaqueImmatriculation + "\n" +
-                     "Parking: " + zone + "\n" +
+                     "Parking: " + nomZone + "\n" +  
                      "Montant: " + String.format("%.2f", montant) + " €\n" +
                      "Vous pouvez quitter le parking.";
         }
@@ -303,23 +303,22 @@ public class Page_Paiement extends JFrame {
     private void retourAccueil() {
         Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
         pagePrincipale.setVisible(true);
-        this.dispose(); // Ferme la page de paiement
+        this.dispose();
     }
     
     /**
      * Valide tous les champs du formulaire de paiement
-     * @return true si tous les champs sont valides, false sinon
      */
     private boolean validerFormulaire() {
         // Validation du nom sur la carte
         if (txtNomCarte.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Veuillez saisir le nom sur la carte", "Erreur", JOptionPane.ERROR_MESSAGE);
-            txtNomCarte.requestFocus(); // Place le curseur sur le champ erroné
+            txtNomCarte.requestFocus();
             return false;
         }
         
         // Validation du numéro de carte (16 chiffres)
-        String numeroCarte = txtNumeroCarte.getText().trim().replaceAll("\\s+", ""); // Supprime les espaces
+        String numeroCarte = txtNumeroCarte.getText().trim().replaceAll("\\s+", "");
         if (numeroCarte.isEmpty() || numeroCarte.length() < 16) {
             JOptionPane.showMessageDialog(this, "Numéro de carte invalide (16 chiffres requis)", "Erreur", JOptionPane.ERROR_MESSAGE);
             txtNumeroCarte.requestFocus();
@@ -341,13 +340,9 @@ public class Page_Paiement extends JFrame {
             return false;
         }
         
-        return true; // Toutes les validations sont passées
+        return true;
     }
     
-    /**
-     * Point d'entrée de l'application (méthode main)
-     * Lance l'application avec la page de bienvenue
-     */
     public static void main(String[] args) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
