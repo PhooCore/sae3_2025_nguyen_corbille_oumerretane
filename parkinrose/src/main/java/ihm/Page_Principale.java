@@ -279,7 +279,7 @@ public class Page_Principale extends JFrame {
                 dispose();
             } else if (choix == 1) {
                 // Parking - ouvrir directement la page de préparation
-                Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur);//mettre l'email
+                Page_Garer_Parking pageParking = new Page_Garer_Parking();//mettre l'email
                 pageParking.setVisible(true);
                 dispose();
             }
