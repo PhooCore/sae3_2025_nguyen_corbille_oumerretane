@@ -169,9 +169,10 @@ public class Page_Garer_Voirie extends JFrame {
     }
 
     private void initialiseDonnees() {
-        // CORRECTION : Utiliser StationnementTarifDAO au lieu de TarifDAO
+        // Charger seulement les zones, pas les parkings
         this.zones = ZoneDAO.getAllZones();
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+        
         for (Zone zone : zones) {
             model.addElement(zone.getAffichage());
         }
