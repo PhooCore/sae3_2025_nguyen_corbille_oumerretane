@@ -1,6 +1,9 @@
 package ihm;
 
 import javax.swing.*;
+
+import controleur.StationnementControleur;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -8,11 +11,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import dao.StationnementDAO;
-import dao.TarifParkingDAO;
-import dao.UsagerDAO;
 import modele.Stationnement;
 import modele.Usager;
+import modele.dao.StationnementDAO;
+import modele.dao.TarifParkingDAO;
+import modele.dao.UsagerDAO;
 
 /**
  * Page de gestion des stationnements en cours
@@ -27,27 +30,24 @@ public class Page_Stationnement_En_Cours extends JFrame {
     private JPanel panelInfo;                 // Panel pour afficher les informations
     private JButton btnArreter;               // Bouton pour arrêter le stationnement
     private Timer timer;                      // Timer pour l'actualisation automatique
-
+    private StationnementControleur controleur;
     /**
      * Constructeur de la page de gestion des stationnements en cours
      * @param email l'email de l'utilisateur connecté
      */
     public Page_Stationnement_En_Cours(String email) {
         this.emailUtilisateur = email;
-        chargerStationnementActif(); // Charge le stationnement actif depuis la BDD
-        initialisePage();            // Initialise l'interface
-        startAutoRefresh();          // Démarre l'actualisation automatique
+        this.controleur = new StationnementControleur(email); // Initialisation du contrôleur
+        chargerStationnementActif();
+        initialisePage();
+        startAutoRefresh();
     }
     
     /**
      * Charge le stationnement actif de l'utilisateur depuis la base de données
      */
     private void chargerStationnementActif() {
-        Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
-        if (usager != null) {
-            // Récupère le stationnement actif valide (statut ACTIF et date non dépassée)
-            stationnementActif = StationnementDAO.getStationnementActifValideByUsager(usager.getIdUsager());
-        }
+        stationnementActif = controleur.getStationnementActif();
     }
     
     /**
@@ -223,14 +223,13 @@ public class Page_Stationnement_En_Cours extends JFrame {
      */
     private void arreterStationnement() {
         if (stationnementActif.estVoirie()) {
-            // === ARRÊT STATIONNEMENT VOIRIE (simple confirmation) ===
             int confirmation = JOptionPane.showConfirmDialog(this,
                 "Êtes-vous sûr de vouloir arrêter ce stationnement ?",
                 "Confirmation",
                 JOptionPane.YES_NO_OPTION);
                 
             if (confirmation == JOptionPane.YES_OPTION) {
-                boolean succes = StationnementDAO.terminerStationnement(stationnementActif.getIdStationnement());
+                boolean succes = controleur.terminerStationnementVoirie(stationnementActif.getIdStationnement());
                 if (succes) {
                     JOptionPane.showMessageDialog(this, 
                         "Stationnement arrêté avec succès !", 
@@ -244,9 +243,8 @@ public class Page_Stationnement_En_Cours extends JFrame {
                         JOptionPane.ERROR_MESSAGE);
                 }
             }
-            
         } else if (stationnementActif.estParking()) {
-            // === ARRÊT STATIONNEMENT PARKING (demande heure départ + paiement) ===
+            // Garder la logique existante pour le parking
             demanderHeureDepartEtPayer();
         }
     }

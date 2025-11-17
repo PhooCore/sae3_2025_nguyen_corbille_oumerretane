@@ -2,8 +2,10 @@ package ihm;
 
 import java.awt.*;
 import javax.swing.*;
-import dao.UsagerDAO;
+
+import controleur.InscriptionControleur;
 import modele.Usager;
+import modele.dao.UsagerDAO;
 
 public class Page_Inscription extends JFrame {
 
@@ -282,88 +284,23 @@ public class Page_Inscription extends JFrame {
      * Retourne à la page de connexion
      */
     private void retourLogin() {
-        Page_Authentification loginPage = new Page_Authentification();
-        loginPage.setVisible(true);
-        this.dispose(); // Ferme la page actuelle
+        InscriptionControleur controleur = new InscriptionControleur();
+        controleur.redirigerVersAuthentification(this);
     }
 
     /**
      * Crée un nouveau compte utilisateur après validation
      */
     private void creerCompte() {
-        // Récupération et nettoyage des valeurs des champs
+        InscriptionControleur controleur = new InscriptionControleur();
+        
         String nom = textFieldNom.getText().trim();
         String prenom = textFieldPrenom.getText().trim();
         String email = textFieldEmail.getText().trim();
-        
-        // Récupération des mots de passe (conversion de char[] en String)
         String motDePasse = new String(passwordField.getPassword());
         String confirmation = new String(passwordFieldConfirm.getPassword());
 
-        // === VALIDATION DU FORMULAIRE ===
-
-        // Vérification des champs obligatoires
-        if (nom.isEmpty() || prenom.isEmpty() || email.isEmpty() || motDePasse.isEmpty()) {
-            JOptionPane.showMessageDialog(this, 
-                "Veuillez remplir tous les champs", 
-                "Erreur", 
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Vérification de la correspondance des mots de passe
-        if (!motDePasse.equals(confirmation)) {
-            JOptionPane.showMessageDialog(this, 
-                "Les mots de passe ne correspondent pas", 
-                "Erreur", 
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Validation de la longueur minimale du mot de passe
-        if (motDePasse.length() < 4) {
-            JOptionPane.showMessageDialog(this, 
-                "Le mot de passe doit contenir au moins 4 caractères", 
-                "Erreur", 
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Vérification de l'unicité de l'email
-        if (UsagerDAO.emailExisteDeja(email)) {
-            JOptionPane.showMessageDialog(this, 
-                "Cet email est déjà utilisé", 
-                "Erreur", 
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // === CRÉATION DU COMPTE ===
-
-        // Création de l'objet Usager avec les données validées
-        Usager nouvelUsager = new Usager(nom, prenom, email, motDePasse);
-
-        // Sauvegarde en base de données
-        boolean succes = UsagerDAO.ajouterUsager(nouvelUsager);
-
-        if (succes) {
-            // Message de succès
-            JOptionPane.showMessageDialog(this, 
-                "Compte créé avec succès !", 
-                "Succès", 
-                JOptionPane.INFORMATION_MESSAGE);
-            
-            // Redirection vers la page de connexion
-            Page_Authentification authPage = new Page_Authentification();
-            authPage.setVisible(true);
-            dispose(); // Ferme la page d'inscription
-        } else {
-            // Message d'erreur en cas d'échec
-            JOptionPane.showMessageDialog(this, 
-                "Erreur lors de la création du compte", 
-                "Erreur", 
-                JOptionPane.ERROR_MESSAGE);
-        }
+        controleur.creerCompte(nom, prenom, email, motDePasse, confirmation, this);
     }
 
     public static void main(String[] args) {

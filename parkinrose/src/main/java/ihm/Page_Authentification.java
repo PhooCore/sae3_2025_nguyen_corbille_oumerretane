@@ -18,7 +18,8 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
-import dao.AuthentificationDAO;
+import controleur.AuthentificationControleur;
+import modele.dao.AuthentificationDAO;
 
 public class Page_Authentification extends JFrame {
 	
@@ -144,68 +145,28 @@ public class Page_Authentification extends JFrame {
 	 * Initialise tous les écouteurs d'événements pour les interactions utilisateur
 	 */
 	private void initializeEventListeners() {
+	    final AuthentificationControleur controleur = new AuthentificationControleur();
+	    
 	    // Écouteur pour le bouton de connexion
 	    btnLogin.addActionListener(new ActionListener() {
 	        public void actionPerformed(ActionEvent e) {
-	            // Récupération des valeurs saisies
-	            String email = txtEmail.getText().trim(); // trim() enlève les espaces inutiles
-	            String password = new String(txtPassword.getPassword()); // Conversion du char[] en String
-	            
-	            // Vérification des identifiants avec la base de données
-	            boolean authentifie = AuthentificationDAO.verifierUtilisateur(email, password);
-	            
-	            if (authentifie) {
-	                // Récupération des informations supplémentaires de l'utilisateur
-	                String[] infosUtilisateur = AuthentificationDAO.getInfosUtilisateur(email);
-	                
-	                if (infosUtilisateur != null) {
-	                    String nom = infosUtilisateur[0];
-	                    String prenom = infosUtilisateur[1];
-	                    
-	                    // Redirection vers la page principale après connexion réussie
-	                    Page_Principale pagePrincipale = new Page_Principale(email);
-	                    pagePrincipale.setVisible(true);
-	                    dispose(); // Ferme la page de connexion
-	                    
-	                } else {
-	                    // Erreur si les infos utilisateur n'ont pas pu être récupérées
-	                    JOptionPane.showMessageDialog(null, 
-	                        "Erreur lors de la récupération des informations", 
-	                        "Erreur", 
-	                        JOptionPane.ERROR_MESSAGE);
-	                }
-	                
-	            } else {
-	                // Message d'erreur en cas d'identifiants incorrects
-	                JOptionPane.showMessageDialog(null, 
-	                    "Email ou mot de passe incorrect", 
-	                    "Erreur d'authentification", 
-	                    JOptionPane.ERROR_MESSAGE);
-	                    
-	                // Réinitialisation du champ mot de passe et focus sur l'email
-	                txtPassword.setText("");
-	                txtEmail.requestFocus();
-	            }
+	            String email = txtEmail.getText().trim();
+	            String password = new String(txtPassword.getPassword());
+	            controleur.authentifierUtilisateur(email, password, Page_Authentification.this);
 	        }
 	    });
 	    
 	    // Écouteur pour le lien "Mot de passe oublié"
 	    lblForgotPassword.addMouseListener(new MouseAdapter() {
 	        public void mouseClicked(MouseEvent e) {
-	            // Redirection vers la page de modification de mot de passe
-	            Page_Modif_MDP modifMdpPage = new Page_Modif_MDP();
-	            modifMdpPage.setVisible(true);
-	            dispose(); // Ferme la page actuelle
+	            controleur.redirigerVersModifMDP(Page_Authentification.this);
 	        }
 	    });
 	    
 	    // Écouteur pour le lien "Créer un compte"
 	    lblCreateAccount.addMouseListener(new MouseAdapter() {
 	        public void mouseClicked(MouseEvent e) {
-	            // Redirection vers la page d'inscription
-	            Page_Inscription registrationPage = new Page_Inscription();
-	            registrationPage.setVisible(true);
-	            dispose(); // Ferme la page actuelle
+	            controleur.redirigerVersInscription(Page_Authentification.this);
 	        }
 	    });
 	}

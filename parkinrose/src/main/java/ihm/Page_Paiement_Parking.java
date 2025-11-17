@@ -10,14 +10,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 
-import dao.PaiementDAO;
-import dao.StationnementDAO;
-import dao.ParkingDAO;
 import modele.Paiement;
 import modele.Stationnement;
 import modele.Parking;
 import modele.Usager;
-import dao.UsagerDAO;
+import modele.dao.PaiementDAO;
+import modele.dao.ParkingDAO;
+import modele.dao.StationnementDAO;
+import modele.dao.UsagerDAO;
 
 public class Page_Paiement_Parking extends JFrame {
     

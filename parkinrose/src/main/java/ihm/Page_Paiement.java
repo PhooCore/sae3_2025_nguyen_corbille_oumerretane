@@ -1,16 +1,19 @@
 package ihm;
 
 import javax.swing.*;
+
+import controleur.PaiementControleur;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.time.LocalDateTime;
 
-import dao.PaiementDAO;
-import dao.StationnementDAO;
 import modele.Paiement;
 import modele.Usager;
-import dao.UsagerDAO;
+import modele.dao.PaiementDAO;
+import modele.dao.StationnementDAO;
+import modele.dao.UsagerDAO;
 
 public class Page_Paiement extends JFrame {
     
@@ -27,7 +30,7 @@ public class Page_Paiement extends JFrame {
     private int dureeMinutes;                 // Durée en minutes (pour voirie)
     private Integer idStationnement;          // ID du stationnement existant (null si nouveau)
     private LocalDateTime heureDepart;        // Heure de départ (pour les parkings)
-    
+    private PaiementControleur controleur;
     // === CHAMPS DU FORMULAIRE DE PAIEMENT ===
     private JTextField txtNomCarte;           // Nom porté sur la carte
     private JTextField txtNumeroCarte;        // Numéro de la carte bancaire
@@ -49,22 +52,22 @@ public class Page_Paiement extends JFrame {
      * Constructeur principal pour tous les types de stationnements - ADAPTÉ
      */
     public Page_Paiement(double montant, String emailUtilisateur, String typeVehicule, 
-                        String plaqueImmatriculation, String idTarification, String nomZone,
-                        int dureeHeures, int dureeMinutes, Integer idStationnement, LocalDateTime heureDepart) {
-        this.montant = montant;
-        this.emailUtilisateur = emailUtilisateur;
-        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
-        this.typeVehicule = typeVehicule;
-        this.plaqueImmatriculation = plaqueImmatriculation;
-        this.idZone = idTarification; 
-        this.nomZone = nomZone;               
-        this.dureeHeures = dureeHeures;
-        this.dureeMinutes = dureeMinutes;
-        this.idStationnement = idStationnement;
-        this.heureDepart = heureDepart;
-        
-        initialisePage();
-    }
+            String plaqueImmatriculation, String idTarification, String nomZone,
+        int dureeHeures, int dureeMinutes, Integer idStationnement, LocalDateTime heureDepart) {
+		this.montant = montant;
+		this.emailUtilisateur = emailUtilisateur;
+		this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+		this.typeVehicule = typeVehicule;
+		this.plaqueImmatriculation = plaqueImmatriculation;
+		this.idZone = idTarification;
+		this.nomZone = nomZone;
+		this.dureeHeures = dureeHeures;
+		this.dureeMinutes = dureeMinutes;
+		this.idStationnement = idStationnement;
+		this.heureDepart = heureDepart;
+		this.controleur = new PaiementControleur(emailUtilisateur); // Initialisation du contrôleur
+		initialisePage();
+	}
     
     /**
      * Initialise l'interface utilisateur de la page de paiement
@@ -209,103 +212,43 @@ public class Page_Paiement extends JFrame {
             return;
         }
         
-        try {
-            // Création de l'objet Paiement avec les données du formulaire
-            Paiement paiement = new Paiement(
+        boolean succes = false;
+        
+        if (idStationnement == null) {
+            // Paiement pour nouveau stationnement voirie
+            succes = controleur.traiterPaiementVoirie(
                 txtNomCarte.getText().trim(),
                 txtNumeroCarte.getText().trim(),
                 txtCVV.getText().trim(),
                 montant,
-                usager.getIdUsager()
+                typeVehicule,
+                plaqueImmatriculation,
+                idZone,
+                dureeHeures,
+                dureeMinutes,
+                this
             );
-            
-            // Enregistrement du paiement en base de données
-            boolean paiementReussi = PaiementDAO.enregistrerPaiement(paiement);
-            
-            if (paiementReussi) {
-                boolean operationReussie = false;
-                
-                if (idStationnement == null) {
-                    operationReussie = StationnementDAO.creerStationnementVoirie(
-                        usager.getIdUsager(),
-                        typeVehicule,
-                        plaqueImmatriculation,
-                        idZone,      
-                        dureeHeures,
-                        dureeMinutes,
-                        montant,
-                        paiement.getIdPaiement()
-                    );
-                } else {
-                    operationReussie = StationnementDAO.terminerStationnementParking(
-                        idStationnement,
-                        heureDepart,
-                        montant,
-                        paiement.getIdPaiement()
-                    );
-                }
-                
-                if (operationReussie) {
-                    afficherConfirmation();
-                    retourAccueil();
-                } else {
-                    JOptionPane.showMessageDialog(this,
-                        "Erreur lors de la mise à jour du stationnement",
-                        "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
-                }
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Erreur lors de l'enregistrement du paiement",
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
-            }
-            
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                "Erreur lors du traitement du paiement: " + e.getMessage(),
-                "Erreur",
-                JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Affiche un message de confirmation adapté au type de stationnement - ADAPTÉ
-     */
-    private void afficherConfirmation() {
-        String message;
-        if (idStationnement == null) {
-            // Message pour nouveau stationnement voirie
-            message = "Paiement effectué avec succès !\n" +
-                     "Stationnement confirmé pour " + plaqueImmatriculation + "\n" +
-                     "Zone: " + nomZone + "\n" +  
-                     "Durée: " + dureeHeures + "h" + dureeMinutes + "min\n" +
-                     "Montant: " + String.format("%.2f", montant) + " €";
         } else {
-            // Message pour stationnement parking terminé
-            message = "Paiement effectué avec succès !\n" +
-                     "Stationnement terminé pour " + plaqueImmatriculation + "\n" +
-                     "Parking: " + nomZone + "\n" +  
-                     "Montant: " + String.format("%.2f", montant) + " €\n" +
-                     "Vous pouvez quitter le parking.";
+            // Paiement pour stationnement parking existant
+            succes = controleur.traiterPaiementParking(
+                txtNomCarte.getText().trim(),
+                txtNumeroCarte.getText().trim(),
+                txtCVV.getText().trim(),
+                montant,
+                idStationnement,
+                heureDepart,
+                this
+            );
         }
         
-        JOptionPane.showMessageDialog(this,
-            message,
-            "Paiement réussi",
-            JOptionPane.INFORMATION_MESSAGE);
+        if (!succes) {
+            // En cas d'échec, rester sur la page pour correction
+            return;
+        }
+        // En cas de succès, le contrôleur gère la redirection
     }
     
-    /**
-     * Retourne à la page principale après paiement réussi
-     */
-    private void retourAccueil() {
-        Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-        pagePrincipale.setVisible(true);
-        this.dispose();
-    }
-    
+
     /**
      * Valide tous les champs du formulaire de paiement
      */

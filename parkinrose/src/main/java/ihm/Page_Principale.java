@@ -7,12 +7,12 @@ import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.ArrayList;
 
-import dao.StationnementDAO;
-import dao.ParkingDAO;
-import dao.UsagerDAO;
 import modele.Stationnement;
 import modele.Parking;
 import modele.Usager;
+import modele.dao.ParkingDAO;
+import modele.dao.StationnementDAO;
+import modele.dao.UsagerDAO;
 
 public class Page_Principale extends JFrame {
     

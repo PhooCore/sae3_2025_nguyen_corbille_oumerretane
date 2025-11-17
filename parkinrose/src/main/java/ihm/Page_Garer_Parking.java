@@ -1,6 +1,9 @@
 package ihm;
 
 import javax.swing.*;
+
+import controleur.StationnementControleur;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,12 +12,13 @@ import java.awt.event.ItemListener;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import dao.StationnementDAO;
-import dao.ParkingDAO;
-import dao.UsagerDAO;
 import modele.Stationnement;
 import modele.Parking;
 import modele.Usager;
+import modele.dao.ParkingDAO;
+import modele.dao.StationnementDAO;
+import modele.dao.UsagerDAO;
+
 import java.util.List;
 
 public class Page_Garer_Parking extends JFrame {
@@ -30,6 +34,7 @@ public class Page_Garer_Parking extends JFrame {
     private List<Parking> listeParkings;
     private String emailUtilisateur;
     private Usager usager;
+    private StationnementControleur controleur;
 
     /**
      * Constructeur de la page de stationnement en parking
@@ -38,6 +43,7 @@ public class Page_Garer_Parking extends JFrame {
     public Page_Garer_Parking(String email) {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
+        this.controleur = new StationnementControleur(email);
         initialisePage();
         initialiseDonnees();
         initializeEventListeners();
@@ -235,9 +241,23 @@ public class Page_Garer_Parking extends JFrame {
         JButton btnReserver = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(1);
         btnReserver.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (validerFormulaire()) {
-                    reserverPlace();
+                // Validation simplifiée directement ici
+                if (lblPlaque.getText().equals("Non définie") || lblPlaque.getText().trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(Page_Garer_Parking.this,
+                        "Veuillez définir une plaque d'immatriculation",
+                        "Plaque manquante",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
                 }
+                
+                // Vérification stationnement actif via contrôleur
+                if (controleur.getStationnementActif() != null) {
+                    // Le contrôleur affichera le message d'erreur dans reserverPlace()
+                    reserverPlace();
+                    return;
+                }
+                
+                reserverPlace();
             }
         });
     }
@@ -255,55 +275,6 @@ public class Page_Garer_Parking extends JFrame {
         }
     }
     
-    /**
-     * Valide le formulaire avant réservation
-     * @return true si le formulaire est valide, false sinon
-     */
-    private boolean validerFormulaire() {
-        // Vérifier que la plaque est définie
-        if (lblPlaque.getText().equals("Non définie") || lblPlaque.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Veuillez définir une plaque d'immatriculation",
-                "Plaque manquante",
-                JOptionPane.WARNING_MESSAGE);
-            return false;
-        }
-        
-        // Vérifier si l'utilisateur a déjà un stationnement actif
-        Stationnement stationnementActif = StationnementDAO.getStationnementActifByUsager(usager.getIdUsager());
-        if (stationnementActif != null) {
-            String message = "Vous avez déjà un stationnement " + stationnementActif.getTypeStationnement() + " actif !\n\n" +
-                            "Véhicule: " + stationnementActif.getTypeVehicule() + " - " + stationnementActif.getPlaqueImmatriculation() + "\n";
-            
-            if (stationnementActif.estVoirie()) {
-                message += "Zone: " + stationnementActif.getZone() + "\n" +
-                          "Début: " + stationnementActif.getDateCreation().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-            } else if (stationnementActif.estParking()) {
-                message += "Parking: " + stationnementActif.getZone() + "\n" +
-                          "Arrivée: " + stationnementActif.getHeureArrivee().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-            }
-            
-            message += "\n\nVeuillez terminer ce stationnement avant d'en créer un nouveau.";
-            
-            JOptionPane.showMessageDialog(this, message, "Stationnement actif", JOptionPane.WARNING_MESSAGE);
-            return false;
-        }
-        
-        // Vérifier qu'il reste des places disponibles
-        int index = comboParking.getSelectedIndex();
-        if (index >= 0 && index < listeParkings.size()) {
-            Parking parking = listeParkings.get(index);
-            if (parking.getPlacesDisponibles() <= 0) {
-                JOptionPane.showMessageDialog(this,
-                    "Aucune place disponible dans ce parking",
-                    "Parking complet",
-                    JOptionPane.WARNING_MESSAGE);
-                return false;
-            }
-        }
-        
-        return true;
-    }
     
     /**
      * Effectue la réservation de la place de parking
@@ -313,51 +284,19 @@ public class Page_Garer_Parking extends JFrame {
         if (index >= 0 && index < listeParkings.size()) {
             Parking parking = listeParkings.get(index);
             
-            // Récapitulatif de la réservation
-            String message = "Réservation confirmée :\n\n" +
-                "Nom: " + usager.getNomUsager() + "\n" +
-                "Prénom: " + usager.getPrenomUsager() + "\n" +
-                "Email: " + usager.getMailUsager() + "\n" +
-                "Véhicule: " + getTypeVehicule() + " - " + lblPlaque.getText() + "\n" +
-                "Parking: " + parking.getLibelleParking() + "\n" +
-                "Adresse: " + parking.getAdresseParking() + "\n" +
-                "Heure d'arrivée: " + lblHeureArrivee.getText() + "\n\n" +
-                "Le paiement sera effectué à la sortie en fonction de la durée réelle.";
+            // Utilisation du contrôleur pour préparer le stationnement
+            boolean succes = controleur.preparerStationnementParking(
+                getTypeVehicule(),
+                lblPlaque.getText(),
+                parking.getIdParking(),
+                this
+            );
             
-            int choix = JOptionPane.showConfirmDialog(this,
-                message + "\n\nConfirmer la réservation ?",
-                "Confirmation de réservation",
-                JOptionPane.YES_NO_OPTION);
-            
-            if (choix == JOptionPane.YES_OPTION) {
-             
-            	boolean succes = StationnementDAO.creerStationnementParking(
-            		    usager.getIdUsager(), 
-            		    getTypeVehicule(), 
-            		    lblPlaque.getText(),
-            		    parking.getIdParking(), // L'ID du parking
-            		    LocalDateTime.now()
-            		);
-                
-                if (succes) {                    
-                    JOptionPane.showMessageDialog(this,
-                        "Réservation confirmée !\n\n" +
-                        "Votre place est réservée dans le parking " + parking.getLibelleParking() + ".\n" +
-                        "N'oubliez pas de valider votre sortie pour le paiement.",
-                        "Réservation réussie",
-                        JOptionPane.INFORMATION_MESSAGE);
-                    
-                    // Retour à la page principale
-                    Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-                    pagePrincipale.setVisible(true);
-                    dispose();
-                } else {
-                    JOptionPane.showMessageDialog(this,
-                        "Erreur lors de la réservation. Veuillez réessayer.",
-                        "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
-                }
+            if (succes) {
+                // Le contrôleur gère la redirection et les messages
+                return;
             }
+            // En cas d'échec, rester sur la page
         }
     }
     

@@ -1,6 +1,7 @@
-package dao;
+package modele.dao;
 
 import modele.Parking;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;

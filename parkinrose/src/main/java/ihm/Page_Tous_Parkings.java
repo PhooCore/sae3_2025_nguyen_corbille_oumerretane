@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
 import modele.Parking;
-import dao.ParkingDAO;
-import dao.TarifParkingDAO;
+import modele.dao.ParkingDAO;
+import modele.dao.TarifParkingDAO;
 
 public class Page_Tous_Parkings extends JFrame {
     

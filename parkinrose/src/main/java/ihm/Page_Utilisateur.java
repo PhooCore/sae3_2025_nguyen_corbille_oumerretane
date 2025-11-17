@@ -1,16 +1,20 @@
 package ihm;
 
 import javax.swing.*;
+
+import controleur.UtilisateurControleur;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import dao.UsagerDAO;
-import dao.ZoneDAO;
-import dao.PaiementDAO;
-import dao.ParkingDAO;
-import dao.StationnementDAO;
+
 import modele.Usager;
 import modele.Zone;
+import modele.dao.PaiementDAO;
+import modele.dao.ParkingDAO;
+import modele.dao.StationnementDAO;
+import modele.dao.UsagerDAO;
+import modele.dao.ZoneDAO;
 import modele.Paiement;
 import modele.Parking;
 import modele.Stationnement;
@@ -25,17 +29,17 @@ public class Page_Utilisateur extends JFrame {
     private static final long serialVersionUID = 1L;
     private String emailUtilisateur;  // Email de l'utilisateur connecté
     private Usager usager;            // Objet utilisateur contenant les informations personnelles
-
+    private UtilisateurControleur controleur;
     /**
      * Constructeur de la page utilisateur
      * @param email l'email de l'utilisateur connecté
      */
     public Page_Utilisateur(String email) {
         this.emailUtilisateur = email;
-        this.usager = UsagerDAO.getUsagerByEmail(email); // Récupération des données utilisateur
-        initialisePage(); // Initialisation de l'interface
+        this.usager = UsagerDAO.getUsagerByEmail(email);
+        this.controleur = new UtilisateurControleur(email);
+        initialisePage();
     }
-    
     /**
      * Initialise l'interface utilisateur de la page
      * Structure : Titre + Système d'onglets + Bouton retour
@@ -103,21 +107,20 @@ public class Page_Utilisateur extends JFrame {
         
         // === BOUTONS D'ACTION ===
         JButton btnModifierMdp = new JButton("Modifier le mot de passe");
-        btnModifierMdp.addActionListener(e -> modifierMotDePasse());
-        
+        btnModifierMdp.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+        btnModifierMdp.addActionListener(e -> controleur.redirigerVersModificationMDP(Page_Utilisateur.this));
+
         JButton btnHistorique = new JButton("Voir l'historique des stationnements");
-        btnHistorique.addActionListener(e -> {
-            // Ouverture de la page dédiée à l'historique des stationnements
-            Page_Historique_Stationnements pageHistorique = new Page_Historique_Stationnements(emailUtilisateur);
-            pageHistorique.setVisible(true);
-        });
-        
+        btnHistorique.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+        btnHistorique.addActionListener(e -> controleur.redirigerVersHistoriqueStationnements(Page_Utilisateur.this));
+
         JButton btnDeconnexion = new JButton("Déconnexion");
-        btnDeconnexion.setBackground(new Color(220, 80, 80)); // Rouge
+        btnDeconnexion.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+        btnDeconnexion.setBackground(new Color(220, 80, 80));
         btnDeconnexion.setForeground(Color.WHITE);
-        btnDeconnexion.addActionListener(e -> deconnexion());
+        btnDeconnexion.addActionListener(e -> controleur.deconnecterUtilisateur(Page_Utilisateur.this));
         
-        // Ajout des boutons avec espacement
+        // AJOUT DES BOUTONS AU PANEL (manquant dans votre code)
         panel.add(btnModifierMdp);
         panel.add(Box.createVerticalStrut(10)); // Espacement entre boutons
         panel.add(btnHistorique);
@@ -126,7 +129,6 @@ public class Page_Utilisateur extends JFrame {
         
         return panel;
     }
-    
     /**
      * Crée l'onglet de l'historique des paiements
      * @return JPanel configuré pour l'onglet Historique des paiements

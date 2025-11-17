@@ -5,10 +5,10 @@ import java.awt.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import dao.StationnementDAO;
 import modele.Stationnement;
 import modele.Usager;
-import dao.UsagerDAO;
+import modele.dao.StationnementDAO;
+import modele.dao.UsagerDAO;
 
 
 public class Page_Historique_Stationnements extends JFrame {

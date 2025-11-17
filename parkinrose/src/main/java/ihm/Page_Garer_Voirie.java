@@ -1,6 +1,9 @@
 package ihm;
 
 import javax.swing.*;
+
+import controleur.StationnementControleur;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,11 +12,10 @@ import java.awt.event.ItemListener;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-
-import dao.StationnementDAO;
-import dao.UsagerDAO;
-import dao.ZoneDAO;
 import modele.Zone;
+import modele.dao.StationnementDAO;
+import modele.dao.UsagerDAO;
+import modele.dao.ZoneDAO;
 import modele.Usager;
 import modele.Stationnement;
 import java.util.List;
@@ -30,10 +32,12 @@ public class Page_Garer_Voirie extends JFrame {
     private List<Zone> zones;
     private String emailUtilisateur;
     private Usager usager;
+    private StationnementControleur controleur;
 
     public Page_Garer_Voirie(String email) {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
+        this.controleur = new StationnementControleur(email); // Initialisation du contrôleur
         initialisePage();
         initialiseDonnees();
         initializeEventListeners();
@@ -207,9 +211,21 @@ public class Page_Garer_Voirie extends JFrame {
         JButton btnValider = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(1);
         btnValider.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (validerFormulaire()) {
-                    afficherConfirmation();
+                // Validation simplifiée directement ici
+                if (lblPlaque.getText().equals("Non définie") || lblPlaque.getText().trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(Page_Garer_Voirie.this,
+                        "Veuillez définir une plaque d'immatriculation",
+                        "Plaque manquante",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
                 }
+                
+                // Vérification stationnement actif via contrôleur
+                if (controleur.getStationnementActif() != null) {
+                    // Le contrôleur affichera le message d'erreur dans afficherConfirmation()
+                }
+                
+                afficherConfirmation();
             }
         });
     }
@@ -234,62 +250,6 @@ public class Page_Garer_Voirie extends JFrame {
         }
     }
     
-    private boolean validerFormulaire() {
-        if (lblPlaque.getText().equals("Non définie") || lblPlaque.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Veuillez définir une plaque d'immatriculation",
-                "Plaque manquante",
-                JOptionPane.WARNING_MESSAGE);
-            return false;
-        }
-        
-        Stationnement stationnementActif = StationnementDAO.getStationnementActifByUsager(usager.getIdUsager());
-        if (stationnementActif != null) {
-            String message = "Vous avez déjà un stationnement " + stationnementActif.getTypeStationnement() + " actif !\n\n" +
-                            "Véhicule: " + stationnementActif.getTypeVehicule() + " - " + stationnementActif.getPlaqueImmatriculation() + "\n";
-            
-            if (stationnementActif.estVoirie()) {
-                message += "Zone: " + stationnementActif.getZone() + "\n" +
-                          "Début: " + stationnementActif.getDateCreation().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-            } else if (stationnementActif.estParking()) {
-                message += "Parking: " + stationnementActif.getZone() + "\n" +
-                          "Arrivée: " + stationnementActif.getHeureArrivee().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-            }
-            
-            message += "\n\nVeuillez terminer ce stationnement avant d'en créer un nouveau.";
-            
-            JOptionPane.showMessageDialog(this, message, "Stationnement actif", JOptionPane.WARNING_MESSAGE);
-            return false;
-        }
-        
-        if (!validerDureeMaximale()) {
-            return false;
-        }
-        
-        return true;
-    }
-    
-    private boolean validerDureeMaximale() {
-        int heures = Integer.parseInt(comboHeures.getSelectedItem().toString());
-        int minutes = Integer.parseInt(comboMinutes.getSelectedItem().toString());
-        int dureeTotaleMinutes = (heures * 60) + minutes;
-        
-        int index = comboZone.getSelectedIndex();
-        if (index >= 0 && index < zones.size()) {
-            Zone zone = zones.get(index);
-            if (dureeTotaleMinutes > zone.getDureeMaxMinutes()) {
-                JOptionPane.showMessageDialog(this,
-                    "Durée maximale dépassée pour " + zone.getLibelleZone() +
-                    " (max: " + formatDuree(zone.getDureeMaxMinutes()) + ")",
-                    "Erreur",
-                    JOptionPane.WARNING_MESSAGE);
-                return false;
-            }
-        }
-        
-        return true;
-    }
-    
     private String formatDuree(int minutes) {
         int heures = minutes / 60;
         int mins = minutes % 60;
@@ -299,15 +259,14 @@ public class Page_Garer_Voirie extends JFrame {
             return heures + "h" + mins + "min";
         }
     }
-    
     private void afficherConfirmation() {
         int index = comboZone.getSelectedIndex();
         String idZone = "";
         String nomZone = "";
-        Zone zoneSelectionnee = null;  // Déclarer la variable ici
+        Zone zoneSelectionnee = null;
         
         if (index >= 0 && index < zones.size()) {
-            zoneSelectionnee = zones.get(index);  // Utiliser un nom différent
+            zoneSelectionnee = zones.get(index);
             idZone = zoneSelectionnee.getIdZone();
             nomZone = zoneSelectionnee.getLibelleZone();
         }
@@ -330,18 +289,21 @@ public class Page_Garer_Voirie extends JFrame {
             String coutText = lblCout.getText().replace(" €", "").replace(",", ".");
             double montant = Double.parseDouble(coutText);
             
-            Page_Paiement pagePaiement = new Page_Paiement(
-                montant,
-                emailUtilisateur,
+            // Utilisation du contrôleur pour préparer le stationnement
+            boolean succes = controleur.preparerStationnementVoirie(
                 getTypeVehicule(),
                 lblPlaque.getText(),
-                idZone,  
-                nomZone,
+                idZone,
                 Integer.parseInt(comboHeures.getSelectedItem().toString()),
-                Integer.parseInt(comboMinutes.getSelectedItem().toString())
+                Integer.parseInt(comboMinutes.getSelectedItem().toString()),
+                this
             );
-            pagePaiement.setVisible(true);
-            dispose();
+            
+            if (!succes) {
+                // En cas d'échec, rester sur la page
+                return;
+            }
+            // En cas de succès, le contrôleur gère la redirection
         } else {
             Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
             pagePrincipale.setVisible(true);

@@ -6,7 +6,8 @@ import java.awt.event.ActionListener;
 
 import javax.swing.*;
 
-import dao.ModifMdpDAO;
+import controleur.UtilisateurControleur;
+import modele.dao.ModifMdpDAO;
 
 public class Page_Modif_MDP extends JFrame {
 	/**
@@ -18,7 +19,7 @@ public class Page_Modif_MDP extends JFrame {
 	private JTextField txtEmail;
 	private JPasswordField passwordFieldNouveau;
 	private JPasswordField passwordFieldConfirmer;
-
+	private Page_Utilisateur pageParente;
 	/**
 	 * Constructeur de la page de modification de mot de passe
 	 * Permet à un utilisateur de réinitialiser son mot de passe
@@ -166,15 +167,40 @@ public class Page_Modif_MDP extends JFrame {
 		// Espace flexible pour pousser le contenu vers le haut
 		mainPanel.add(Box.createVerticalGlue());
 	}
+	/**
+	 * Constructeur pour un utilisateur déjà connecté
+	 * @param email l'email de l'utilisateur connecté
+	 * @param pageParente la page utilisateur parente
+	 */
+	public Page_Modif_MDP(String email, Page_Utilisateur pageParente) {
+	    this(); // Appel du constructeur par défaut
+	    this.pageParente = pageParente; // Stocke la référence à la page parente
+	    if (email != null) {
+	        txtEmail.setText(email);
+	        txtEmail.setEditable(false); // Empêche la modification de l'email
+	    }
+	}
 
 	/**
-	 * Retourne à la page d'authentification
-	 * Appelé quand l'utilisateur clique sur "Retour"
+	 * Retourne à la page appropriée
 	 */
 	protected void retourProfil() {
-		Page_Authentification loginPage = new Page_Authentification();
-		loginPage.setVisible(true);
-		this.dispose(); // Ferme la page actuelle
+	    if (pageParente != null) {
+	        // Si on a une page parente, on retourne vers elle
+	        pageParente.setVisible(true); // Rend la page parente visible
+	        this.dispose(); // Ferme cette page
+	    } else if (txtEmail.getText() != null && !txtEmail.getText().trim().isEmpty() && !txtEmail.isEditable()) {
+	        // L'utilisateur était connecté mais pas de page parente
+	        // On crée une nouvelle page utilisateur
+	        Page_Utilisateur pageUtilisateur = new Page_Utilisateur(txtEmail.getText());
+	        pageUtilisateur.setVisible(true);
+	        this.dispose();
+	    } else {
+	        // L'utilisateur n'était pas connecté
+	        Page_Authentification loginPage = new Page_Authentification();
+	        loginPage.setVisible(true);
+	        this.dispose();
+	    }
 	}
 
 	/**
@@ -182,69 +208,69 @@ public class Page_Modif_MDP extends JFrame {
 	 * Gère tout le processus de modification sécurisé
 	 */
 	protected void modifierMotDePasse() {
-		// Récupération et nettoyage des données
-		String email = txtEmail.getText().trim();
-		String nouveauMotDePasse = new String(passwordFieldNouveau.getPassword());
-		String confirmerMotDePasse = new String(passwordFieldConfirmer.getPassword());
+	    UtilisateurControleur controleur = new UtilisateurControleur(null); // Pas d'email car pas encore connecté
+	    
+	    String email = txtEmail.getText().trim();
+	    String nouveauMotDePasse = new String(passwordFieldNouveau.getPassword());
+	    String confirmerMotDePasse = new String(passwordFieldConfirmer.getPassword());
+	    
+	    // Pour cette page spécifique, on utilise directement le DAO
+	    // car l'utilisateur n'est pas forcément connecté
+	    ModifMdpDAO dao = new ModifMdpDAO();
+	    
+	    // Validation des champs obligatoires
+	    if (email.isEmpty() || nouveauMotDePasse.isEmpty() || confirmerMotDePasse.isEmpty()) {
+	        JOptionPane.showMessageDialog(this, 
+	            "Veuillez remplir tous les champs", 
+	            "Erreur", 
+	            JOptionPane.ERROR_MESSAGE);
+	        return;
+	    }
 
-		// === VALIDATION DES CHAMPS OBLIGATOIRES ===
-		if (email.isEmpty() || nouveauMotDePasse.isEmpty() || confirmerMotDePasse.isEmpty()) {
-			JOptionPane.showMessageDialog(this, 
-				"Veuillez remplir tous les champs", 
-				"Erreur", 
-				JOptionPane.ERROR_MESSAGE);
-			return;
-		}
+	    // Validation de la correspondance des mots de passe
+	    if (!nouveauMotDePasse.equals(confirmerMotDePasse)) {
+	        JOptionPane.showMessageDialog(this, 
+	            "Les mots de passe ne correspondent pas", 
+	            "Erreur", 
+	            JOptionPane.ERROR_MESSAGE);
+	        return;
+	    }
 
-		// === VALIDATION DE LA CORRESPONDANCE DES MOTS DE PASSE ===
-		if (!nouveauMotDePasse.equals(confirmerMotDePasse)) {
-			JOptionPane.showMessageDialog(this, 
-				"Les mots de passe ne correspondent pas", 
-				"Erreur", 
-				JOptionPane.ERROR_MESSAGE);
-			return;
-		}
+	    // Validation de la longueur minimale
+	    if (nouveauMotDePasse.length() < 6) {
+	        JOptionPane.showMessageDialog(this, 
+	            "Le mot de passe doit contenir au moins 6 caractères", 
+	            "Erreur", 
+	            JOptionPane.ERROR_MESSAGE);
+	        return;
+	    }
 
-		// === VALIDATION DE LA LONGUEUR MINIMALE ===
-		if (nouveauMotDePasse.length() < 6) {
-			JOptionPane.showMessageDialog(this, 
-				"Le mot de passe doit contenir au moins 6 caractères", 
-				"Erreur", 
-				JOptionPane.ERROR_MESSAGE);
-			return;
-		}
+	    // Vérification de l'existence de l'email
+	    boolean emailExiste = dao.verifierEmailExiste(email);
+	    
+	    if (!emailExiste) {
+	        JOptionPane.showMessageDialog(this, 
+	            "Email non trouvé", 
+	            "Erreur", 
+	            JOptionPane.ERROR_MESSAGE);
+	        return;
+	    }
 
-		// === VÉRIFICATION DE L'EXISTENCE DE L'EMAIL ===
-		ModifMdpDAO dao = new ModifMdpDAO();
-		boolean emailExiste = dao.verifierEmailExiste(email);
-		
-		if (!emailExiste) {
-			JOptionPane.showMessageDialog(this, 
-				"Email non trouvé", 
-				"Erreur", 
-				JOptionPane.ERROR_MESSAGE);
-			return;
-		}
-
-		// === MODIFICATION EFFECTIVE DU MOT DE PASSE ===
-		boolean modificationReussie = dao.modifierMotDePasse(email, nouveauMotDePasse);
-		
-		if (modificationReussie) {
-			// Message de succès
-			JOptionPane.showMessageDialog(this, 
-				"Mot de passe modifié avec succès !", 
-				"Succès", 
-				JOptionPane.INFORMATION_MESSAGE);
-			
-			// Retour à la page de connexion
-			retourProfil();
-		} else {
-			// Message d'erreur en cas d'échec
-			JOptionPane.showMessageDialog(this, 
-				"Erreur lors de la modification du mot de passe", 
-				"Erreur", 
-				JOptionPane.ERROR_MESSAGE);
-		}
+	    // Modification effective du mot de passe
+	    boolean modificationReussie = dao.modifierMotDePasse(email, nouveauMotDePasse);
+	    
+	    if (modificationReussie) {
+	        JOptionPane.showMessageDialog(this, 
+	            "Mot de passe modifié avec succès !", 
+	            "Succès", 
+	            JOptionPane.INFORMATION_MESSAGE);
+	        retourProfil();
+	    } else {
+	        JOptionPane.showMessageDialog(this, 
+	            "Erreur lors de la modification du mot de passe", 
+	            "Erreur", 
+	            JOptionPane.ERROR_MESSAGE);
+	    }
 	}
 
 	public static void main(String[] args) {

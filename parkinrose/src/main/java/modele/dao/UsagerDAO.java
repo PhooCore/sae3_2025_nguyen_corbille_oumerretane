@@ -1,5 +1,6 @@
-package dao;
+package modele.dao;
 import modele.Usager;
+
 import java.sql.*;
 
 public class UsagerDAO {

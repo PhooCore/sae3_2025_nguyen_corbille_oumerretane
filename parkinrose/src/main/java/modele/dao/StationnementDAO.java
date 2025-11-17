@@ -1,6 +1,7 @@
-package dao;
+package modele.dao;
 
 import modele.Stationnement;
+
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -268,7 +269,7 @@ public class StationnementDAO {
     }
     
     /**
-     * Vérifie si un usager a déjà un stationnement actif
+     * Vérifie si un usager a un stationnement actif (pour le contrôleur)
      */
     public static boolean hasStationnementActif(int idUsager) {
         String sql = "SELECT COUNT(*) FROM Stationnement WHERE id_usager = ? AND statut = 'ACTIF'";
