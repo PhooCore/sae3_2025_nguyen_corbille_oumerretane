@@ -23,12 +23,7 @@ public class Page_Paiement_Parking extends JFrame {
     
     private static final long serialVersionUID = 1L;
     
-    // Liste des IDs des parkings avec tarif soirée
-    private static final List<String> PARKINGS_TARIF_SOIREE_IDS = Arrays.asList(
-        "P001", "P002", "P003", "P004", "P005", "P006", "P007", 
-        "P008", "P009", "P010", "P011", "P012", "P013", "P014"
-    );
-    
+
     private static final double TARIF_SOIREE = 5.90; // Forfait soirée
     
     private double montant;                   // Montant à payer calculé
@@ -62,8 +57,16 @@ public class Page_Paiement_Parking extends JFrame {
         this.stationnement = StationnementDAO.getStationnementById(idStationnement);
         
         if (stationnement != null) {
-            // Récupérer le parking par son ID depuis le stationnement
-            this.parking = ParkingDAO.getParkingById(parking.getIdParking());
+            // Récupérer l'ID du parking depuis la colonne id_zone du stationnement
+            String parkingId = stationnement.getIdTarification(); // ou stationnement.getZone()
+            this.parking = ParkingDAO.getParkingById(parkingId);
+            
+            // Debug pour vérifier
+            System.out.println("ID Parking récupéré: " + parkingId);
+            System.out.println("Parking trouvé: " + (parking != null));
+            if (parking != null) {
+                System.out.println("Nom parking: " + parking.getLibelleParking());
+            }
         }
         
         calculerMontant();
@@ -109,28 +112,20 @@ public class Page_Paiement_Parking extends JFrame {
     /**
      * Vérifie si le stationnement est éligible au tarif soirée
      */
+    /**
+     * Vérifie si le stationnement est éligible au tarif soirée
+     */
     private boolean estEligibleTarifSoiree(LocalDateTime arrivee, LocalDateTime depart) {
-        // Vérifier si le parking propose le tarif soirée via son ID
-        if (!PARKINGS_TARIF_SOIREE_IDS.contains(parking.getIdParking())) {
+        if (parking == null || !parking.hasTarifSoiree()) {
             return false;
         }
         
-        // Vérifier si l'arrivée est entre 19h30 et 22h
+        // Le reste de votre logique pour les horaires...
         boolean arriveeValide = (arrivee.getHour() == 19 && arrivee.getMinute() >= 30) || 
                                (arrivee.getHour() >= 20 && arrivee.getHour() < 22);
         
-        // Vérifier si le départ est avant 3h le lendemain
-        boolean departValide;
-        if (depart.getHour() < 3) {
-            // Départ le lendemain avant 3h
-            departValide = true;
-        } else if (depart.getHour() == 3 && depart.getMinute() == 0) {
-            // Départ exactement à 3h00
-            departValide = true;
-        } else {
-            // Départ après 3h
-            departValide = false;
-        }
+        boolean departValide = depart.getHour() < 3 || 
+                              (depart.getHour() == 3 && depart.getMinute() == 0);
         
         return arriveeValide && departValide;
     }
@@ -247,9 +242,9 @@ public class Page_Paiement_Parking extends JFrame {
             infoPanel.add(lblTypeTarif);
             infoPanel.add(lblTarifHoraire);
             
-            // Afficher une info si le parking propose le tarif soirée
-            if (PARKINGS_TARIF_SOIREE_IDS.contains(parking.getIdParking())) {
-                JLabel lblInfoSoiree = new JLabel("✓ Ce parking propose le forfait soirée à " + TARIF_SOIREE + " €");
+         // Afficher une info si le parking propose le tarif soirée
+            if (parking.hasTarifSoiree()) {
+                JLabel lblInfoSoiree = new JLabel("Ce parking propose le forfait soirée à " + TARIF_SOIREE + " €");
                 lblInfoSoiree.setForeground(new Color(0, 100, 0));
                 lblInfoSoiree.setFont(new Font("Arial", Font.ITALIC, 12));
                 infoPanel.add(lblInfoSoiree);

@@ -5,10 +5,14 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import dao.UsagerDAO;
+import dao.ZoneDAO;
 import dao.PaiementDAO;
+import dao.ParkingDAO;
 import dao.StationnementDAO;
 import modele.Usager;
+import modele.Zone;
 import modele.Paiement;
+import modele.Parking;
 import modele.Stationnement;
 import java.util.List;
 
@@ -186,7 +190,6 @@ public class Page_Utilisateur extends JFrame {
         
         return panel;
     }
-    
     /**
      * Crée l'onglet de l'historique des stationnements
      * @return JPanel configuré pour l'onglet Historique des stationnements
@@ -215,9 +218,22 @@ public class Page_Utilisateur extends JFrame {
             // Colonne 3: Véhicule (type + plaque)
             donnees[i][2] = s.getTypeVehicule() + " - " + s.getPlaqueImmatriculation();
             
-            // Colonne 4: Zone ou nom du parking
-            donnees[i][3] = s.getZone();
-            
+         // Colonne 4: Zone ou nom du parking - VERSION CORRECTE
+            String zoneId = s.getIdTarification();
+
+            if (zoneId == null || zoneId.trim().isEmpty()) {
+                donnees[i][3] = "Non spécifié";
+            } else {
+                if ("PARKING".equals(s.getTypeStationnement())) {
+                    // Récupérer le parking et utiliser son libellé directement
+                    Parking parking = ParkingDAO.getParkingById(zoneId);
+                    donnees[i][3] = (parking != null) ? parking.getLibelleParking() : zoneId;
+                } else {
+                    // Pour la voirie
+                    Zone zone = ZoneDAO.getZoneById(zoneId);
+                    donnees[i][3] = (zone != null) ? zone.getLibelleZone() : zoneId;
+                }
+            }
             // Colonne 5: Durée du stationnement (calcul différencié)
             if (s.estVoirie()) {
                 // Pour la voirie : durée planifiée

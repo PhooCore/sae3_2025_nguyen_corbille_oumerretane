@@ -45,6 +45,13 @@ public class ParkingDAO {
      * Récupère un parking par son ID
      */
     public static Parking getParkingById(String idParking) {
+        // Gérer le cas PARKING_DEFAULT
+        if ("PARKING_DEFAULT".equals(idParking)) {
+            return new Parking("PARKING_DEFAULT", "Parking par défaut", 
+                              "Adresse non spécifiée", 100, 2.50, false);
+        }
+        
+        // Logique normale pour les autres parkings
         String sql = "SELECT id_parking, libelle_parking, adresse_parking, " +
                     "nombre_places, hauteur_parking, tarif_soiree FROM Parking " +
                     "WHERE id_parking = ?";
@@ -56,7 +63,6 @@ public class ParkingDAO {
             
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    // CORRECTION : Utiliser le constructeur avec tarif_soiree
                     return new Parking(
                         rs.getString("id_parking"),
                         rs.getString("libelle_parking"),
