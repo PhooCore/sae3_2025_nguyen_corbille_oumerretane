@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JOptionPane;
+
 public class StationnementDAO {
     
     /**
@@ -50,52 +52,71 @@ public class StationnementDAO {
      */
     public static boolean creerStationnementParking(int idUsager, String typeVehicule, String plaqueImmatriculation,
                                                    String idParking, LocalDateTime heureArrivee) {
-        // CORRECTION : Ajouter id_zone avec une valeur par défaut pour les parkings
-        String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, id_zone, " +
-                    "heure_arrivee, type_stationnement, statut_paiement, statut) " +
-                    "VALUES (?, ?, ?, ?, ?, 'PARKING', 'NON_PAYE', 'ACTIF')";
         
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        Connection conn = null;
+        try {
+            conn = MySQLConnection.getConnection();
+            conn.setAutoCommit(false);
             
-            stmt.setInt(1, idUsager);
-            stmt.setString(2, typeVehicule);
-            stmt.setString(3, plaqueImmatriculation);
-            stmt.setString(4, "PARKING_DEFAULT"); // Valeur par défaut pour id_zone
-            stmt.setTimestamp(5, Timestamp.valueOf(heureArrivee));
+            // 1. Vérifier qu'il y a encore des places disponibles
+            int placesDisponibles = ParkingDAO.getPlacesDisponibles(idParking);
+            if (placesDisponibles <= 0) {
+                JOptionPane.showMessageDialog(null, "Plus de places disponibles dans ce parking", "Parking complet", JOptionPane.WARNING_MESSAGE);
+                return false;
+            }
             
-            int lignesAffectees = stmt.executeUpdate();
-            return lignesAffectees > 0;
+            // 2. Décrémenter les places disponibles
+            boolean placesDecrementees = ParkingDAO.decrementerPlacesDisponibles(idParking);
+            if (!placesDecrementees) {
+                conn.rollback();
+                JOptionPane.showMessageDialog(null, "Erreur lors de la réservation de la place", "Erreur", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
             
-        } catch (SQLException e) {
-            System.err.println("Erreur création stationnement parking: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    /**
-     * Récupère le libellé du parking depuis son ID
-     */
-    private static String getLibelleParking(String idParking) {
-        String sql = "SELECT libelle_parking FROM Parking WHERE id_parking = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            // 3. Créer le stationnement avec id_parking au lieu de id_zone
+            String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
+                        "id_parking, heure_arrivee, type_stationnement, statut_paiement, statut) " +
+                        "VALUES (?, ?, ?, ?, ?, 'PARKING', 'NON_PAYE', 'ACTIF')";
             
-            stmt.setString(1, idParking);
-            ResultSet rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                return rs.getString("libelle_parking");
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, idUsager);
+                stmt.setString(2, typeVehicule);
+                stmt.setString(3, plaqueImmatriculation);
+                stmt.setString(4, idParking); // Utiliser id_parking
+                stmt.setTimestamp(5, Timestamp.valueOf(heureArrivee));
+                
+                int lignesAffectees = stmt.executeUpdate();
+                
+                if (lignesAffectees > 0) {
+                    conn.commit();
+                    return true;
+                } else {
+                    conn.rollback();
+                    return false;
+                }
             }
             
         } catch (SQLException e) {
-            System.err.println("Erreur récupération libellé parking: " + e.getMessage());
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Erreur lors du rollback: " + ex.getMessage());
+            }
+            System.err.println("Erreur création stationnement parking: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                System.err.println("Erreur fermeture connexion: " + e.getMessage());
+            }
         }
-        
-        return null;
     }
+    
     
     /**
      * Récupère le stationnement actif d'un usager
@@ -171,28 +192,69 @@ public class StationnementDAO {
     }
     
     /**
-     * Termine un stationnement parking avec paiement
+     * Termine un stationnement parking et incrémente les places disponibles
      */
     public static boolean terminerStationnementParking(int idStationnement, LocalDateTime heureDepart, 
                                                       double cout, String idPaiement) {
-        String sql = "UPDATE Stationnement SET statut = 'TERMINE', heure_depart = ?, cout = ?, " +
-                    "id_paiement = ?, statut_paiement = 'PAYE' WHERE id_stationnement = ?";
         
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        Connection conn = null;
+        try {
+            conn = MySQLConnection.getConnection();
+            conn.setAutoCommit(false);
             
-            stmt.setTimestamp(1, Timestamp.valueOf(heureDepart));
-            stmt.setDouble(2, cout);
-            stmt.setString(3, idPaiement);
-            stmt.setInt(4, idStationnement);
+            // 1. Récupérer l'ID du parking depuis le stationnement
+            String idParking = getIdParkingFromStationnement(idStationnement);
+            if (idParking == null) {
+                conn.rollback();
+                return false;
+            }
             
-            int lignesAffectees = stmt.executeUpdate();
-            return lignesAffectees > 0;
+            // 2. Mettre à jour le stationnement
+            String sql = "UPDATE Stationnement SET statut = 'TERMINE', heure_depart = ?, cout = ?, " +
+                        "id_paiement = ?, statut_paiement = 'PAYE' WHERE id_stationnement = ?";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setTimestamp(1, Timestamp.valueOf(heureDepart));
+                stmt.setDouble(2, cout);
+                stmt.setString(3, idPaiement);
+                stmt.setInt(4, idStationnement);
+                
+                int lignesAffectees = stmt.executeUpdate();
+                
+                if (lignesAffectees > 0) {
+                    // 3. Incrémenter les places disponibles
+                    boolean placesIncrementees = ParkingDAO.incrementerPlacesDisponibles(idParking);
+                    if (placesIncrementees) {
+                        conn.commit();
+                        return true;
+                    } else {
+                        conn.rollback();
+                        return false;
+                    }
+                } else {
+                    conn.rollback();
+                    return false;
+                }
+            }
             
         } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Erreur lors du rollback: " + ex.getMessage());
+            }
             System.err.println("Erreur terminaison stationnement parking: " + e.getMessage());
             e.printStackTrace();
             return false;
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                System.err.println("Erreur fermeture connexion: " + e.getMessage());
+            }
         }
     }
     
@@ -248,7 +310,11 @@ public class StationnementDAO {
      * Récupère un stationnement par son ID
      */
     public static Stationnement getStationnementById(int idStationnement) {
-        String sql = "SELECT s.* FROM Stationnement s WHERE s.id_stationnement = ?";
+        String sql = "SELECT s.*, p.libelle_parking, z.libelle_zone " +
+                    "FROM Stationnement s " +
+                    "LEFT JOIN Parking p ON s.id_parking = p.id_parking " +
+                    "LEFT JOIN Zone z ON s.id_zone = z.id_zone " +
+                    "WHERE s.id_stationnement = ?";
         
         try (Connection conn = MySQLConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -264,7 +330,6 @@ public class StationnementDAO {
             System.err.println("Erreur récupération stationnement par ID: " + e.getMessage());
             e.printStackTrace();
         }
-        
         return null;
     }
     
@@ -382,4 +447,26 @@ public class StationnementDAO {
         
         return stationnements;
     }
+    /**
+     * Récupère l'ID du parking depuis un stationnement
+     */
+    private static String getIdParkingFromStationnement(int idStationnement) {
+        String sql = "SELECT id_parking FROM Stationnement WHERE id_stationnement = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, idStationnement);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getString("id_parking");
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération ID parking: " + e.getMessage());
+        }
+        return null;
+    }
+    
 }

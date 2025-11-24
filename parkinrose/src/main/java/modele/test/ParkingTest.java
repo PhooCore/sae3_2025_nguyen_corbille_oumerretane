@@ -1,20 +1,19 @@
 package modele.test;
 
 import org.junit.Test;
-
 import modele.Parking;
-
 import static org.junit.Assert.*;
 
 public class ParkingTest {
     
     @Test
-    public void testConstructeurAvecTarifSoiree() {
+    public void testConstructeurComplet() {
         Parking parking = new Parking(
             "PARK_CAPITOLE", 
             "Parking Capitole", 
             "Place du Capitole, 31000 Toulouse", 
             250, 
+            125,  // places_disponibles
             2.10, 
             true
         );
@@ -23,55 +22,44 @@ public class ParkingTest {
         assertEquals("Parking Capitole", parking.getLibelleParking());
         assertEquals("Place du Capitole, 31000 Toulouse", parking.getAdresseParking());
         assertEquals(250, parking.getNombrePlaces());
+        assertEquals(125, parking.getPlacesDisponibles());
         assertEquals(2.10, parking.getHauteurParking(), 0.001);
         assertTrue(parking.hasTarifSoiree());
-        assertEquals(50, parking.getPlacesDisponibles());
     }
     
     @Test
-    public void testConstructeurSansTarifSoiree() {
-        Parking parking = new Parking(
-            "PARK_SEPT_DENIERS", 
-            "Parking Relais Sept Deniers", 
-            "Avenue de Grande-Bretagne, 31300 Toulouse", 
-            500, 
-            2.80, 
-            false
-        );
+    public void testSetters() {
+        Parking parking = new Parking("ID_TEST", "Libelle Test", "Adresse Test", 200, 100, 2.5, false);
         
-        assertEquals("PARK_SEPT_DENIERS", parking.getIdParking());
-        assertFalse(parking.hasTarifSoiree());
-        assertEquals(100, parking.getPlacesDisponibles());
+        parking.setPlacesDisponibles(75);
+        assertEquals(75, parking.getPlacesDisponibles());
+        
+        parking.setNombrePlaces(300);
+        assertEquals(300, parking.getNombrePlaces());
+        
+        parking.setHauteurParking(3.0);
+        assertEquals(3.0, parking.getHauteurParking(), 0.001);
+        
+        parking.setTarifSoiree(true);
+        assertTrue(parking.hasTarifSoiree());
     }
     
     @Test
-    public void testPlacesDisponiblesCalcul() {
-        Parking petitParking = new Parking("TEST1", "Test1", "Adresse1", 50, 2.0, true);
-        assertEquals(10, petitParking.getPlacesDisponibles());
+    public void testPlacesDisponiblesLimites() {
+        Parking parkingVide = new Parking("VIDE", "Parking Vide", "Adresse", 100, 0, 2.0, true);
+        assertEquals(0, parkingVide.getPlacesDisponibles());
         
-        Parking grandParking = new Parking("TEST2", "Test2", "Adresse2", 1000, 2.5, false);
-        assertEquals(200, grandParking.getPlacesDisponibles());
+        Parking parkingPlein = new Parking("PLEIN", "Parking Plein", "Adresse", 100, 100, 2.0, true);
+        assertEquals(100, parkingPlein.getPlacesDisponibles());
     }
     
     @Test
     public void testToString() {
-        Parking parking = new Parking("TEST", "Parking Test", "Adresse Test", 100, 2.0, true);
+        Parking parking = new Parking("TEST", "Parking Test", "Adresse Test", 100, 45, 2.0, true);
         String str = parking.toString();
         
         assertTrue(str.contains("Parking Test"));
         assertTrue(str.contains("Adresse Test"));
-    }
-    
-    @Test
-    public void testGetters() {
-        Parking parking = new Parking("ID_TEST", "Libelle Test", "Adresse Test", 150, 2.3, true);
-        
-        assertEquals("ID_TEST", parking.getIdParking());
-        assertEquals("Libelle Test", parking.getLibelleParking());
-        assertEquals("Adresse Test", parking.getAdresseParking());
-        assertEquals(150, parking.getNombrePlaces());
-        assertEquals(2.3, parking.getHauteurParking(), 0.001);
-        assertTrue(parking.hasTarifSoiree());
-        assertEquals(30, parking.getPlacesDisponibles());
+        assertTrue(str.contains("45/100"));
     }
 }

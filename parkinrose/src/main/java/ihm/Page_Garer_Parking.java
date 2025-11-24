@@ -1,9 +1,7 @@
 package ihm;
 
 import javax.swing.*;
-
 import controleur.StationnementControleur;
-
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -11,20 +9,15 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
-import modele.Stationnement;
 import modele.Parking;
 import modele.Usager;
 import modele.dao.ParkingDAO;
-import modele.dao.StationnementDAO;
 import modele.dao.UsagerDAO;
-
 import java.util.List;
 
 public class Page_Garer_Parking extends JFrame {
     private static final long serialVersionUID = 1L;
     
-    // Déclaration des composants de l'interface
     private JPanel contentPanel;
     private JLabel lblNom, lblPrenom, lblEmail, lblPlaque;
     private JComboBox<String> comboParking;
@@ -36,10 +29,6 @@ public class Page_Garer_Parking extends JFrame {
     private Usager usager;
     private StationnementControleur controleur;
 
-    /**
-     * Constructeur de la page de stationnement en parking
-     * @param email l'email de l'utilisateur connecté
-     */
     public Page_Garer_Parking(String email) {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
@@ -49,9 +38,6 @@ public class Page_Garer_Parking extends JFrame {
         initializeEventListeners();
     }
     
-    /**
-     * Initialise l'interface utilisateur
-     */
     private void initialisePage() {
         this.setTitle("Stationnement en Parking");
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -64,16 +50,13 @@ public class Page_Garer_Parking extends JFrame {
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         this.setContentPane(contentPanel);
         
-        // Titre de la page
         JLabel lblTitre = new JLabel("Stationnement en Parking Intérieur", SwingConstants.CENTER);
         lblTitre.setFont(new Font("Arial", Font.BOLD, 18));
         contentPanel.add(lblTitre, BorderLayout.NORTH);
         
-        // Panel principal avec layout vertical
         JPanel panelPrincipal = new JPanel();
         panelPrincipal.setLayout(new BoxLayout(panelPrincipal, BoxLayout.Y_AXIS));
         
-        // Section : Informations personnelles (lecture seule)
         JPanel panelInfos = new JPanel();
         panelInfos.setLayout(new GridLayout(3, 2, 10, 10));
         panelInfos.setBorder(BorderFactory.createTitledBorder("Vos informations"));
@@ -96,12 +79,10 @@ public class Page_Garer_Parking extends JFrame {
         panelPrincipal.add(panelInfos);
         panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
         
-        // Section : Véhicule
         JPanel panelVehicule = new JPanel();
         panelVehicule.setLayout(new BorderLayout());
         panelVehicule.setBorder(BorderFactory.createTitledBorder("Véhicule"));
         
-        // Boutons radio pour le type de véhicule
         JPanel panelType = new JPanel(new FlowLayout(FlowLayout.LEFT));
         groupeTypeVehicule = new ButtonGroup();
         
@@ -119,14 +100,12 @@ public class Page_Garer_Parking extends JFrame {
         
         panelVehicule.add(panelType, BorderLayout.NORTH);
         
-        // Section plaque d'immatriculation
         JPanel panelPlaque = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panelPlaque.add(new JLabel("Plaque d'immatriculation:"));
         lblPlaque = new JLabel();
         lblPlaque.setFont(new Font("Arial", Font.PLAIN, 14));
         panelPlaque.add(lblPlaque);
         
-        // Bouton pour modifier la plaque
         JButton btnModifierPlaque = new JButton("Modifier");
         btnModifierPlaque.addActionListener(e -> modifierPlaque());
         panelPlaque.add(btnModifierPlaque);
@@ -136,7 +115,6 @@ public class Page_Garer_Parking extends JFrame {
         panelPrincipal.add(panelVehicule);
         panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
         
-        // Section : Parking (sélection, informations)
         JPanel panelParking = new JPanel();
         panelParking.setLayout(new GridLayout(4, 2, 10, 10));
         panelParking.setBorder(BorderFactory.createTitledBorder("Parking"));
@@ -164,7 +142,6 @@ public class Page_Garer_Parking extends JFrame {
         
         contentPanel.add(panelPrincipal, BorderLayout.CENTER);
         
-        // Boutons de navigation
         JPanel panelBoutons = new JPanel(new FlowLayout());
         
         JButton btnAnnuler = new JButton("Annuler");
@@ -178,70 +155,37 @@ public class Page_Garer_Parking extends JFrame {
     
     private void modifierPlaque() {
         String nouvellePlaque = JOptionPane.showInputDialog(this, 
-            "Entrez la plaque d'immatriculation (format: AA-123-AA):", 
+            "Entrez la plaque d'immatriculation:", 
             lblPlaque.getText());
         
         if (nouvellePlaque != null && !nouvellePlaque.trim().isEmpty()) {
             String plaqueNettoyee = nouvellePlaque.trim().toUpperCase();
             
-            // Validation du format de plaque (AA-123-AA)
-            if (!validerFormatPlaque(plaqueNettoyee)) {
-                JOptionPane.showMessageDialog(this,
-                    "Format de plaque invalide !\nLe format doit être: AA-123-AA\nExemple: AB-123-CD",
-                    "Erreur de format",
-                    JOptionPane.ERROR_MESSAGE);
-                return;
+            if (controleur.validerPlaque(plaqueNettoyee)) {
+                lblPlaque.setText(plaqueNettoyee);
             }
-            
-            lblPlaque.setText(plaqueNettoyee);
         }
     }
 
-    /**
-     * Valide le format de plaque d'immatriculation (AA-123-AA)
-     * @param plaque la plaque à valider
-     * @return true si le format est correct
-     */
-    private boolean validerFormatPlaque(String plaque) {
-        if (plaque == null || plaque.trim().isEmpty()) {
-            return false;
-        }
-        
-        // Format: 2 lettres - 3 chiffres - 2 lettres
-        // Exemple: AB-123-CD
-        return plaque.matches("[A-Z]{2}-\\d{3}-[A-Z]{2}");
-    }
-
-    /**
-     * Charge les données depuis la base de données
-     */
     private void initialiseDonnees() {
-        // Charger les parkings depuis la base de données
         listeParkings = ParkingDAO.getAllParkings();
         
-        // Peupler la liste déroulante des parkings
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
         for (Parking parking : listeParkings) {
             model.addElement(parking.getLibelleParking() + " - " + parking.getAdresseParking());
         }
         comboParking.setModel(model);
         
-        // Initialiser la plaque si vide
         if (lblPlaque.getText() == null || lblPlaque.getText().isEmpty()) {
             lblPlaque.setText("Non définie");
         }
         
-        // Mettre à jour les informations du premier parking
         if (!listeParkings.isEmpty()) {
             mettreAJourInfosParking(0);
         }
     }
     
-    /**
-     * Initialise les écouteurs d'événements
-     */
     private void initializeEventListeners() {
-        // Mettre à jour les infos quand le parking change
         comboParking.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
@@ -250,7 +194,6 @@ public class Page_Garer_Parking extends JFrame {
             }
         });
         
-        // Bouton Annuler - retour à la page principale
         JButton btnAnnuler = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(0);
         btnAnnuler.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -260,84 +203,55 @@ public class Page_Garer_Parking extends JFrame {
             }
         });
         
-        // Bouton Réserver - validation du formulaire
         JButton btnReserver = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(1);
         btnReserver.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                // Validation simplifiée directement ici
-                if (lblPlaque.getText().equals("Non définie") || lblPlaque.getText().trim().isEmpty()) {
-                    JOptionPane.showMessageDialog(Page_Garer_Parking.this,
-                        "Veuillez définir une plaque d'immatriculation",
-                        "Plaque manquante",
-                        JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-                
-                // Vérification stationnement actif via contrôleur
-                if (controleur.getStationnementActif() != null) {
-                    // Le contrôleur affichera le message d'erreur dans reserverPlace()
-                    reserverPlace();
-                    return;
-                }
-                
                 reserverPlace();
             }
         });
     }
     
-    /**
-     * Met à jour les informations affichées pour le parking sélectionné
-     * @param index l'index du parking dans la liste
-     */
     private void mettreAJourInfosParking(int index) {
         if (index >= 0 && index < listeParkings.size()) {
             Parking parking = listeParkings.get(index);
-            lblPlacesDispo.setText(String.valueOf(parking.getPlacesDisponibles()));
-            // Pour l'instant, on met un tarif fixe, vous pourrez l'adapter plus tard
+            lblPlacesDispo.setText(parking.getPlacesDisponibles() + " / " + parking.getNombrePlaces());
             lblTarifHoraire.setText("2.50 €/h");
+            
+            if (parking.getPlacesDisponibles() <= 5) {
+                lblPlacesDispo.setForeground(Color.RED);
+            } else if (parking.getPlacesDisponibles() <= 10) {
+                lblPlacesDispo.setForeground(Color.ORANGE);
+            } else {
+                lblPlacesDispo.setForeground(Color.BLACK);
+            }
         }
     }
     
-    
-    /**
-     * Effectue la réservation de la place de parking
-     */
     private void reserverPlace() {
         int index = comboParking.getSelectedIndex();
         if (index >= 0 && index < listeParkings.size()) {
             Parking parking = listeParkings.get(index);
             
-            // Utilisation du contrôleur pour préparer le stationnement
             boolean succes = controleur.preparerStationnementParking(
                 getTypeVehicule(),
                 lblPlaque.getText(),
                 parking.getIdParking(),
                 this
             );
-            
-            if (succes) {
-                // Le contrôleur gère la redirection et les messages
-                return;
-            }
-            // En cas d'échec, rester sur la page
         }
     }
     
-    /**
-     * Retourne le type de véhicule sélectionné
-     * @return le type de véhicule
-     */
     private String getTypeVehicule() {
         if (radioVoiture.isSelected()) return "Voiture";
         if (radioMoto.isSelected()) return "Moto";
         return "Camion";
     }
 
+    
     public static void main(String[] args) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 try {
-                    // Pour tester la page indépendamment
                     new Page_Garer_Parking("pho@email.com").setVisible(true);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -345,4 +259,5 @@ public class Page_Garer_Parking extends JFrame {
             }
         });
     }
+    
 }

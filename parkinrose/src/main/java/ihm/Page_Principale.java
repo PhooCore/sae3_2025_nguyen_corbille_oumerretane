@@ -1,12 +1,14 @@
 package ihm;
 
 import javax.swing.*;
+
+import controleur.StationnementControleur;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.ArrayList;
-
 import modele.Stationnement;
 import modele.Parking;
 import modele.Usager;
@@ -27,7 +29,6 @@ public class Page_Principale extends JFrame {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
         
-        // Nettoyer les stationnements expirés au démarrage
         StationnementDAO.nettoyerStationnementsExpires();
         
         initialisePage();
@@ -41,21 +42,17 @@ public class Page_Principale extends JFrame {
         this.setLocationRelativeTo(null);
         this.setResizable(false);
         
-        // Panel principal avec layout BorderLayout
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
         mainPanel.setBackground(Color.WHITE);
         this.setContentPane(mainPanel);
         
-        // === BARRE DU HAUT (HEADER) - Recherche + Icônes ===
         JPanel headerPanel = creerBarrePanel();
         mainPanel.add(headerPanel, BorderLayout.NORTH);
         
-        // === PANEL CENTRAL - Message simple "Map à venir" ===
         JPanel centerPanel = creerCenterPanel();
         mainPanel.add(centerPanel, BorderLayout.CENTER);
         
-        // === BOUTONS PRINCIPAUX EN BAS ===
         JPanel bottomPanel = creerBottomPanel();
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
         
@@ -68,7 +65,6 @@ public class Page_Principale extends JFrame {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         headerPanel.setPreferredSize(new Dimension(900, 100));
         
-        // === BARRE DE RECHERCHE ===
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         searchPanel.setBackground(new Color(240, 240, 240));
         
@@ -82,7 +78,6 @@ public class Page_Principale extends JFrame {
         searchField.setText("Rechercher un parking...");
         searchField.setForeground(Color.GRAY);
         
-        // Gestion du focus
         searchField.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusGained(java.awt.event.FocusEvent evt) {
                 if (searchField.getText().equals("Rechercher un parking...")) {
@@ -98,15 +93,13 @@ public class Page_Principale extends JFrame {
             }
         });
         
-        // Bouton de recherche avec icône loupe.png
         JButton btnSearch = new JButton();
         btnSearch.setBackground(Color.WHITE);
         btnSearch.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
         btnSearch.setPreferredSize(new Dimension(50, 40));
         btnSearch.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Charger l'icône loupe.png
-        JLabel lblLoupe = chargerIconeLabel("/images/loupe.png", 16, 16, "🔍");
+        JLabel lblLoupe = chargerIconeLabel("/images/loupe.png", 16, 16, "");
         btnSearch.add(lblLoupe);
         
         btnSearch.addActionListener(e -> {
@@ -128,11 +121,9 @@ public class Page_Principale extends JFrame {
         searchPanel.add(searchField);
         searchPanel.add(btnSearch);
         
-        // === ICÔNES DE NAVIGATION ===
         JPanel iconsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         iconsPanel.setBackground(new Color(240, 240, 240));
         
-        // Icône Stationnement seulement
         btnStationnement = new JButton();
         btnStationnement.setLayout(new BorderLayout());
         btnStationnement.setBackground(new Color(240, 240, 240));
@@ -149,7 +140,6 @@ public class Page_Principale extends JFrame {
         btnStationnement.add(lblTextPark, BorderLayout.SOUTH);
         btnStationnement.addActionListener(e -> ouvrirPageStationnement());
         
-        // Icône Utilisateur seulement
         JButton btnUtilisateur = new JButton();
         btnUtilisateur.setLayout(new BorderLayout());
         btnUtilisateur.setBackground(new Color(240, 240, 240));
@@ -166,11 +156,9 @@ public class Page_Principale extends JFrame {
         btnUtilisateur.add(lblTextUser, BorderLayout.SOUTH);
         btnUtilisateur.addActionListener(e -> ouvrirPageUtilisateur());
         
-        // Ajout des icônes (seulement 2 maintenant)
         iconsPanel.add(btnStationnement);
         iconsPanel.add(btnUtilisateur);
         
-        // Assemblage final
         headerPanel.add(searchPanel, BorderLayout.WEST);
         headerPanel.add(iconsPanel, BorderLayout.EAST);
         
@@ -196,7 +184,6 @@ public class Page_Principale extends JFrame {
         bottomPanel.setBackground(Color.WHITE);
         bottomPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 30, 20));
         
-        // Bouton unique pour préparer un stationnement
         JButton btnPreparerStationnement = new JButton("Préparer un stationnement");
         btnPreparerStationnement.setFont(new Font("Arial", Font.BOLD, 16));
         btnPreparerStationnement.setBackground(new Color(70, 130, 180));
@@ -205,7 +192,6 @@ public class Page_Principale extends JFrame {
         btnPreparerStationnement.setBorder(BorderFactory.createEmptyBorder(15, 40, 15, 40));
         btnPreparerStationnement.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnPreparerStationnement.addActionListener(e -> {
-            // Redirige vers le choix du type de stationnement
             ouvrirPageStationnement();
         });
         
@@ -214,10 +200,6 @@ public class Page_Principale extends JFrame {
         return bottomPanel;
     }
     
-    
-    /**
-     * Charge une image depuis les ressources ou crée un placeholder textuel
-     */
     private JLabel chargerIconeLabel(String chemin, int largeur, int hauteur, String textePlaceholder) {
         try {
             java.net.URL imageUrl = getClass().getResource(chemin);
@@ -235,9 +217,6 @@ public class Page_Principale extends JFrame {
         }
     }
     
-    /**
-     * Crée un label de remplacement avec texte stylisé
-     */
     private JLabel creerLabelPlaceholder(int largeur, int hauteur, String texte) {
         JLabel label = new JLabel(texte, SwingConstants.CENTER);
         label.setPreferredSize(new Dimension(largeur, hauteur));
@@ -249,19 +228,15 @@ public class Page_Principale extends JFrame {
         return label;
     }
     
-    /**
-     * Ouvre la page appropriée selon l'état du stationnement
-     */
     private void ouvrirPageStationnement() {
-        Stationnement stationnementActif = StationnementDAO.getStationnementActifValideByUsager(usager.getIdUsager());
+        StationnementControleur controleur = new StationnementControleur(emailUtilisateur);
+        Stationnement stationnementActif = controleur.getStationnementActif();
         
         if (stationnementActif != null) {
-            // Stationnement actif : ouvrir la page de gestion
             Page_Stationnement_En_Cours pageStationnement = new Page_Stationnement_En_Cours(emailUtilisateur);
             pageStationnement.setVisible(true);
             dispose();
         } else {
-            // Aucun stationnement actif : proposer un choix
             Object[] options = {"Stationnement en Voirie", "Stationnement en Parking"};
             int choix = JOptionPane.showOptionDialog(this,
                 "Choisissez le type de stationnement :",
@@ -273,41 +248,31 @@ public class Page_Principale extends JFrame {
                 options[0]);
                 
             if (choix == 0) {
-                // Voirie
                 Page_Garer_Voirie pageGarer = new Page_Garer_Voirie(emailUtilisateur);
                 pageGarer.setVisible(true);
                 dispose();
             } else if (choix == 1) {
-                // Parking - ouvrir directement la page de préparation
-                Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur);//mettre l'email
+                Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur);
                 pageParking.setVisible(true);
                 dispose();
             }
         }
     }
     
-    /**
-     * Ouvre la page des informations utilisateur
-     */
     private void ouvrirPageUtilisateur() {
         Page_Utilisateur pageUtilisateur = new Page_Utilisateur(emailUtilisateur);
         pageUtilisateur.setVisible(true);
         dispose();
     }
     
-    /**
-     * Démarre la vérification périodique des stationnements actifs
-     */
     private void startStationnementCheck() {
         timer = new Timer(10000, e -> updateStationnementIcon());
         timer.start();
     }
     
-    /**
-     * Met à jour l'apparence de l'icône stationnement
-     */
     private void updateStationnementIcon() {
-        Stationnement stationnementActif = StationnementDAO.getStationnementActifValideByUsager(usager.getIdUsager());
+        StationnementControleur controleur = new StationnementControleur(emailUtilisateur);
+        Stationnement stationnementActif = controleur.getStationnementActif();
         
         if (stationnementActif != null) {
             btnStationnement.setBackground(new Color(255, 220, 220));

@@ -18,16 +18,13 @@ public class UtilisateurControleur {
      * Contrôleur pour la gestion des utilisateurs
      * @param email l'email de l'utilisateur connecté
      */
-    /**
-     * Contrôleur pour la gestion des utilisateurs
-     * @param email l'email de l'utilisateur connecté
-     */
     public UtilisateurControleur(String email) {
         this.emailUtilisateur = email;
         if (email != null) {
             this.usager = UsagerDAO.getUsagerByEmail(email);
         }
     }
+    
     /**
      * Récupère les informations de l'utilisateur
      * @return l'objet Usager

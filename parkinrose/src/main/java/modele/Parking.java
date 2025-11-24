@@ -5,33 +5,80 @@ public class Parking {
     private String libelleParking;
     private String adresseParking;
     private int nombrePlaces;
-    private double hauteurParking;
     private int placesDisponibles;
-    private boolean tarifSoiree;  // NOUVEAU
-
+    private double hauteurParking;
+    private boolean tarifSoiree;
+    
     public Parking(String idParking, String libelleParking, String adresseParking, 
-                   int nombrePlaces, double hauteurParking, boolean tarifSoiree) {
+                  int nombrePlaces, int placesDisponibles, double hauteurParking, boolean tarifSoiree) {
         this.idParking = idParking;
         this.libelleParking = libelleParking;
         this.adresseParking = adresseParking;
         this.nombrePlaces = nombrePlaces;
+        this.placesDisponibles = placesDisponibles;
         this.hauteurParking = hauteurParking;
         this.tarifSoiree = tarifSoiree;
-        // Estimation des places disponibles (80% de remplissage)
-        this.placesDisponibles = (int)(nombrePlaces * 0.2);
     }
-
-    // Getters
-    public String getIdParking() { return idParking; }
-    public String getLibelleParking() { return libelleParking; }
-    public String getAdresseParking() { return adresseParking; }
-    public int getNombrePlaces() { return nombrePlaces; }
-    public double getHauteurParking() { return hauteurParking; }
-    public int getPlacesDisponibles() { return placesDisponibles; }
-    public boolean hasTarifSoiree() { return tarifSoiree; }  // NOUVEAU
+    
+    // Getters et Setters
+    public String getIdParking() {
+        return idParking;
+    }
+    
+    public void setIdParking(String idParking) {
+        this.idParking = idParking;
+    }
+    
+    public String getLibelleParking() {
+        return libelleParking;
+    }
+    
+    public void setLibelleParking(String libelleParking) {
+        this.libelleParking = libelleParking;
+    }
+    
+    public String getAdresseParking() {
+        return adresseParking;
+    }
+    
+    public void setAdresseParking(String adresseParking) {
+        this.adresseParking = adresseParking;
+    }
+    
+    public int getNombrePlaces() {
+        return nombrePlaces;
+    }
+    
+    public void setNombrePlaces(int nombrePlaces) {
+        this.nombrePlaces = nombrePlaces;
+    }
+    
+    public int getPlacesDisponibles() {
+        return placesDisponibles;
+    }
+    
+    public void setPlacesDisponibles(int placesDisponibles) {
+        this.placesDisponibles = placesDisponibles;
+    }
+    
+    public double getHauteurParking() {
+        return hauteurParking;
+    }
+    
+    public void setHauteurParking(double hauteurParking) {
+        this.hauteurParking = hauteurParking;
+    }
+    
+    public boolean hasTarifSoiree() {
+        return tarifSoiree;
+    }
+    
+    public void setTarifSoiree(boolean tarifSoiree) {
+        this.tarifSoiree = tarifSoiree;
+    }
     
     @Override
     public String toString() {
-        return libelleParking + " - " + adresseParking;
+        return libelleParking + " - " + adresseParking + " (" + placesDisponibles + "/" + nombrePlaces + " places)";
     }
 }

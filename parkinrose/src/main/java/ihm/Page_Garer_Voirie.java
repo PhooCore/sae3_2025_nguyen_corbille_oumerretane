@@ -1,9 +1,7 @@
 package ihm;
 
 import javax.swing.*;
-
 import controleur.StationnementControleur;
-
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -11,13 +9,10 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
 import modele.Zone;
-import modele.dao.StationnementDAO;
 import modele.dao.UsagerDAO;
 import modele.dao.ZoneDAO;
 import modele.Usager;
-import modele.Stationnement;
 import java.util.List;
 
 public class Page_Garer_Voirie extends JFrame {
@@ -37,7 +32,7 @@ public class Page_Garer_Voirie extends JFrame {
     public Page_Garer_Voirie(String email) {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
-        this.controleur = new StationnementControleur(email); // Initialisation du contrôleur
+        this.controleur = new StationnementControleur(email);
         initialisePage();
         initialiseDonnees();
         initializeEventListeners();
@@ -170,36 +165,13 @@ public class Page_Garer_Voirie extends JFrame {
         if (nouvellePlaque != null && !nouvellePlaque.trim().isEmpty()) {
             String plaqueNettoyee = nouvellePlaque.trim().toUpperCase();
             
-            // Validation du format de plaque (AA-123-AA)
-            if (!validerFormatPlaque(plaqueNettoyee)) {
-                JOptionPane.showMessageDialog(this,
-                    "Format de plaque invalide !\nLe format doit être: AA-123-AA\nExemple: AB-123-CD",
-                    "Erreur de format",
-                    JOptionPane.ERROR_MESSAGE);
-                return;
+            if (controleur.validerPlaque(plaqueNettoyee)) {
+                lblPlaque.setText(plaqueNettoyee);
             }
-            
-            lblPlaque.setText(plaqueNettoyee);
         }
-    }
-
-    /**
-     * Valide le format de plaque d'immatriculation (AA-123-AA)
-     * @param plaque la plaque à valider
-     * @return true si le format est correct
-     */
-    private boolean validerFormatPlaque(String plaque) {
-        if (plaque == null || plaque.trim().isEmpty()) {
-            return false;
-        }
-        
-        // Format: 2 lettres - 3 chiffres - 2 lettres
-        // Exemple: AB-123-CD
-        return plaque.matches("[A-Z]{2}-\\d{3}-[A-Z]{2}");
     }
 
     private void initialiseDonnees() {
-        // Charger seulement les zones, pas les parkings
         this.zones = ZoneDAO.getAllZones();
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
         
@@ -214,6 +186,7 @@ public class Page_Garer_Voirie extends JFrame {
         
         calculerCout();
     }
+    
     private void initializeEventListeners() {
         ItemListener calculateurCout = new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
@@ -237,21 +210,7 @@ public class Page_Garer_Voirie extends JFrame {
         JButton btnValider = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(1);
         btnValider.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                // Validation simplifiée directement ici
-                if (lblPlaque.getText().equals("Non définie") || lblPlaque.getText().trim().isEmpty()) {
-                    JOptionPane.showMessageDialog(Page_Garer_Voirie.this,
-                        "Veuillez définir une plaque d'immatriculation",
-                        "Plaque manquante",
-                        JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-                
-                // Vérification stationnement actif via contrôleur
-                if (controleur.getStationnementActif() != null) {
-                    // Le contrôleur affichera le message d'erreur dans afficherConfirmation()
-                }
-                
-                afficherConfirmation();
+                validerStationnement();
             }
         });
     }
@@ -265,97 +224,34 @@ public class Page_Garer_Voirie extends JFrame {
             int index = comboZone.getSelectedIndex();
             if (index >= 0 && index < zones.size()) {
                 Zone zone = zones.get(index);
-                
-                // SIMPLIFICATION : Appel direct sans paramètres de date
                 double cout = zone.calculerCout(dureeTotaleMinutes);
                 lblCout.setText(String.format("%.2f €", cout));
             }
-            
         } catch (Exception e) {
             lblCout.setText("0.00 €");
         }
     }
     
-    private String formatDuree(int minutes) {
-        int heures = minutes / 60;
-        int mins = minutes % 60;
-        if (mins == 0) {
-            return heures + "h";
-        } else {
-            return heures + "h" + mins + "min";
-        }
-    }
-    private void afficherConfirmation() {
-        // Validation de la plaque d'immatriculation
-        String plaque = lblPlaque.getText();
-        if (plaque.equals("Non définie") || plaque.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Veuillez définir une plaque d'immatriculation",
-                "Plaque manquante",
-                JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        
-        // Validation du format de plaque
-        if (!validerFormatPlaque(plaque)) {
-            JOptionPane.showMessageDialog(this,
-                "Format de plaque invalide !\nLe format doit être: AA-123-AA\nExemple: AB-123-CD\n\nVeuillez modifier la plaque avant de continuer.",
-                "Format de plaque incorrect",
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
+    private void validerStationnement() {
         int index = comboZone.getSelectedIndex();
         String idZone = "";
         String nomZone = "";
-        Zone zoneSelectionnee = null;
         
         if (index >= 0 && index < zones.size()) {
-            zoneSelectionnee = zones.get(index);
+            Zone zoneSelectionnee = zones.get(index);
             idZone = zoneSelectionnee.getIdZone();
             nomZone = zoneSelectionnee.getLibelleZone();
         }
         
-        String message = "Stationnement confirmé :\n\n" +
-            "Nom: " + usager.getNomUsager() + "\n" +
-            "Prénom: " + usager.getPrenomUsager() + "\n" +
-            "Email: " + usager.getMailUsager() + "\n" +
-            "Véhicule: " + getTypeVehicule() + " - " + lblPlaque.getText() + "\n" +
-            "Zone: " + nomZone + "\n" +
-            "Durée: " + comboHeures.getSelectedItem() + "h" + comboMinutes.getSelectedItem() + "min\n" +
-            "Coût: " + lblCout.getText();
-        
-        int choix = JOptionPane.showConfirmDialog(this,
-            message + "\n\nVoulez-vous procéder au paiement ?",
-            "Confirmation",
-            JOptionPane.YES_NO_OPTION);
-        
-        if (choix == JOptionPane.YES_OPTION) {
-            String coutText = lblCout.getText().replace(" €", "").replace(",", ".");
-            double montant = Double.parseDouble(coutText);
-            
-            // Utilisation du contrôleur pour préparer le stationnement
-            boolean succes = controleur.preparerStationnementVoirie(
-                getTypeVehicule(),
-                lblPlaque.getText(),
-                idZone,
-                Integer.parseInt(comboHeures.getSelectedItem().toString()),
-                Integer.parseInt(comboMinutes.getSelectedItem().toString()),
-                this
-            );
-            
-            if (!succes) {
-                // En cas d'échec, rester sur la page
-                return;
-            }
-            // En cas de succès, le contrôleur gère la redirection
-        } else {
-            Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-            pagePrincipale.setVisible(true);
-            dispose();
-        }
+        boolean succes = controleur.preparerStationnementVoirie(
+            getTypeVehicule(),
+            lblPlaque.getText(),
+            idZone,
+            Integer.parseInt(comboHeures.getSelectedItem().toString()),
+            Integer.parseInt(comboMinutes.getSelectedItem().toString()),
+            this
+        );
     }
-    
     
     private String getTypeVehicule() {
         if (radioVoiture.isSelected()) return "Voiture";

@@ -3,7 +3,6 @@ package controleur;
 import modele.Stationnement;
 import modele.Usager;
 import modele.Zone;
-import modele.dao.PaiementDAO;
 import modele.dao.ParkingDAO;
 import modele.dao.StationnementDAO;
 import modele.dao.UsagerDAO;
@@ -22,19 +21,11 @@ public class StationnementControleur {
     private String emailUtilisateur;
     private Usager usager;
     
-    /**
-     * Contrôleur pour la gestion des stationnements
-     * @param email l'email de l'utilisateur connecté
-     */
     public StationnementControleur(String email) {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
     }
     
-    /**
-     * Vérifie si l'utilisateur a un stationnement actif
-     * @return le stationnement actif ou null
-     */
     public Stationnement getStationnementActif() {
         if (usager != null) {
             return StationnementDAO.getStationnementActifValideByUsager(usager.getIdUsager());
@@ -42,27 +33,15 @@ public class StationnementControleur {
         return null;
     }
     
-    /**
-     * Prépare un nouveau stationnement en voirie
-     * @param typeVehicule le type de véhicule
-     * @param plaqueImmatriculation la plaque d'immatriculation
-     * @param idZone l'ID de la zone
-     * @param dureeHeures la durée en heures
-     * @param dureeMinutes la durée en minutes
-     * @param pageVoirie la page voirie pour les callbacks
-     * @return true si la préparation réussit
-     */
     public boolean preparerStationnementVoirie(String typeVehicule, String plaqueImmatriculation,
                                               String idZone, int dureeHeures, int dureeMinutes,
                                               Page_Garer_Voirie pageVoirie) {
         
-        // Validation des champs
-        if (!validerStationnementVoirie(typeVehicule, plaqueImmatriculation, idZone, 
+        if (!validerStationnementVoirie(plaqueImmatriculation, typeVehicule, idZone, 
                                        dureeHeures, dureeMinutes, pageVoirie)) {
             return false;
         }
         
-        // Récupération de la zone
         Zone zone = ZoneDAO.getZoneById(idZone);
         if (zone == null) {
             JOptionPane.showMessageDialog(pageVoirie,
@@ -72,11 +51,9 @@ public class StationnementControleur {
             return false;
         }
         
-        // Calcul du coût
         int dureeTotaleMinutes = (dureeHeures * 60) + dureeMinutes;
         double cout = zone.calculerCout(dureeTotaleMinutes);
         
-        // Vérification de la durée maximale
         if (dureeTotaleMinutes > zone.getDureeMaxMinutes()) {
             JOptionPane.showMessageDialog(pageVoirie,
                 "Durée maximale dépassée pour " + zone.getLibelleZone() +
@@ -86,7 +63,6 @@ public class StationnementControleur {
             return false;
         }
         
-        // Redirection vers le paiement
         Page_Paiement pagePaiement = new Page_Paiement(
             cout,
             emailUtilisateur,
@@ -103,23 +79,13 @@ public class StationnementControleur {
         return true;
     }
     
-    /**
-     * Prépare un nouveau stationnement en parking
-     * @param typeVehicule le type de véhicule
-     * @param plaqueImmatriculation la plaque d'immatriculation
-     * @param idParking l'ID du parking
-     * @param pageParking la page parking pour les callbacks
-     * @return true si la préparation réussit
-     */
     public boolean preparerStationnementParking(String typeVehicule, String plaqueImmatriculation,
                                                String idParking, Page_Garer_Parking pageParking) {
         
-        // Validation des champs
-        if (!validerStationnementParking(typeVehicule, plaqueImmatriculation, idParking, pageParking)) {
+        if (!validerStationnementParking(plaqueImmatriculation, typeVehicule, idParking, pageParking)) {
             return false;
         }
         
-        // Récupération du parking
         Parking parking = ParkingDAO.getParkingById(idParking);
         if (parking == null) {
             JOptionPane.showMessageDialog(pageParking,
@@ -129,7 +95,6 @@ public class StationnementControleur {
             return false;
         }
         
-        // Vérification des places disponibles
         if (parking.getPlacesDisponibles() <= 0) {
             JOptionPane.showMessageDialog(pageParking,
                 "Aucune place disponible dans ce parking",
@@ -138,7 +103,6 @@ public class StationnementControleur {
             return false;
         }
         
-        // Création du stationnement
         boolean succes = StationnementDAO.creerStationnementParking(
             usager.getIdUsager(),
             typeVehicule,
@@ -155,7 +119,6 @@ public class StationnementControleur {
                 "Réservation réussie",
                 JOptionPane.INFORMATION_MESSAGE);
             
-            // Retour à la page principale
             Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
             pagePrincipale.setVisible(true);
             pageParking.dispose();
@@ -169,46 +132,35 @@ public class StationnementControleur {
         }
     }
     
-    /**
-     * Termine un stationnement voirie
-     * @param idStationnement l'ID du stationnement
-     * @return true si la terminaison réussit
-     */
     public boolean terminerStationnementVoirie(int idStationnement) {
         return StationnementDAO.terminerStationnement(idStationnement);
     }
     
-    /**
-     * Termine un stationnement parking avec paiement
-     * @param idStationnement l'ID du stationnement
-     * @param heureDepart l'heure de départ
-     * @param cout le coût calculé
-     * @param idPaiement l'ID du paiement
-     * @return true si la terminaison réussit
-     */
     public boolean terminerStationnementParking(int idStationnement, LocalDateTime heureDepart,
                                                double cout, String idPaiement) {
         return StationnementDAO.terminerStationnementParking(
             idStationnement, heureDepart, cout, idPaiement);
     }
     
-    /**
-     * Valide les données pour un stationnement voirie
-     */
-    private boolean validerStationnementVoirie(String typeVehicule, String plaqueImmatriculation,
+    public boolean validerPlaque(String plaque) {
+        if (plaque == null || plaque.trim().isEmpty() || plaque.equals("Non définie")) {
+            return false;
+        }
+        return plaque.matches("[A-Z]{2}-\\d{3}-[A-Z]{2}");
+    }
+    
+    private boolean validerStationnementVoirie(String plaqueImmatriculation, String typeVehicule,
                                               String idZone, int dureeHeures, int dureeMinutes,
                                               Page_Garer_Voirie pageVoirie) {
         
-        if (plaqueImmatriculation == null || plaqueImmatriculation.trim().isEmpty() ||
-            plaqueImmatriculation.equals("Non définie")) {
+        if (!validerPlaque(plaqueImmatriculation)) {
             JOptionPane.showMessageDialog(pageVoirie,
-                "Veuillez définir une plaque d'immatriculation",
+                "Veuillez définir une plaque d'immatriculation valide (format: AA-123-AA)",
                 "Plaque manquante",
                 JOptionPane.WARNING_MESSAGE);
             return false;
         }
         
-        // Vérification stationnement actif
         Stationnement stationnementActif = getStationnementActif();
         if (stationnementActif != null) {
             afficherMessageStationnementActif(stationnementActif, pageVoirie);
@@ -218,22 +170,17 @@ public class StationnementControleur {
         return true;
     }
     
-    /**
-     * Valide les données pour un stationnement parking
-     */
-    private boolean validerStationnementParking(String typeVehicule, String plaqueImmatriculation,
+    private boolean validerStationnementParking(String plaqueImmatriculation, String typeVehicule,
                                                String idParking, Page_Garer_Parking pageParking) {
         
-        if (plaqueImmatriculation == null || plaqueImmatriculation.trim().isEmpty() ||
-            plaqueImmatriculation.equals("Non définie")) {
+        if (!validerPlaque(plaqueImmatriculation)) {
             JOptionPane.showMessageDialog(pageParking,
-                "Veuillez définir une plaque d'immatriculation",
+                "Veuillez définir une plaque d'immatriculation valide (format: AA-123-AA)",
                 "Plaque manquante",
                 JOptionPane.WARNING_MESSAGE);
             return false;
         }
         
-        // Vérification stationnement actif
         Stationnement stationnementActif = getStationnementActif();
         if (stationnementActif != null) {
             afficherMessageStationnementActif(stationnementActif, pageParking);
@@ -243,9 +190,6 @@ public class StationnementControleur {
         return true;
     }
     
-    /**
-     * Affiche un message d'erreur pour un stationnement actif
-     */
     private void afficherMessageStationnementActif(Stationnement stationnement, javax.swing.JFrame parent) {
         String message = "Vous avez déjà un stationnement " + stationnement.getTypeStationnement() + " actif !\n\n" +
                         "Véhicule: " + stationnement.getTypeVehicule() + " - " + stationnement.getPlaqueImmatriculation() + "\n";
@@ -263,9 +207,6 @@ public class StationnementControleur {
         JOptionPane.showMessageDialog(parent, message, "Stationnement actif", JOptionPane.WARNING_MESSAGE);
     }
     
-    /**
-     * Formate une durée en minutes en texte lisible
-     */
     private String formatDuree(int minutes) {
         int heures = minutes / 60;
         int mins = minutes % 60;
@@ -276,10 +217,6 @@ public class StationnementControleur {
         }
     }
     
-    /**
-     * Récupère l'historique des stationnements de l'utilisateur
-     * @return la liste des stationnements
-     */
     public List<Stationnement> getHistoriqueStationnements() {
         if (usager != null) {
             return StationnementDAO.getHistoriqueStationnements(usager.getIdUsager());
