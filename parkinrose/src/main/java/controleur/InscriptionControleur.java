@@ -26,13 +26,12 @@ public class InscriptionControleur {
     public boolean creerCompte(String nom, String prenom, String email, 
                               String motDePasse, String confirmation, 
                               Page_Inscription pageInscription) {
-        
-        // Validation des champs
+
         if (!validerChamps(nom, prenom, email, motDePasse, confirmation, pageInscription)) {
             return false;
         }
         
-        // Vérification de l'unicité de l'email
+
         if (UsagerDAO.emailExisteDeja(email)) {
             JOptionPane.showMessageDialog(pageInscription, 
                 "Cet email est déjà utilisé", 
@@ -41,10 +40,8 @@ public class InscriptionControleur {
             return false;
         }
         
-        // Création de l'utilisateur
         Usager nouvelUsager = new Usager(nom, prenom, email, motDePasse);
         
-        // Sauvegarde en base de données
         boolean succes = UsagerDAO.ajouterUsager(nouvelUsager);
         
         if (succes) {
@@ -52,8 +49,7 @@ public class InscriptionControleur {
                 "Compte créé avec succès !", 
                 "Succès", 
                 JOptionPane.INFORMATION_MESSAGE);
-            
-            // Redirection vers la page de connexion
+
             Page_Authentification authPage = new Page_Authentification();
             authPage.setVisible(true);
             pageInscription.dispose();
@@ -102,7 +98,6 @@ public class InscriptionControleur {
             return false;
         }
         
-        // Validation basique de l'email
         if (!email.contains("@") || !email.contains(".")) {
             JOptionPane.showMessageDialog(pageInscription, 
                 "Veuillez saisir un email valide", 

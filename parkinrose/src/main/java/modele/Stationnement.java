@@ -21,11 +21,11 @@ public class Stationnement {
     private String statutPaiement;
     private String idPaiement;
 
-    // CONSTRUCTEUR PAR DÉFAUT
+  
     public Stationnement() {
     }
 
-    // Constructeur pour voirie (paiement immédiat)
+
     public Stationnement(int idUsager, String typeVehicule, String plaqueImmatriculation, 
                         String idTarification, String zone, int dureeHeures, int dureeMinutes, 
                         double cout, String idPaiement) {

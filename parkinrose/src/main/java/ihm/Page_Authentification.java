@@ -28,7 +28,6 @@ public class Page_Authentification extends JFrame {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	// Déclaration des composants de l'interface
 	public JPanel contentPanel;
 	public JLabel lblTitre;
 	public JLabel lblEmail;
@@ -44,25 +43,25 @@ public class Page_Authentification extends JFrame {
 	 * Initialise l'interface utilisateur et les écouteurs d'événements
 	 */
 	public Page_Authentification() {
-		// Configuration de la fenêtre principale
+
 		this.setTitle("User Login");
-		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // Ferme l'application quand on clique sur X
-		this.setSize(800, 600); // Taille fixe de la fenêtre
-		this.setLocationRelativeTo(null); // Centre la fenêtre sur l'écran
-		this.setResizable(false); // Empêche le redimensionnement
+		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		this.setSize(800, 600); 
+		this.setLocationRelativeTo(null);
+		this.setResizable(false);
 		
-		// Création du panel principal
+
 		contentPanel = new JPanel();
-		contentPanel.setBackground(Color.WHITE); // Fond blanc
-		contentPanel.setLayout(null); // Layout absolu (positionnement manuel)
-		this.setContentPane(contentPanel); // Définit le panel comme contenu de la fenêtre
+		contentPanel.setBackground(Color.WHITE); 
+		contentPanel.setLayout(null); 
+		this.setContentPane(contentPanel); 
 		
 		// Titre de la page
 		lblTitre = new JLabel("Connexion");
-		lblTitre.setFont(new Font("Arial", Font.BOLD, 32)); // Police gras, taille 32
-		lblTitre.setHorizontalAlignment(SwingConstants.CENTER); // Centrage horizontal
-		lblTitre.setForeground(Color.BLACK); // Couleur du texte
-		lblTitre.setBounds(200, 40, 400, 50); // Position et taille (x, y, largeur, hauteur)
+		lblTitre.setFont(new Font("Arial", Font.BOLD, 32)); 
+		lblTitre.setHorizontalAlignment(SwingConstants.CENTER); 
+		lblTitre.setForeground(Color.BLACK);
+		lblTitre.setBounds(200, 40, 400, 50);
 		contentPanel.add(lblTitre);
 
 		// Label pour l'email
@@ -76,12 +75,12 @@ public class Page_Authentification extends JFrame {
 		txtEmail = new JTextField();
 		txtEmail.setFont(new Font("Arial", Font.PLAIN, 16));
 		txtEmail.setBackground(Color.WHITE);
-		// Bordure composée : ligne grise + padding interne
+
 		txtEmail.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createLineBorder(Color.GRAY),
-			BorderFactory.createEmptyBorder(8, 12, 8, 12) // padding: haut, gauche, bas, droite
+			BorderFactory.createEmptyBorder(8, 12, 8, 12)
 		));
-		txtEmail.setBounds(50, 160, 700, 40); // Large champ qui prend presque toute la largeur
+		txtEmail.setBounds(50, 160, 700, 40);
 		contentPanel.add(txtEmail);
 
 		// Label pour le mot de passe
@@ -122,17 +121,17 @@ public class Page_Authentification extends JFrame {
         });
 		btnLogin.setFont(new Font("Arial", Font.BOLD, 18));
 		btnLogin.setForeground(Color.WHITE);
-		btnLogin.setBackground(new Color(80, 80, 80)); // Gris foncé
-		btnLogin.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30)); // Padding interne
-		btnLogin.setFocusPainted(false); // Désactive l'effet de focus
-		btnLogin.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Curseur main au survol
+		btnLogin.setBackground(new Color(80, 80, 80)); 
+		btnLogin.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30)); 
+		btnLogin.setFocusPainted(false); 
+		btnLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
 		btnLogin.setBounds(50, 350, 700, 50);
 		contentPanel.add(btnLogin);
 
 		// Lien "Créer un compte"
 		lblCreateAccount = new JLabel("Créer un compte", SwingConstants.CENTER);
 		lblCreateAccount.setFont(new Font("Arial", Font.BOLD, 16));
-		lblCreateAccount.setForeground(new Color(0, 100, 200)); // Bleu
+		lblCreateAccount.setForeground(new Color(0, 100, 200));
 		lblCreateAccount.setCursor(new Cursor(Cursor.HAND_CURSOR));
 		lblCreateAccount.setBounds(50, 420, 700, 30);
 		contentPanel.add(lblCreateAccount);

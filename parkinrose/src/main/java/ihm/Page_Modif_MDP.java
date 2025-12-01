@@ -35,14 +35,14 @@ public class Page_Modif_MDP extends JFrame {
 		JPanel mainPanel = new JPanel();
 		mainPanel.setBackground(Color.WHITE);
 		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
-		mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 100, 40, 100)); // Marges généreuses
+		mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 100, 40, 100)); 
 		setContentPane(mainPanel);
 		
 
 		// Panel de retour en haut à gauche
 		JPanel panelRetour = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
 		panelRetour.setBackground(Color.WHITE);
-		panelRetour.setMaximumSize(new Dimension(600, 40)); // Largeur limitée
+		panelRetour.setMaximumSize(new Dimension(600, 40)); 
 		mainPanel.add(panelRetour);
 		
 
@@ -53,11 +53,11 @@ public class Page_Modif_MDP extends JFrame {
 				retourProfil();
 			}
 		});
-		btnRetour.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); // Curseur main
-		btnRetour.setFocusPainted(false); // Désactive l'effet de focus
-		btnRetour.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // Padding interne
+		btnRetour.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); 
+		btnRetour.setFocusPainted(false); 
+		btnRetour.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
 		btnRetour.setBackground(Color.WHITE);
-		btnRetour.setForeground(new Color(80, 80, 80)); // Gris foncé
+		btnRetour.setForeground(new Color(80, 80, 80)); 
 		btnRetour.setFont(new Font("Arial", Font.PLAIN, 14));
 		panelRetour.add(btnRetour);
 		
@@ -68,7 +68,7 @@ public class Page_Modif_MDP extends JFrame {
 		// Titre de la page
 		JLabel lblTitre = new JLabel("Modifier le mot de passe", SwingConstants.CENTER);
 		lblTitre.setFont(new Font("Arial", Font.BOLD, 32));
-		lblTitre.setAlignmentX(CENTER_ALIGNMENT); // Centrage horizontal dans BoxLayout
+		lblTitre.setAlignmentX(CENTER_ALIGNMENT);
 		mainPanel.add(lblTitre);
 		
 		// Espacement après le titre
@@ -78,26 +78,26 @@ public class Page_Modif_MDP extends JFrame {
 		// === PANEL EMAIL ===
 		JPanel panelEmail = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
 		panelEmail.setBackground(Color.WHITE);
-		panelEmail.setMaximumSize(new Dimension(600, 50)); // Largeur limitée pour centrage
+		panelEmail.setMaximumSize(new Dimension(600, 50)); 
 		
 		// Label "Email"
 		JLabel lblEmail = new JLabel("Email:");
 		lblEmail.setFont(new Font("Arial", Font.PLAIN, 16));
-		lblEmail.setPreferredSize(new Dimension(200, 30)); // Taille fixe pour l'alignement
+		lblEmail.setPreferredSize(new Dimension(200, 30)); 
 		panelEmail.add(lblEmail);
 		
 		// Champ de saisie pour l'email
 		txtEmail = new JTextField();
 		txtEmail.setFont(new Font("Arial", Font.PLAIN, 16));
 		txtEmail.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(Color.GRAY), // Bordure grise
-			BorderFactory.createEmptyBorder(8, 12, 8, 12) // Padding interne
+			BorderFactory.createLineBorder(Color.GRAY),
+			BorderFactory.createEmptyBorder(8, 12, 8, 12) 
 		));
-		txtEmail.setPreferredSize(new Dimension(350, 40)); // Taille fixe
+		txtEmail.setPreferredSize(new Dimension(350, 40)); 
 		panelEmail.add(txtEmail);
 		
 		mainPanel.add(panelEmail);
-		mainPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Espacement
+		mainPanel.add(Box.createRigidArea(new Dimension(0, 20))); 
 		
 
 		// === PANEL NOUVEAU MOT DE PASSE ===
@@ -145,23 +145,23 @@ public class Page_Modif_MDP extends JFrame {
 		panelConfirmer.add(passwordFieldConfirmer);
 		
 		mainPanel.add(panelConfirmer);
-		mainPanel.add(Box.createRigidArea(new Dimension(0, 40))); // Espacement avant le bouton
+		mainPanel.add(Box.createRigidArea(new Dimension(0, 40))); 
 		
 
 		// === BOUTON DE MODIFICATION ===
 		JButton btnModifier = new JButton("MODIFIER LE MOT DE PASSE");
 		btnModifier.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				modifierMotDePasse(); // Action au clic
+				modifierMotDePasse(); 
 			}
 		});
 		btnModifier.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		btnModifier.setFocusPainted(false);
-		btnModifier.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30)); // Padding généreux
-		btnModifier.setBackground(new Color(80, 80, 80)); // Gris foncé
+		btnModifier.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30));
+		btnModifier.setBackground(new Color(80, 80, 80)); 
 		btnModifier.setForeground(Color.WHITE);
 		btnModifier.setFont(new Font("Arial", Font.BOLD, 18));
-		btnModifier.setAlignmentX(CENTER_ALIGNMENT); // Centrage horizontal
+		btnModifier.setAlignmentX(CENTER_ALIGNMENT); 
 		mainPanel.add(btnModifier);
 		
 		// Espace flexible pour pousser le contenu vers le haut

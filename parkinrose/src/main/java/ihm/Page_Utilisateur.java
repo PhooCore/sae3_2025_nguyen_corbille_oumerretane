@@ -54,7 +54,7 @@ public class Page_Utilisateur extends JFrame {
         // Panel principal avec bordures
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); // Marges
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         mainPanel.setBackground(Color.WHITE);
         
         // Titre de la page
@@ -94,7 +94,7 @@ public class Page_Utilisateur extends JFrame {
      */
     private JPanel creerOngletInfos() {
         JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS)); // Layout vertical
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS)); 
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         panel.setBackground(Color.WHITE);
         
@@ -103,24 +103,24 @@ public class Page_Utilisateur extends JFrame {
         ajouterLigneInfo(panel, "Prénom:", usager.getPrenomUsager());
         ajouterLigneInfo(panel, "Email:", usager.getMailUsager());
         
-        panel.add(Box.createVerticalStrut(30)); // Espacement important
+        panel.add(Box.createVerticalStrut(30)); 
         
         // === BOUTONS D'ACTION ===
         JButton btnModifierMdp = new JButton("Modifier le mot de passe");
-        btnModifierMdp.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+        btnModifierMdp.setAlignmentX(Component.CENTER_ALIGNMENT); 
         btnModifierMdp.addActionListener(e -> controleur.redirigerVersModificationMDP(Page_Utilisateur.this));
 
         JButton btnHistorique = new JButton("Voir l'historique des stationnements");
-        btnHistorique.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+        btnHistorique.setAlignmentX(Component.CENTER_ALIGNMENT); 
         btnHistorique.addActionListener(e -> controleur.redirigerVersHistoriqueStationnements(Page_Utilisateur.this));
 
         JButton btnDeconnexion = new JButton("Déconnexion");
-        btnDeconnexion.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+        btnDeconnexion.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnDeconnexion.setBackground(new Color(220, 80, 80));
         btnDeconnexion.setForeground(Color.WHITE);
         btnDeconnexion.addActionListener(e -> controleur.deconnecterUtilisateur(Page_Utilisateur.this));
         
-        // AJOUT DES BOUTONS AU PANEL (manquant dans votre code)
+        // AJOUT DES BOUTONS AU PANEL
         panel.add(btnModifierMdp);
         panel.add(Box.createVerticalStrut(10)); // Espacement entre boutons
         panel.add(btnHistorique);
@@ -163,7 +163,7 @@ public class Page_Utilisateur extends JFrame {
         JTable table = new JTable(donnees, colonnes);
         table.setFont(new Font("Arial", Font.PLAIN, 12));
         table.setRowHeight(25); // Hauteur des lignes
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12)); // En-tête en gras
+        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12)); 
         
         // Empêcher l'édition des cellules (données en lecture seule)
         table.setDefaultEditor(Object.class, null);
@@ -277,7 +277,6 @@ public class Page_Utilisateur extends JFrame {
         
         // Calcul des statistiques
         long totalStationnements = stationnements.size(); // Nombre total
-        // Comptage des stationnements actifs avec stream Java 8
         long stationnementsActifs = stationnements.stream()
                 .filter(s -> "ACTIF".equals(s.getStatut()))
                 .count();
@@ -302,14 +301,14 @@ public class Page_Utilisateur extends JFrame {
     private void ajouterLigneInfo(JPanel panel, String libelle, String valeur) {
         JPanel ligne = new JPanel(new BorderLayout());
         ligne.setBackground(Color.WHITE);
-        ligne.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0)); // Espacement vertical
+        ligne.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
         
         JLabel lblLibelle = new JLabel(libelle);
-        lblLibelle.setFont(new Font("Arial", Font.BOLD, 14)); // Texte en gras
-        lblLibelle.setPreferredSize(new Dimension(100, 25)); // Largeur fixe pour l'alignement
+        lblLibelle.setFont(new Font("Arial", Font.BOLD, 14)); 
+        lblLibelle.setPreferredSize(new Dimension(100, 25)); 
         
         JLabel lblValeur = new JLabel(valeur);
-        lblValeur.setFont(new Font("Arial", Font.PLAIN, 14)); // Texte normal
+        lblValeur.setFont(new Font("Arial", Font.PLAIN, 14)); 
         
         ligne.add(lblLibelle, BorderLayout.WEST);
         ligne.add(lblValeur, BorderLayout.CENTER);

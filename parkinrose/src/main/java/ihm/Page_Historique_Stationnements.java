@@ -25,7 +25,7 @@ public class Page_Historique_Stationnements extends JFrame {
         this.emailUtilisateur = email;
         // Récupération des informations utilisateur depuis la base de données
         this.usager = UsagerDAO.getUsagerByEmail(email);
-        initialisePage();  // Initialisation de l'interface graphique
+        initialisePage();  
     }
     
     /**
@@ -35,14 +35,14 @@ public class Page_Historique_Stationnements extends JFrame {
     private void initialisePage() {
         // Configuration de la fenêtre
         this.setTitle("Historique des stationnements");
-        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Ne ferme que cette fenêtre
-        this.setSize(800, 600);  // Taille fixe de la fenêtre
-        this.setLocationRelativeTo(null);  // Centre la fenêtre sur l'écran
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        this.setSize(800, 600);  
+        this.setLocationRelativeTo(null);  
         
         // Panel principal avec bordures
         JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); // Marge de 20px
-        mainPanel.setBackground(Color.WHITE);  // Fond blanc
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainPanel.setBackground(Color.WHITE);  
         
         //EN-TÊTE DE LA PAGE
         JPanel headerPanel = new JPanel(new BorderLayout());
@@ -50,15 +50,15 @@ public class Page_Historique_Stationnements extends JFrame {
         
         // Bouton de retour vers la page profil
         JButton btnRetour = new JButton("← Retour");
-        btnRetour.addActionListener(e -> retourProfil());  // Action au clic
-        headerPanel.add(btnRetour, BorderLayout.WEST);  // Positionné à gauche
+        btnRetour.addActionListener(e -> retourProfil());  
+        headerPanel.add(btnRetour, BorderLayout.WEST);  
         
         // Titre centré de la page
         JLabel lblTitre = new JLabel("Historique de vos stationnements", SwingConstants.CENTER);
-        lblTitre.setFont(new Font("Arial", Font.BOLD, 18));  // Police en gras
+        lblTitre.setFont(new Font("Arial", Font.BOLD, 18)); 
         headerPanel.add(lblTitre, BorderLayout.CENTER);
         
-        mainPanel.add(headerPanel, BorderLayout.NORTH);  // Ajout en haut du panel principal
+        mainPanel.add(headerPanel, BorderLayout.NORTH);  
         
         //TABLEAU DES STATIONNEMENTS
         
@@ -115,32 +115,31 @@ public class Page_Historique_Stationnements extends JFrame {
         
         // Création du tableau avec les données
         JTable table = new JTable(donnees, colonnes);
-        table.setFont(new Font("Arial", Font.PLAIN, 12));  // Police standard
+        table.setFont(new Font("Arial", Font.PLAIN, 12));  
         table.setRowHeight(25);  // Hauteur des lignes
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));  // En-tête en gras
-        table.setDefaultEditor(Object.class, null);  // Tableau non éditable
+        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12)); 
+        table.setDefaultEditor(Object.class, null);
         
         // Ajout du tableau dans un scroll pane pour le défilement
         JScrollPane scrollPane = new JScrollPane(table);
-        mainPanel.add(scrollPane, BorderLayout.CENTER);  // Positionné au centre
+        mainPanel.add(scrollPane, BorderLayout.CENTER);  
         
         //PANEL DES STATISTIQUES
         JPanel statsPanel = new JPanel(new FlowLayout());
         statsPanel.setBackground(Color.WHITE);
         
         // Calcul des statistiques
-        long totalStationnements = stationnements.size();  // Nombre total
-        // Comptage des stationnements actifs avec stream Java 8
+        long totalStationnements = stationnements.size();  
         long stationnementsActifs = stationnements.stream()
                 .filter(s -> "ACTIF".equals(s.getStatut()))
                 .count();
         
         // Affichage des statistiques
         JLabel lblStats = new JLabel("Total: " + totalStationnements + " stationnement(s) | Actifs: " + stationnementsActifs);
-        lblStats.setFont(new Font("Arial", Font.BOLD, 14));  // Police en gras
+        lblStats.setFont(new Font("Arial", Font.BOLD, 14));
         statsPanel.add(lblStats);
         
-        mainPanel.add(statsPanel, BorderLayout.SOUTH);  // Positionné en bas
+        mainPanel.add(statsPanel, BorderLayout.SOUTH);
         
         // Définition du panel principal comme contenu de la fenêtre
         this.setContentPane(mainPanel);

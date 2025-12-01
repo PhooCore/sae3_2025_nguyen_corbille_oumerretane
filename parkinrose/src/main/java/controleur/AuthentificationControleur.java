@@ -23,7 +23,6 @@ public class AuthentificationControleur {
      * @return true si l'authentification réussit
      */
     public boolean authentifierUtilisateur(String email, String motDePasse, Page_Authentification pageAuthentification) {
-        // Validation des champs
         if (email == null || email.trim().isEmpty() || motDePasse == null || motDePasse.isEmpty()) {
             JOptionPane.showMessageDialog(pageAuthentification, 
                 "Veuillez remplir tous les champs", 
@@ -32,15 +31,12 @@ public class AuthentificationControleur {
             return false;
         }
         
-        // Vérification en base de données
         boolean authentifie = AuthentificationDAO.verifierUtilisateur(email, motDePasse);
         
         if (authentifie) {
-            // Récupération des informations utilisateur
             String[] infosUtilisateur = AuthentificationDAO.getInfosUtilisateur(email);
             
             if (infosUtilisateur != null) {
-                // Redirection vers la page principale
                 Page_Principale pagePrincipale = new Page_Principale(email);
                 pagePrincipale.setVisible(true);
                 pageAuthentification.dispose();

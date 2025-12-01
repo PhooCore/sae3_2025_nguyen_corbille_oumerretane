@@ -45,7 +45,7 @@ public class Page_Tous_Parkings extends JFrame {
         // Panel principal avec bordures
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); // Marge de 20px
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); 
         mainPanel.setBackground(Color.WHITE);
         
         // === EN-TÊTE DE LA PAGE AVEC FILTRES AVANCÉS ===
@@ -54,12 +54,12 @@ public class Page_Tous_Parkings extends JFrame {
         
         // === LISTE DES PARKINGS ===
         panelParkings = new JPanel();
-        panelParkings.setLayout(new BoxLayout(panelParkings, BoxLayout.Y_AXIS)); // Layout vertical
+        panelParkings.setLayout(new BoxLayout(panelParkings, BoxLayout.Y_AXIS)); 
         panelParkings.setBackground(Color.WHITE);
         
         // Scroll pane pour permettre le défilement si nombreux parkings
         JScrollPane scrollPane = new JScrollPane(panelParkings);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0)); // Marge supérieure
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         
         afficherParkings(); // Remplissage de la liste des parkings
@@ -196,14 +196,14 @@ public class Page_Tous_Parkings extends JFrame {
             JLabel lblAucun = new JLabel("Aucun parking ne correspond aux critères sélectionnés", SwingConstants.CENTER);
             lblAucun.setFont(new Font("Arial", Font.PLAIN, 16));
             lblAucun.setForeground(Color.GRAY);
-            lblAucun.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+            lblAucun.setAlignmentX(Component.CENTER_ALIGNMENT); 
             panelParkings.add(lblAucun);
         } else {
             // === CAS AVEC PARKINGS ===
             // Création d'une carte pour chaque parking
             for (Parking parking : parkingsFiltres) {
                 panelParkings.add(creerCarteParking(parking));
-                panelParkings.add(Box.createRigidArea(new Dimension(0, 10))); // Espacement entre les cartes
+                panelParkings.add(Box.createRigidArea(new Dimension(0, 10))); 
             }
         }
         
@@ -223,11 +223,11 @@ public class Page_Tous_Parkings extends JFrame {
         carte.setBackground(Color.WHITE);
         // Bordure grise avec padding interne
         carte.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(200, 200, 200)), // Bordure externe
-            BorderFactory.createEmptyBorder(15, 15, 15, 15) // Marge interne
+            BorderFactory.createLineBorder(new Color(200, 200, 200)), 
+            BorderFactory.createEmptyBorder(15, 15, 15, 15) 
         ));
-        carte.setMaximumSize(new Dimension(800, 120)); // Taille maximale fixe
-        carte.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Curseur main au survol
+        carte.setMaximumSize(new Dimension(800, 120)); 
+        carte.setCursor(new Cursor(Cursor.HAND_CURSOR)); 
         
         // === PANEL DES INFORMATIONS (partie gauche) ===
         JPanel infoPanel = new JPanel();
@@ -237,7 +237,7 @@ public class Page_Tous_Parkings extends JFrame {
         // Nom du parking (en bleu et gras)
         JLabel lblNom = new JLabel(parking.getLibelleParking());
         lblNom.setFont(new Font("Arial", Font.BOLD, 16));
-        lblNom.setForeground(new Color(0, 100, 200)); // Bleu
+        lblNom.setForeground(new Color(0, 100, 200));
         
         // Adresse du parking
         JLabel lblAdresse = new JLabel(parking.getAdresseParking());
@@ -262,7 +262,7 @@ public class Page_Tous_Parkings extends JFrame {
         if (TarifParkingDAO.estParkingGratuit(parking.getIdParking())) {
             JLabel lblGratuit = new JLabel("★ GRATUIT");
             lblGratuit.setFont(new Font("Arial", Font.BOLD, 12));
-            lblGratuit.setForeground(Color.GREEN.darker()); // Vert foncé
+            lblGratuit.setForeground(Color.GREEN.darker());
             detailsPanel.add(lblGratuit);
         }
         
@@ -270,7 +270,7 @@ public class Page_Tous_Parkings extends JFrame {
         if (TarifParkingDAO.proposeTarifSoiree(parking.getIdParking())) {
             JLabel lblSoiree = new JLabel("★ Tarif soirée");
             lblSoiree.setFont(new Font("Arial", Font.BOLD, 12));
-            lblSoiree.setForeground(Color.ORANGE.darker()); // Orange foncé
+            lblSoiree.setForeground(Color.ORANGE.darker()); 
             detailsPanel.add(lblSoiree);
         }
         
@@ -278,7 +278,7 @@ public class Page_Tous_Parkings extends JFrame {
         if (TarifParkingDAO.estParkingRelais(parking.getIdParking())) {
             JLabel lblRelais = new JLabel("★ Parking relais");
             lblRelais.setFont(new Font("Arial", Font.BOLD, 12));
-            lblRelais.setForeground(Color.BLUE.darker()); // Bleu foncé
+            lblRelais.setForeground(Color.BLUE.darker()); 
             detailsPanel.add(lblRelais);
         }
         
@@ -288,16 +288,16 @@ public class Page_Tous_Parkings extends JFrame {
         
         // === ASSEMBLAGE DU PANEL D'INFORMATIONS ===
         infoPanel.add(lblNom);
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Espacement
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 5))); 
         infoPanel.add(lblAdresse);
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Espacement
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         infoPanel.add(detailsPanel);
         
         carte.add(infoPanel, BorderLayout.CENTER);
         
         // === BOUTON D'ACTION (partie droite) ===
         JButton btnSelect = new JButton("Stationner ici");
-        btnSelect.setPreferredSize(new Dimension(120, 35)); // Taille fixe
+        btnSelect.setPreferredSize(new Dimension(120, 35)); 
         btnSelect.addActionListener(e -> selectionnerParking(parking));
         
         carte.add(btnSelect, BorderLayout.EAST);
@@ -322,7 +322,7 @@ public class Page_Tous_Parkings extends JFrame {
             JOptionPane.YES_NO_OPTION);
             
         if (choix == JOptionPane.YES_OPTION) {
-            // CORRECTION : Passage des paramètres nécessaires au constructeur
+
             Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur);//email et parking
             pageParking.setVisible(true);
             dispose(); // Ferme la page actuelle

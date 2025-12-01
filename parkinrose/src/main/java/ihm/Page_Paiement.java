@@ -179,7 +179,6 @@ public class Page_Paiement extends JFrame {
     }
 
     private void traiterPaiement() {
-        // Valider d'abord le formulaire
         if (!validerFormulaire()) {
             return;
         }

@@ -13,7 +13,7 @@ public class ParkingTest {
             "Parking Capitole", 
             "Place du Capitole, 31000 Toulouse", 
             250, 
-            125,  // places_disponibles
+            125, 
             2.10, 
             true
         );

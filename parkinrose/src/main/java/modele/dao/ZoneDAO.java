@@ -15,7 +15,6 @@ public class ZoneDAO {
 	public static List<Zone> getAllZones() {
 	    List<Zone> zones = new ArrayList<>();
 	    
-	    // Ajouter une condition WHERE pour exclure les parkings
 	    String sql = "SELECT id_zone, libelle_zone, couleur_zone, tarif_par_heure, duree_max FROM zone " +
 	                "WHERE id_zone IN ('ZONE_BLEUE', 'ZONE_VERTE', 'ZONE_JAUNE', 'ZONE_ORANGE', 'ZONE_ROUGE') " +
 	                "ORDER BY libelle_zone";
@@ -61,8 +60,7 @@ public class ZoneDAO {
                     String libelleZone = rs.getString("libelle_zone");
                     String couleurZone = rs.getString("couleur_zone");
                     double tarifParHeure = rs.getDouble("tarif_par_heure");
-                    
-                    // Récupérer la durée max comme String
+
                     String dureeMaxStr = rs.getString("duree_max");
                     LocalTime dureeMax = parseDureeMax(dureeMaxStr);
                     

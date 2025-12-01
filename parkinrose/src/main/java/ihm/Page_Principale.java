@@ -24,6 +24,7 @@ public class Page_Principale extends JFrame {
     private JButton btnStationnement;
     private Timer timer;
     private JTextField searchField;
+    private JPanel headerPanel;
 
     public Page_Principale(String email) {
         this.emailUtilisateur = email;
@@ -47,7 +48,7 @@ public class Page_Principale extends JFrame {
         mainPanel.setBackground(Color.WHITE);
         this.setContentPane(mainPanel);
         
-        JPanel headerPanel = creerBarrePanel();
+        headerPanel = creerBarrePanel();
         mainPanel.add(headerPanel, BorderLayout.NORTH);
         
         JPanel centerPanel = creerCenterPanel();
@@ -57,8 +58,37 @@ public class Page_Principale extends JFrame {
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
         
         updateStationnementIcon();
+        if (usager != null && usager.isAdmin()) {
+            ajouterBoutonAdmin();
+        }
     }
-    
+    private void ajouterBoutonAdmin() {
+        JButton btnAdmin = new JButton("Administration");
+        btnAdmin.setPreferredSize(new Dimension(130, 35));
+        btnAdmin.setBackground(new Color(255, 165, 0)); 
+        btnAdmin.setForeground(Color.WHITE);
+        btnAdmin.setFont(new Font("Arial", Font.BOLD, 12));
+        btnAdmin.setFocusPainted(false);
+        
+        btnAdmin.addActionListener(e -> {
+            Page_Administration adminPage = new Page_Administration(emailUtilisateur);
+            adminPage.setVisible(true);
+            this.dispose();
+        });
+        
+
+        Component[] components = headerPanel.getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JPanel && ((JPanel) comp).getComponentCount() > 0) {
+                JPanel iconsPanel = (JPanel) comp;
+                iconsPanel.add(btnAdmin, 0);
+                break;
+            }
+        }
+        
+        headerPanel.revalidate();
+        headerPanel.repaint();
+    }
     private JPanel creerBarrePanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(new Color(240, 240, 240));

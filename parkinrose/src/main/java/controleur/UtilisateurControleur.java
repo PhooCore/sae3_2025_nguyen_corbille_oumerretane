@@ -44,7 +44,7 @@ public class UtilisateurControleur {
     public boolean modifierMotDePasse(String ancienMotDePasse, String nouveauMotDePasse, 
                                      String confirmation, Page_Utilisateur pageUtilisateur) {
         
-        // Validation des champs
+
         if (ancienMotDePasse == null || ancienMotDePasse.isEmpty() ||
             nouveauMotDePasse == null || nouveauMotDePasse.isEmpty() ||
             confirmation == null || confirmation.isEmpty()) {
@@ -55,8 +55,7 @@ public class UtilisateurControleur {
                 JOptionPane.ERROR_MESSAGE);
             return false;
         }
-        
-        // Vérification de la correspondance des mots de passe
+
         if (!nouveauMotDePasse.equals(confirmation)) {
             JOptionPane.showMessageDialog(pageUtilisateur, 
                 "Les mots de passe ne correspondent pas", 
@@ -64,8 +63,7 @@ public class UtilisateurControleur {
                 JOptionPane.ERROR_MESSAGE);
             return false;
         }
-        
-        // Vérification de la longueur minimale
+
         if (nouveauMotDePasse.length() < 6) {
             JOptionPane.showMessageDialog(pageUtilisateur, 
                 "Le mot de passe doit contenir au moins 6 caractères", 
@@ -74,7 +72,7 @@ public class UtilisateurControleur {
             return false;
         }
         
-        // Vérification de l'ancien mot de passe
+
         ModifMdpDAO modifMdpDAO = new ModifMdpDAO();
         boolean ancienMdpCorrect = modifMdpDAO.verifierAncienMotDePasse(emailUtilisateur, ancienMotDePasse);
         
@@ -86,7 +84,7 @@ public class UtilisateurControleur {
             return false;
         }
         
-        // Modification du mot de passe
+
         boolean modificationReussie = modifMdpDAO.modifierMotDePasse(emailUtilisateur, nouveauMotDePasse);
         
         if (modificationReussie) {
@@ -126,11 +124,10 @@ public class UtilisateurControleur {
      * @param pageUtilisateur la page actuelle à fermer
      */
     public void redirigerVersModificationMDP(Page_Utilisateur pageUtilisateur) {
-        // Utilise le nouveau constructeur avec email pré-rempli ET la page parente
         Page_Modif_MDP pageModifMdp = new Page_Modif_MDP(emailUtilisateur, pageUtilisateur);
         pageModifMdp.setVisible(true);
-        pageUtilisateur.setVisible(false); // Cache la page utilisateur au lieu de la fermer
-        // Ne pas appeler dispose() ici pour pouvoir y retourner
+        pageUtilisateur.setVisible(false);
+
     }
     
     /**
@@ -153,8 +150,6 @@ public class UtilisateurControleur {
      */
     public boolean mettreAJourInformations(String nom, String prenom, String email, 
                                           Page_Utilisateur pageUtilisateur) {
-        // Cette méthode pourrait être implémentée si vous ajoutez 
-        // la fonctionnalité de modification des informations personnelles
         
         JOptionPane.showMessageDialog(pageUtilisateur, 
             "Fonctionnalité de modification des informations personnelles à implémenter", 

@@ -13,9 +13,7 @@ public class UsagerDAO {
      * @return true si l'ajout a réussi, false sinon
      */
     public static boolean ajouterUsager(Usager usager) {
-        // Requête SQL pour insérer un nouvel utilisateur
-        String sql = "INSERT INTO Usager (nom_usager, prenom_usager, mail_usager, mot_de_passe) VALUES (?, ?, ?, ?)";
-        
+        String sql = "INSERT INTO Usager (nom_usager, prenom_usager, mail_usager, mot_de_passe, is_admin) VALUES (?, ?, ?, ?, ?)";
         try (
             // Connexion à la base de données
             Connection conn = MySQLConnection.getConnection();
@@ -28,7 +26,7 @@ public class UsagerDAO {
             stmt.setString(2, usager.getPrenomUsager());     // 2ème ? : prénom de l'usager
             stmt.setString(3, usager.getMailUsager());       // 3ème ? : email de l'usager
             stmt.setString(4, usager.getMotDePasse());       // 4ème ? : mot de passe (en clair - à hasher en production)
-
+            stmt.setBoolean(5, usager.isAdmin());
             // Exécution de la requête d'insertion
             int ligneinseree = stmt.executeUpdate();
             
@@ -109,7 +107,7 @@ public class UsagerDAO {
                     usager.setPrenomUsager(rs.getString("prenom_usager"));   // Prénom
                     usager.setMailUsager(rs.getString("mail_usager"));       // Email
                     usager.setMotDePasse(rs.getString("mot_de_passe"));      // Mot de passe
-                    
+                    usager.setAdmin(rs.getBoolean("is_admin"));
                     
                     return usager;
                 }

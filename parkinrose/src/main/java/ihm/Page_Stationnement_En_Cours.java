@@ -57,9 +57,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
     private void initialisePage() {
         // Configuration de la fenêtre
         this.setTitle("Stationnement en cours");
-        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Ne ferme que cette fenêtre
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); 
         this.setSize(600, 500);
-        this.setLocationRelativeTo(null); // Centre la fenêtre
+        this.setLocationRelativeTo(null); 
         
         // Panel principal avec bordures
         JPanel mainPanel = new JPanel();
@@ -74,9 +74,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         
         // === PANEL D'INFORMATIONS DÉTAILLÉES ===
         panelInfo = new JPanel();
-        panelInfo.setLayout(new BoxLayout(panelInfo, BoxLayout.Y_AXIS)); // Layout vertical
+        panelInfo.setLayout(new BoxLayout(panelInfo, BoxLayout.Y_AXIS)); 
         panelInfo.setBackground(Color.WHITE);
-        panelInfo.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0)); // Marge verticale
+        panelInfo.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         
         // Ajout du panel dans un scroll pane pour permettre le défilement
         JScrollPane scrollPane = new JScrollPane(panelInfo);
@@ -93,7 +93,7 @@ public class Page_Stationnement_En_Cours extends JFrame {
         btnArreter = new JButton("Arrêter le stationnement");
         btnArreter.setBackground(Color.RED);
         btnArreter.setForeground(Color.WHITE);
-        btnArreter.setFocusPainted(false); // Désactive l'effet de focus
+        btnArreter.setFocusPainted(false);
         btnArreter.addActionListener(e -> arreterStationnement());
         
         panelBoutons.add(btnRetour);

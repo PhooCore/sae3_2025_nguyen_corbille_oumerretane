@@ -27,16 +27,16 @@ public class Page_Bienvenue extends JFrame {
 	public Page_Bienvenue() {
 		// Configuration de la fenêtre principale
 		this.setTitle("Application - Accueil");
-		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // Quitte l'application quand on ferme
-		this.setSize(800, 600); // Taille fixe
-		this.setLocationRelativeTo(null); // Centre la fenêtre
-		this.setResizable(false); // Empêche le redimensionnement
+		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+		this.setSize(800, 600);
+		this.setLocationRelativeTo(null); 
+		this.setResizable(false);
 		
 		// Création du panel principal avec layout vertical (BoxLayout)
 		contentPanel = new JPanel();
 		contentPanel.setBackground(Color.WHITE);
-		contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS)); // Alignement vertical
-		this.setContentPane(contentPanel); // Définit comme contenu principal
+		contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS)); 
+		this.setContentPane(contentPanel);
 		
 		// Ajout d'un espace vide en haut pour centrer verticalement
 		contentPanel.add(Box.createRigidArea(new Dimension(0, 80)));
@@ -48,12 +48,12 @@ public class Page_Bienvenue extends JFrame {
 		// Chargement du logo depuis les ressources
 		ImageIcon logoIcon = null;
 		try {
-			String imagePath = "/images/IMG_8155.png"; // Chemin relatif dans le classpath
-			URL imageUrl = getClass().getResource(imagePath); // Récupération de l'URL de l'image
+			String imagePath = "/images/IMG_8155.png";
+			URL imageUrl = getClass().getResource(imagePath); 
 			if (imageUrl != null) {
-				logoIcon = new ImageIcon(imageUrl); // Création de l'icône si l'image est trouvée
+				logoIcon = new ImageIcon(imageUrl); 
 			} else {
-				System.err.println("Image non trouvée: " + imagePath); // Message d'erreur en console
+				System.err.println("Image non trouvée: " + imagePath); 
 			}
 		} catch (Exception e) {
 			System.err.println("Erreur lors du chargement de l'image: " + e.getMessage());
@@ -66,8 +66,8 @@ public class Page_Bienvenue extends JFrame {
 				// Redimensionnement de l'image à 80% de sa taille originale
 				int originalWidth = logoIcon.getIconWidth();
 				int originalHeight = logoIcon.getIconHeight();
-				int newWidth = (int)(originalWidth * 0.8); // 80% de la largeur
-				int newHeight = (int)(originalHeight * 0.8); // 80% de la hauteur
+				int newWidth = (int)(originalWidth * 0.8); 
+				int newHeight = (int)(originalHeight * 0.8); 
 				
 				// Création d'une nouvelle icône redimensionnée avec lissage
 				ImageIcon scaledIcon = new ImageIcon(logoIcon.getImage().getScaledInstance(
@@ -81,7 +81,7 @@ public class Page_Bienvenue extends JFrame {
 			// Fallback si l'image n'est pas trouvée : affichage d'un texte "LOGO"
 			lblLogo.setText("LOGO");
 			lblLogo.setFont(new Font("Arial", Font.BOLD, 24));
-			lblLogo.setForeground(new Color(150, 150, 150)); // Gris moyen
+			lblLogo.setForeground(new Color(150, 150, 150));
 		}
 		
 		// Centrage du logo
@@ -98,9 +98,9 @@ public class Page_Bienvenue extends JFrame {
 		
 		// Configuration du titre
 		lblTitre = new JLabel("Bienvenue !");
-		lblTitre.setFont(new Font("Arial", Font.BOLD, 32)); // Police gras, taille 32
-		lblTitre.setForeground(new Color(60, 60, 60)); // Gris foncé
-		lblTitre.setHorizontalAlignment(SwingConstants.CENTER); // Centrage
+		lblTitre.setFont(new Font("Arial", Font.BOLD, 32)); 
+		lblTitre.setForeground(new Color(60, 60, 60)); 
+		lblTitre.setHorizontalAlignment(SwingConstants.CENTER); 
 		
 		titlePanel.add(lblTitre);
 		contentPanel.add(titlePanel);
@@ -112,19 +112,17 @@ public class Page_Bienvenue extends JFrame {
 		// Configuration du bouton "ENTRER"
 		btnEntrer = new JButton("ENTRER");
 		btnEntrer.setFont(new Font("Arial", Font.BOLD, 18));
-		btnEntrer.setForeground(Color.WHITE); // Texte blanc
-		btnEntrer.setBackground(new Color(70, 130, 180)); // Bleu
-		btnEntrer.setBorder(BorderFactory.createEmptyBorder(12, 50, 12, 50)); // Padding généreux
-		btnEntrer.setFocusPainted(false); // Désactive l'effet de focus
-		btnEntrer.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Curseur main au survol
+		btnEntrer.setForeground(Color.WHITE); 
+		btnEntrer.setBackground(new Color(70, 130, 180)); 
+		btnEntrer.setBorder(BorderFactory.createEmptyBorder(12, 50, 12, 50)); 
+		btnEntrer.setFocusPainted(false); 
+		btnEntrer.setCursor(new Cursor(Cursor.HAND_CURSOR)); 
 		
 		buttonPanel.add(btnEntrer);
 		contentPanel.add(buttonPanel);
-		
-		// Ajout d'un espace flexible pour pousser le contenu vers le haut (centrage vertical)
+
 		contentPanel.add(Box.createVerticalGlue());
-		
-		// Ajout de l'écouteur d'événement pour le bouton
+
 		btnEntrer.addActionListener(new BtnEntrerActionListener());
 	}
 

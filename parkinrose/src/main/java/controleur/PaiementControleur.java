@@ -126,8 +126,7 @@ public class PaiementControleur {
     
     public boolean validerDonneesPaiement(String nomCarte, String numeroCarte, String dateExpiration, String cvv,
                                          javax.swing.JFrame parent) {
-        
-        // Validation du nom sur la carte
+
         if (nomCarte == null || nomCarte.trim().isEmpty()) {
             JOptionPane.showMessageDialog(parent, 
                 "Veuillez saisir le nom sur la carte", 
@@ -135,8 +134,7 @@ public class PaiementControleur {
                 JOptionPane.ERROR_MESSAGE);
             return false;
         }
-        
-        // Validation du numéro de carte (16 chiffres)
+
         String numeroCarteNettoye = numeroCarte.trim().replaceAll("\\s+", "");
         if (numeroCarteNettoye.isEmpty() || !numeroCarteNettoye.matches("\\d{16}")) {
             JOptionPane.showMessageDialog(parent, 
@@ -145,8 +143,7 @@ public class PaiementControleur {
                 JOptionPane.ERROR_MESSAGE);
             return false;
         }
-        
-        // Validation de la date d'expiration
+
         if (dateExpiration == null || dateExpiration.trim().isEmpty()) {
             JOptionPane.showMessageDialog(parent, 
                 "Veuillez saisir la date d'expiration", 
@@ -154,8 +151,7 @@ public class PaiementControleur {
                 JOptionPane.ERROR_MESSAGE);
             return false;
         }
-        
-        // Validation du format de la date (MM/AA ou MM/YYYY)
+
         if (!validerFormatDateExpiration(dateExpiration.trim())) {
             JOptionPane.showMessageDialog(parent, 
                 "Format de date invalide. Utilisez MM/AA (ex: 12/25)", 
@@ -164,7 +160,6 @@ public class PaiementControleur {
             return false;
         }
         
-        // Vérification que la carte n'est pas expirée
         if (!estCarteNonExpiree(dateExpiration.trim())) {
             JOptionPane.showMessageDialog(parent, 
                 "La carte est expirée", 
@@ -173,7 +168,6 @@ public class PaiementControleur {
             return false;
         }
         
-        // Validation du CVV (3 ou 4 chiffres)
         String cvvNettoye = cvv.trim();
         if (cvvNettoye.isEmpty() || !cvvNettoye.matches("\\d{3,4}")) {
             JOptionPane.showMessageDialog(parent, 
@@ -190,7 +184,6 @@ public class PaiementControleur {
      * Valide le format de la date d'expiration (MM/AA ou MM/YYYY)
      */
     private boolean validerFormatDateExpiration(String dateExpiration) {
-        // Accepter les formats MM/AA et MM/YYYY
         if (!dateExpiration.matches("\\d{2}/\\d{2,4}")) {
             return false;
         }
@@ -200,12 +193,10 @@ public class PaiementControleur {
             int mois = Integer.parseInt(parties[0]);
             int annee = Integer.parseInt(parties[1]);
             
-            // Validation du mois (1-12)
             if (mois < 1 || mois > 12) {
                 return false;
             }
-            
-            // Validation de l'année
+
             if (annee < 0) {
                 return false;
             }
@@ -225,19 +216,14 @@ public class PaiementControleur {
             String[] parties = dateExpiration.split("/");
             int mois = Integer.parseInt(parties[0]);
             int annee = Integer.parseInt(parties[1]);
-            
-            // Si l'année est sur 2 chiffres, convertir en 4 chiffres
             if (annee < 100) {
-                annee += 2000; // Supposer le 21ème siècle
+                annee += 2000; 
             }
-            
-            // Créer l'objet YearMonth pour la date d'expiration
+
             YearMonth expiration = YearMonth.of(annee, mois);
-            
-            // Obtenir le mois et l'année actuels
+
             YearMonth maintenant = YearMonth.now();
-            
-            // La carte est valide si elle expire ce mois-ci ou plus tard
+
             return !expiration.isBefore(maintenant);
             
         } catch (Exception e) {
@@ -310,7 +296,6 @@ public class PaiementControleur {
                                                    String dateExpiration, String cvv,
                                                    javax.swing.JFrame parent) {
         
-        // Validation du nom sur la carte
         if (nomCarte == null || nomCarte.trim().isEmpty()) {
             JOptionPane.showMessageDialog(parent, 
                 "Veuillez saisir le nom sur la carte", 
@@ -319,7 +304,6 @@ public class PaiementControleur {
             return false;
         }
         
-        // Validation du numéro de carte
         String numeroCarteNettoye = numeroCarte.trim().replaceAll("\\s+", "");
         if (numeroCarteNettoye.isEmpty() || !numeroCarteNettoye.matches("\\d{16}")) {
             JOptionPane.showMessageDialog(parent, 
@@ -329,7 +313,6 @@ public class PaiementControleur {
             return false;
         }
         
-        // Validation de la date d'expiration
         if (dateExpiration == null || dateExpiration.trim().isEmpty()) {
             JOptionPane.showMessageDialog(parent, 
                 "Veuillez saisir la date d'expiration", 
@@ -337,8 +320,7 @@ public class PaiementControleur {
                 JOptionPane.ERROR_MESSAGE);
             return false;
         }
-        
-        // Validation du CVV
+
         String cvvNettoye = cvv.trim();
         if (cvvNettoye.isEmpty() || !cvvNettoye.matches("\\d{3,4}")) {
             JOptionPane.showMessageDialog(parent, 
@@ -347,8 +329,7 @@ public class PaiementControleur {
                 JOptionPane.ERROR_MESSAGE);
             return false;
         }
-        
-        // Validation métier (format date + expiration)
+
         return validerDonneesPaiement(nomCarte, numeroCarte, dateExpiration, cvv, parent);
     }
 
@@ -361,7 +342,6 @@ public class PaiementControleur {
         String numeroNettoye = numeroCarte.trim().replaceAll("\\s+", "");
         if (numeroNettoye.length() != 16) return numeroCarte;
         
-        // Formater comme XXXX XXXX XXXX XXXX
         return numeroNettoye.replaceAll("(.{4})", "$1 ").trim();
     }
 

@@ -38,7 +38,7 @@ public class Page_Inscription extends JFrame {
         JPanel panelRetour = new JPanel();
         panelRetour.setBackground(Color.WHITE);
         FlowLayout flowLayout = (FlowLayout) panelRetour.getLayout();
-        flowLayout.setAlignment(FlowLayout.LEFT); // Alignement à gauche
+        flowLayout.setAlignment(FlowLayout.LEFT); 
         mainPanel.add(panelRetour, BorderLayout.NORTH);
         
         // Bouton retour vers la page de connexion
@@ -46,19 +46,19 @@ public class Page_Inscription extends JFrame {
         btnRetour.addActionListener(e -> retourLogin());
         btnRetour.setFont(new Font("Arial", Font.PLAIN, 14));
         btnRetour.setBackground(Color.WHITE);
-        btnRetour.setFocusPainted(false); // Désactive l'effet de focus
+        btnRetour.setFocusPainted(false); 
         panelRetour.add(btnRetour);
 
         // Panel central pour le formulaire
         JPanel formPanel = new JPanel();
         formPanel.setBackground(Color.WHITE);
         mainPanel.add(formPanel, BorderLayout.CENTER);
-        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS)); // Layout vertical
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS)); 
         
 
         // Titre de la page
         JLabel lblTitre = new JLabel("Créer un compte");
-        lblTitre.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+        lblTitre.setAlignmentX(Component.CENTER_ALIGNMENT); 
         lblTitre.setFont(new Font("Arial", Font.BOLD, 28));
         formPanel.add(lblTitre);
         
@@ -70,9 +70,9 @@ public class Page_Inscription extends JFrame {
         // Panel pour le champ Nom
         JPanel panelNom = new JPanel();
         panelNom.setBackground(Color.WHITE);
-        panelNom.setMaximumSize(new Dimension(500, 50)); // Taille maximale fixe
+        panelNom.setMaximumSize(new Dimension(500, 50)); 
         formPanel.add(panelNom);
-        panelNom.setLayout(new BoxLayout(panelNom, BoxLayout.X_AXIS)); // Layout horizontal
+        panelNom.setLayout(new BoxLayout(panelNom, BoxLayout.X_AXIS)); 
         
         // Espacement gauche
         Component horizontalStrut = Box.createRigidArea(new Dimension(10, 0));
@@ -82,7 +82,7 @@ public class Page_Inscription extends JFrame {
         JLabel lblNom = new JLabel("Nom");
         lblNom.setPreferredSize(new Dimension(120, 30));
         lblNom.setMinimumSize(new Dimension(120, 30));
-        lblNom.setMaximumSize(new Dimension(120, 30)); // Taille fixe pour l'alignement
+        lblNom.setMaximumSize(new Dimension(120, 30)); 
         lblNom.setFont(new Font("Arial", Font.PLAIN, 16));
         panelNom.add(lblNom);
         
@@ -94,11 +94,11 @@ public class Page_Inscription extends JFrame {
         textFieldNom = new JTextField();
         textFieldNom.setPreferredSize(new Dimension(300, 40));
         textFieldNom.setMinimumSize(new Dimension(300, 40));
-        textFieldNom.setMaximumSize(new Dimension(300, 40)); // Taille fixe
+        textFieldNom.setMaximumSize(new Dimension(300, 40)); 
         textFieldNom.setFont(new Font("Arial", Font.PLAIN, 16));
         textFieldNom.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY), // Bordure grise
-            BorderFactory.createEmptyBorder(8, 12, 8, 12) // Padding interne
+            BorderFactory.createLineBorder(Color.GRAY), 
+            BorderFactory.createEmptyBorder(8, 12, 8, 12) 
         ));
         panelNom.add(textFieldNom);
         
@@ -207,7 +207,7 @@ public class Page_Inscription extends JFrame {
         Component horizontalStrut_10 = Box.createRigidArea(new Dimension(20, 0));
         panelPassword.add(horizontalStrut_10);
         
-        passwordField = new JPasswordField(); // Champ masqué pour le mot de passe
+        passwordField = new JPasswordField(); 
         passwordField.setPreferredSize(new Dimension(300, 40));
         passwordField.setMinimumSize(new Dimension(300, 40));
         passwordField.setMaximumSize(new Dimension(300, 40));
@@ -266,13 +266,13 @@ public class Page_Inscription extends JFrame {
 
         // Bouton de création de compte
         JButton btnCreerCompte = new JButton("CRÉER MON COMPTE");
-        btnCreerCompte.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
-        btnCreerCompte.addActionListener(e -> creerCompte()); // Action au clic
+        btnCreerCompte.setAlignmentX(Component.CENTER_ALIGNMENT); 
+        btnCreerCompte.addActionListener(e -> creerCompte()); 
         btnCreerCompte.setFont(new Font("Arial", Font.BOLD, 18));
-        btnCreerCompte.setBackground(new Color(80, 80, 80)); // Gris foncé
+        btnCreerCompte.setBackground(new Color(80, 80, 80));
         btnCreerCompte.setForeground(Color.WHITE);
         btnCreerCompte.setFocusPainted(false);
-        btnCreerCompte.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30)); // Padding généreux
+        btnCreerCompte.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30));
         formPanel.add(btnCreerCompte);
         
         // Espace flexible pour pousser le contenu vers le haut

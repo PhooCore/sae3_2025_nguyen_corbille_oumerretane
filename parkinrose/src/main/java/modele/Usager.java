@@ -13,6 +13,7 @@ public class Usager {
     private String mailUsager;
     private String motDePasse;
     private LocalDateTime dateInscription;
+    private boolean isAdmin;
 
     /**
      * Constructeur avec paramètres pour créer un nouvel usager.
@@ -27,6 +28,7 @@ public class Usager {
         this.prenomUsager = prenomUsager;
         this.mailUsager = mailUsager;
         this.motDePasse = motDePasse;
+        
     }
 
     /**
@@ -107,5 +109,18 @@ public class Usager {
      */
     public void setMotDePasse(String motDePasse) { 
         this.motDePasse = motDePasse; 
+    }
+    /**
+     * @return true si l'usager est un administrateur
+     */
+    public boolean isAdmin() {
+        return isAdmin;
+    }
+
+    /**
+     * @param isAdmin définit si l'usager est administrateur
+     */
+    public void setAdmin(boolean isAdmin) {
+        this.isAdmin = isAdmin;
     }
 }

@@ -28,9 +28,8 @@ public class TarifParkingDAO {
             return 0.00;
         }
         
-        // Vérifier si le tarif soirée s'applique
         if (tarifSoireeApplicable(heureArrivee, heureDepart, idParking)) {
-            return 5.90; // Tarif forfaitaire soirée
+            return 5.90;
         }
         
         // Calcul de la durée en minutes

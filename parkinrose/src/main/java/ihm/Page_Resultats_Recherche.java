@@ -81,7 +81,7 @@ public class Page_Resultats_Recherche extends JFrame {
         JButton btnRetour = new JButton("← Retour");
         btnRetour.addActionListener(e -> retourAccueil());
         btnRetour.setBackground(Color.WHITE);
-        btnRetour.setFocusPainted(false); // Désactive l'effet de focus
+        btnRetour.setFocusPainted(false); 
         headerPanel.add(btnRetour, BorderLayout.WEST);
         
         // Titre avec le nombre de résultats trouvés
@@ -124,7 +124,7 @@ public class Page_Resultats_Recherche extends JFrame {
      */
     private void appliquerFiltre() {
         String filtreSelectionne = (String) comboFiltres.getSelectedItem();
-        parkingsFiltres = new ArrayList<>(parkings); // Réinitialise avec tous les parkings
+        parkingsFiltres = new ArrayList<>(parkings); 
         
         switch (filtreSelectionne) {
             case "Places disponibles (décroissant)":
@@ -158,7 +158,7 @@ public class Page_Resultats_Recherche extends JFrame {
         String titre = parkingsFiltres.size() + " résultat(s) pour \"" + termeRecherche + "\"";
         ((JLabel)((JPanel)getContentPane().getComponent(0)).getComponent(1)).setText(titre);
         
-        afficherResultats(); // Réaffiche les résultats filtrés
+        afficherResultats(); 
     }
     
     /**
@@ -166,7 +166,7 @@ public class Page_Resultats_Recherche extends JFrame {
      * Gère le cas où aucun résultat n'est trouvé
      */
     private void afficherResultats() {
-        panelResultats.removeAll(); // Vide le panel avant de le remplir
+        panelResultats.removeAll();
         
         if (parkingsFiltres.isEmpty()) {
             // === CAS AUCUN RÉSULTAT ===
@@ -175,7 +175,7 @@ public class Page_Resultats_Recherche extends JFrame {
             JLabel lblAucunResultat = new JLabel("Aucun parking trouvé pour votre recherche.", SwingConstants.CENTER);
             lblAucunResultat.setFont(new Font("Arial", Font.PLAIN, 16));
             lblAucunResultat.setForeground(Color.GRAY);
-            lblAucunResultat.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrage horizontal
+            lblAucunResultat.setAlignmentX(Component.CENTER_ALIGNMENT); 
             panelResultats.add(lblAucunResultat);
             
             // Suggestion pour l'utilisateur
@@ -183,14 +183,14 @@ public class Page_Resultats_Recherche extends JFrame {
             lblSuggestion.setFont(new Font("Arial", Font.PLAIN, 14));
             lblSuggestion.setForeground(Color.GRAY);
             lblSuggestion.setAlignmentX(Component.CENTER_ALIGNMENT);
-            panelResultats.add(Box.createRigidArea(new Dimension(0, 10))); // Espacement
+            panelResultats.add(Box.createRigidArea(new Dimension(0, 10))); 
             panelResultats.add(lblSuggestion);
             
             // Bouton alternatif pour voir tous les parkings
             JButton btnTousParkings = new JButton("Voir tous les parkings");
             btnTousParkings.setAlignmentX(Component.CENTER_ALIGNMENT);
             btnTousParkings.addActionListener(e -> afficherTousParkings());
-            panelResultats.add(Box.createRigidArea(new Dimension(0, 20))); // Espacement
+            panelResultats.add(Box.createRigidArea(new Dimension(0, 20))); 
             panelResultats.add(btnTousParkings);
             
         } else {
@@ -199,7 +199,7 @@ public class Page_Resultats_Recherche extends JFrame {
             // Création d'une carte pour chaque parking trouvé
             for (Parking parking : parkingsFiltres) {
                 panelResultats.add(creerCarteParking(parking));
-                panelResultats.add(Box.createRigidArea(new Dimension(0, 10))); // Espacement entre les cartes
+                panelResultats.add(Box.createRigidArea(new Dimension(0, 10)));
             }
         }
         
@@ -318,8 +318,8 @@ public class Page_Resultats_Recherche extends JFrame {
             JOptionPane.YES_NO_OPTION);
             
         if (choix == JOptionPane.YES_OPTION) {
-            // CORRECTION : Passage des paramètres nécessaires au constructeur
-            Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur); //email et voiture
+
+            Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur);
 
             pageParking.setVisible(true);
             dispose(); // Ferme la page actuelle

@@ -14,7 +14,7 @@ public class Paiement {
     private String methodePaiement;
     private String statut;
 
-    // Constructeur complet
+
     public Paiement(String nomCarte, String numeroCarte, String codeSecretCarte, double montant, int idUsager) {
         this.nomCarte = nomCarte;
         this.numeroCarte = numeroCarte;
@@ -28,7 +28,6 @@ public class Paiement {
         this.statut = "REUSSI";
     }
 
-    // Constructeur vide pour le DAO
     public Paiement() {
     }
 
