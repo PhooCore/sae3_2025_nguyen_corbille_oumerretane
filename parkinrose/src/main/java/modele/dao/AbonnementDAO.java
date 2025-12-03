@@ -232,4 +232,64 @@ public class AbonnementDAO {
         }
         return abonnements;
     }
+    
+    /**
+     * Ajoute un abonnement à un utilisateur
+     * @param idUsager ID de l'utilisateur
+     * @param idAbonnement ID de l'abonnement
+     * @return true si l'ajout a réussi, false sinon
+     */
+    public static boolean ajouterAbonnementUtilisateur(int idUsager, String idAbonnement) {
+        // D'abord supprimer les anciens abonnements
+        String sqlDelete = "DELETE FROM Appartenir WHERE id_usager = ?";
+        String sqlInsert = "INSERT INTO Appartenir (id_usager, id_abonnement, date_debut) VALUES (?, ?, CURDATE())";
+        
+        try (Connection conn = MySQLConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            
+            try (PreparedStatement pstmtDelete = conn.prepareStatement(sqlDelete);
+                 PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert)) {
+                
+                // Supprimer les anciens abonnements
+                pstmtDelete.setInt(1, idUsager);
+                pstmtDelete.executeUpdate();
+                
+                // Ajouter le nouvel abonnement
+                pstmtInsert.setInt(1, idUsager);
+                pstmtInsert.setString(2, idAbonnement);
+                int rowsAffected = pstmtInsert.executeUpdate();
+                
+                conn.commit();
+                return rowsAffected > 0;
+                
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Supprime tous les abonnements d'un utilisateur
+     * @param idUsager ID de l'utilisateur
+     * @return true si la suppression a réussi, false sinon
+     */
+    public static boolean supprimerAbonnementsUtilisateur(int idUsager) {
+        String sql = "DELETE FROM Appartenir WHERE id_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, idUsager);
+            int rowsAffected = pstmt.executeUpdate();
+            return rowsAffected >= 0; // Retourne true même si aucun abonnement à supprimer
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
