@@ -1,12 +1,17 @@
 package ihm;
 
 import javax.swing.*;
+
+import controleur.PaiementControleur;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import modele.Abonnement;
+import modele.Paiement;
 import modele.dao.AbonnementDAO;
+import modele.dao.PaiementDAO;
 import modele.Usager;
 import modele.dao.UsagerDAO;
 
@@ -19,6 +24,12 @@ public class Page_Paiement_Abonnement extends JFrame {
     private String emailUtilisateur;
     private Abonnement abonnement;
     private JFrame parentFrame;
+    
+    // Déclaration des champs textuels comme variables de classe
+    private JTextField txtNumeroCarte;
+    private JTextField txtExpiration;
+    private JTextField txtCrypto;
+    private JTextField txtTitulaire;
     
     public Page_Paiement_Abonnement(String email, Abonnement abonnement, JFrame parent) {
         this.emailUtilisateur = email;
@@ -47,6 +58,7 @@ public class Page_Paiement_Abonnement extends JFrame {
         panelDetails.setBackground(Color.WHITE);
         panelDetails.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         
+        // ========== SECTION RÉCAPITULATIF ==========
         JPanel panelRecap = new JPanel(new GridLayout(0, 2, 10, 10));
         panelRecap.setBackground(Color.WHITE);
         panelRecap.setBorder(BorderFactory.createTitledBorder("Récapitulatif"));
@@ -71,24 +83,29 @@ public class Page_Paiement_Abonnement extends JFrame {
         panelDetails.add(panelRecap);
         panelDetails.add(Box.createVerticalStrut(20));
         
+        // ========== SECTION FORMULAIRE PAIEMENT ==========
         JPanel panelPaiement = new JPanel(new GridLayout(0, 2, 10, 10));
         panelPaiement.setBackground(Color.WHITE);
         panelPaiement.setBorder(BorderFactory.createTitledBorder("Informations de paiement"));
         
+        // Numéro de carte
         panelPaiement.add(new JLabel("Numéro de carte:"));
-        JTextField txtNumCarte = new JTextField("4242 4242 4242 4242");
-        panelPaiement.add(txtNumCarte);
+        txtNumeroCarte = new JTextField("4242 4242 4242 4242");
+        panelPaiement.add(txtNumeroCarte);
         
-        panelPaiement.add(new JLabel("Date d'expiration:"));
-        JTextField txtExpiration = new JTextField("MM/AA");
+        // Date d'expiration
+        panelPaiement.add(new JLabel("Date d'expiration (MM/AA):"));
+        txtExpiration = new JTextField("12/25");
         panelPaiement.add(txtExpiration);
         
-        panelPaiement.add(new JLabel("Cryptogramme:"));
-        JTextField txtCrypto = new JTextField("123");
+        // Cryptogramme
+        panelPaiement.add(new JLabel("Cryptogramme (CVV):"));
+        txtCrypto = new JTextField("123");
         panelPaiement.add(txtCrypto);
         
-        panelPaiement.add(new JLabel("Titulaire:"));
-        JTextField txtTitulaire = new JTextField();
+        // Titulaire
+        panelPaiement.add(new JLabel("Titulaire de la carte:"));
+        txtTitulaire = new JTextField();
         Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
         if (usager != null) {
             txtTitulaire.setText(usager.getNomUsager() + " " + usager.getPrenomUsager());
@@ -96,9 +113,31 @@ public class Page_Paiement_Abonnement extends JFrame {
         panelPaiement.add(txtTitulaire);
         
         panelDetails.add(panelPaiement);
+        panelDetails.add(Box.createVerticalStrut(20));
+        
+        // ========== SECTION SÉCURITÉ ==========
+        JPanel panelSecurite = new JPanel();
+        panelSecurite.setBackground(new Color(240, 248, 255));
+        panelSecurite.setLayout(new BoxLayout(panelSecurite, BoxLayout.Y_AXIS));
+        panelSecurite.setBorder(BorderFactory.createTitledBorder("Sécurité du paiement"));
+        
+        JLabel lblSecurite1 = new JLabel("• Votre paiement est sécurisé par cryptage SSL");
+        JLabel lblSecurite2 = new JLabel("• Aucune donnée bancaire n'est conservée sur nos serveurs");
+        JLabel lblSecurite3 = new JLabel("• Le prélèvement s'effectuera mensuellement");
+        
+        lblSecurite1.setFont(new Font("Arial", Font.PLAIN, 11));
+        lblSecurite2.setFont(new Font("Arial", Font.PLAIN, 11));
+        lblSecurite3.setFont(new Font("Arial", Font.PLAIN, 11));
+        
+        panelSecurite.add(lblSecurite1);
+        panelSecurite.add(lblSecurite2);
+        panelSecurite.add(lblSecurite3);
+        
+        panelDetails.add(panelSecurite);
         
         mainPanel.add(panelDetails, BorderLayout.CENTER);
         
+        // ========== SECTION BOUTONS ==========
         JPanel panelBoutons = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         panelBoutons.setBackground(Color.WHITE);
         
@@ -129,61 +168,71 @@ public class Page_Paiement_Abonnement extends JFrame {
     }
     
     private void traiterPaiement() {
-        // Simuler le traitement du paiement
-        int confirmation = JOptionPane.showConfirmDialog(this,
-            "Confirmez-vous le paiement de " + String.format("%.2f €", abonnement.getTarifAbonnement()) + 
-            " pour l'abonnement " + abonnement.getLibelleAbonnement() + " ?",
-            "Confirmation de paiement",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.QUESTION_MESSAGE);
-            
-        if (confirmation == JOptionPane.YES_OPTION) {
-            // Ajouter l'abonnement à l'utilisateur
-            Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
-            
-            // Supprimer d'abord les anciens abonnements
-            supprimerAbonnementsUtilisateur(usager.getIdUsager());
-            
-            // Ajouter le nouvel abonnement
-            boolean succes = ajouterAbonnementUtilisateur(usager.getIdUsager(), abonnement.getIdAbonnement());
-            
-            if (succes) {
-                JOptionPane.showMessageDialog(this,
-                    "Paiement confirmé !\n" +
-                    "Votre abonnement " + abonnement.getLibelleAbonnement() + " est maintenant actif.",
-                    "Succès",
-                    JOptionPane.INFORMATION_MESSAGE);
-                    
-                // Fermer cette fenêtre et celle des abonnements
-                if (parentFrame != null) {
-                    parentFrame.dispose();
-                }
-                
-                // ========== NOUVEAU : OUVERTURE DE LA PAGE UTILISATEUR AVEC RAFRAÎCHISSEMENT ==========
-                // Fermer toutes les fenêtres d'abonnement
-                dispose();
-                
-                // Ouvrir la page utilisateur qui affichera automatiquement le nouvel abonnement
-                // L'onglet Informations montrera "Actif - [Nom de l'abonnement]"
-                Page_Utilisateur pageUser = new Page_Utilisateur(emailUtilisateur);
-                pageUser.setVisible(true);
-                // ========== FIN MODIFICATION ==========
-                
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Une erreur est survenue lors de l'activation de l'abonnement.",
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
-            }
+        // Valider le formulaire
+        if (!validerFormulaire()) {
+            return;
         }
+        
+        // Récupérer l'utilisateur
+        Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+        if (usager == null) {
+            JOptionPane.showMessageDialog(this,
+                "Utilisateur non trouvé.",
+                "Erreur",
+                JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        // Utiliser le contrôleur pour traiter le paiement
+        PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
+        boolean succes = controleur.traiterPaiementAbonnement(
+            txtTitulaire.getText().trim(),
+            txtNumeroCarte.getText().trim(),
+            txtExpiration.getText().trim(),
+            txtCrypto.getText().trim(),
+            abonnement.getTarifAbonnement(),
+            abonnement.getIdAbonnement(),
+            abonnement.getLibelleAbonnement(),
+            this
+        );
+        
+        if (succes) {
+            // Fermer toutes les fenêtres d'abonnement
+            if (parentFrame != null) {
+                parentFrame.dispose();
+            }
+            
+            // Ouvrir la page utilisateur avec rafraîchissement
+            dispose();
+            Page_Utilisateur pageUser = new Page_Utilisateur(emailUtilisateur, true);
+            pageUser.setVisible(true);
+        }
+        // Si erreur, le contrôleur a déjà affiché le message
+    }
+
+    private boolean validerFormulaire() {
+        // Créer le contrôleur de paiement
+        PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
+        
+        // Valider le formulaire complet
+        return controleur.validerFormulairePaiementComplet(
+            txtTitulaire.getText().trim(),
+            txtNumeroCarte.getText().trim(),
+            txtExpiration.getText().trim(),
+            txtCrypto.getText().trim(),
+            this
+        );
     }
     
-    private void supprimerAbonnementsUtilisateur(int idUsager) {
-        System.out.println("Suppression des anciens abonnements pour l'utilisateur " + idUsager);
-    }
-    
-    private boolean ajouterAbonnementUtilisateur(int idUsager, String idAbonnement) {
-        System.out.println("Ajout de l'abonnement " + idAbonnement + " à l'utilisateur " + idUsager);
-        return true;
+    // Méthode main pour tester la page
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            // Créer un abonnement fictif pour le test
+            Abonnement testAbonnement = new Abonnement("ABN_BASIC", "Abonnement Basique", 9.99);
+            
+            // Créer et afficher la page de paiement
+            Page_Paiement_Abonnement page = new Page_Paiement_Abonnement("test@example.com", testAbonnement, null);
+            page.setVisible(true);
+        });
     }
 }

@@ -14,38 +14,59 @@ public class StationnementDAO {
     /**
      * Crée un nouveau stationnement en voirie
      */
-    public static boolean creerStationnementVoirie(int idUsager, String typeVehicule, String plaqueImmatriculation, 
-                                                  String idZone, int dureeHeures, int dureeMinutes,  
-                                                  double cout, String idPaiement) {
-        String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, id_zone, " +
-                    "duree_heures, duree_minutes, cout, date_creation, date_fin, statut, " +
-                    "id_paiement, type_stationnement, statut_paiement) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE), 'ACTIF', ?, 'VOIRIE', 'PAYE')";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            int dureeTotaleMinutes = (dureeHeures * 60) + dureeMinutes;
-            
-            stmt.setInt(1, idUsager);
-            stmt.setString(2, typeVehicule);
-            stmt.setString(3, plaqueImmatriculation);
-            stmt.setString(4, idZone);
-            stmt.setInt(5, dureeHeures);
-            stmt.setInt(6, dureeMinutes);
-            stmt.setDouble(7, cout);
-            stmt.setInt(8, dureeTotaleMinutes);
-            stmt.setString(9, idPaiement);
-            
-            int lignesAffectees = stmt.executeUpdate();
-            return lignesAffectees > 0;
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur création stationnement voirie: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
+	public static boolean creerStationnementVoirie(Stationnement stationnement) {
+	    String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
+	                 "id_tarification, type_stationnement, duree_heures, duree_minutes, cout, " +
+	                 "statut, date_creation, id_paiement) " +
+	                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	    
+	    try (Connection conn = MySQLConnection.getConnection();
+	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+	        
+	        pstmt.setInt(1, stationnement.getIdUsager());
+	        pstmt.setString(2, stationnement.getTypeVehicule());
+	        pstmt.setString(3, stationnement.getPlaqueImmatriculation());
+	        pstmt.setString(4, stationnement.getIdTarification());
+	        pstmt.setString(5, stationnement.getTypeStationnement());
+	        pstmt.setInt(6, stationnement.getDureeHeures());
+	        pstmt.setInt(7, stationnement.getDureeMinutes());
+	        pstmt.setDouble(8, stationnement.getCout());
+	        pstmt.setString(9, stationnement.getStatut());
+	        pstmt.setTimestamp(10, java.sql.Timestamp.valueOf(stationnement.getDateCreation()));
+	        pstmt.setString(11, stationnement.getIdPaiement());
+	        
+	        int rowsAffected = pstmt.executeUpdate();
+	        return rowsAffected > 0;
+	        
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	        return false;
+	    }
+	}
+
+	public static boolean terminerStationnementParking(Integer idStationnement, 
+	                                                  LocalDateTime heureDepart, 
+	                                                  double cout, 
+	                                                  String idPaiement) {
+	    String sql = "UPDATE Stationnement SET heure_depart = ?, cout = ?, statut = 'TERMINE', " +
+	                 "id_paiement = ? WHERE id_stationnement = ?";
+	    
+	    try (Connection conn = MySQLConnection.getConnection();
+	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+	        
+	        pstmt.setTimestamp(1, java.sql.Timestamp.valueOf(heureDepart));
+	        pstmt.setDouble(2, cout);
+	        pstmt.setString(3, idPaiement);
+	        pstmt.setInt(4, idStationnement);
+	        
+	        int rowsAffected = pstmt.executeUpdate();
+	        return rowsAffected > 0;
+	        
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	        return false;
+	    }
+	}
     
     /**
      * Crée un nouveau stationnement en parking

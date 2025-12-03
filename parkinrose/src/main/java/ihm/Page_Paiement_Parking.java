@@ -274,6 +274,7 @@ public class Page_Paiement_Parking extends JFrame {
         }
         
         try {
+            // Créer le paiement
             Paiement paiement = new Paiement(
                 txtNomCarte.getText().trim(),
                 txtNumeroCarte.getText().trim(),
@@ -282,9 +283,28 @@ public class Page_Paiement_Parking extends JFrame {
                 usager.getIdUsager()
             );
             
-            boolean paiementReussi = PaiementDAO.enregistrerPaiement(paiement);
+            // Simuler le paiement via le contrôleur
+            PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
+            boolean paiementSimuleReussi = controleur.simulerPaiement(
+                montant,
+                txtNumeroCarte.getText().trim(),
+                txtDateExpiration.getText().trim(),
+                txtCVV.getText().trim()
+            );
             
-            if (paiementReussi) {
+            if (!paiementSimuleReussi) {
+                JOptionPane.showMessageDialog(this,
+                    "Le paiement a été refusé par la banque",
+                    "Paiement refusé",
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Enregistrer le paiement dans la base
+            boolean paiementEnregistre = PaiementDAO.enregistrerPaiement(paiement);
+            
+            if (paiementEnregistre) {
+                // Mettre à jour le stationnement
                 boolean operationReussie = StationnementDAO.terminerStationnementParking(
                     idStationnement,
                     LocalDateTime.now(),
@@ -315,6 +335,18 @@ public class Page_Paiement_Parking extends JFrame {
             e.printStackTrace();
         }
     }
+
+    private boolean validerFormulaire() {
+        PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
+        
+        return controleur.validerFormulairePaiementComplet(
+            txtNomCarte.getText().trim(),
+            txtNumeroCarte.getText().trim(),
+            txtDateExpiration.getText().trim(),
+            txtCVV.getText().trim(),
+            this
+        );
+    }
     
     private void afficherConfirmation() {
         String message = "Paiement effectué avec succès !\n\n" +
@@ -335,18 +367,6 @@ public class Page_Paiement_Parking extends JFrame {
         pagePrincipale.setVisible(true);
         this.dispose();
     }
-    
-    private boolean validerFormulaire() {
-
-        PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
-        
-        return controleur.validerFormulairePaiementComplet(
-            txtNomCarte.getText().trim(),
-            txtNumeroCarte.getText().trim(),
-            txtDateExpiration.getText().trim(),
-            txtCVV.getText().trim(),
-            this
-        );
-    }
+   
 
 }

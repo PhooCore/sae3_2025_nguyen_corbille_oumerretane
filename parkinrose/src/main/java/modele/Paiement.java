@@ -13,19 +13,27 @@ public class Paiement {
     private LocalDateTime datePaiement;
     private String methodePaiement;
     private String statut;
+    private String typePaiement;
 
-
+    // Constructeur pour les stationnements
     public Paiement(String nomCarte, String numeroCarte, String codeSecretCarte, double montant, int idUsager) {
         this.nomCarte = nomCarte;
         this.numeroCarte = numeroCarte;
         this.codeSecretCarte = codeSecretCarte;
         this.montant = montant;
         this.idUsager = idUsager;
-        this.idAbonnement = "ABO_SIMPLE";
         this.idPaiement = "PAY_" + System.currentTimeMillis();
         this.datePaiement = LocalDateTime.now();
         this.methodePaiement = "CARTE";
         this.statut = "REUSSI";
+        this.typePaiement = "Stationnement";
+    }
+
+    // Constructeur pour les abonnements
+    public Paiement(String nomCarte, String numeroCarte, String codeSecretCarte, double montant, int idUsager, String idAbonnement) {
+        this(nomCarte, numeroCarte, codeSecretCarte, montant, idUsager);
+        this.idAbonnement = idAbonnement;
+        this.typePaiement = "Abonnement";
     }
 
     public Paiement() {
@@ -61,4 +69,16 @@ public class Paiement {
     
     public String getStatut() { return statut; }
     public void setStatut(String statut) { this.statut = statut; }
+
+    public String getTypePaiement() { 
+        if (typePaiement == null) {
+            // Détermine automatiquement le type en fonction de l'ID abonnement
+            return idAbonnement != null && !idAbonnement.isEmpty() ? "Abonnement" : "Stationnement";
+        }
+        return typePaiement; 
+    }
+    
+    public void setTypePaiement(String typePaiement) { 
+        this.typePaiement = typePaiement; 
+    }
 }
