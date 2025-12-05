@@ -1,5 +1,6 @@
 package modele.dao;
 
+import modele.Parking;
 import modele.Stationnement;
 
 import java.sql.*;
@@ -68,74 +69,103 @@ public class StationnementDAO {
 	    }
 	}
     
-    /**
-     * Crée un nouveau stationnement en parking
-     */
+	/**
+	 * Crée un stationnement en parking avec gestion des places selon le type de véhicule
+	 */
 	public static boolean creerStationnementParking(int idUsager, String typeVehicule, String plaqueImmatriculation,
-            String idParking, LocalDateTime heureArrivee) {
+	        String idParking, LocalDateTime heureArrivee) {
 
-	Connection conn = null;
-	try {
-		conn = MySQLConnection.getConnection();
-		conn.setAutoCommit(false);
-		
-		// 1. Vérifier qu'il y a encore des places disponibles
-		int placesDisponibles = ParkingDAO.getPlacesDisponibles(idParking);
-		if (placesDisponibles <= 0) {
-			JOptionPane.showMessageDialog(null, "Plus de places disponibles dans ce parking", "Parking complet", JOptionPane.WARNING_MESSAGE);
-			return false;
-		}
-		
-		// 2. Décrémenter les places disponibles
-		boolean placesDecrementees = ParkingDAO.decrementerPlacesDisponibles(idParking);
-		if (!placesDecrementees) {
-			conn.rollback();
-			JOptionPane.showMessageDialog(null, "Erreur lors de la réservation de la place", "Erreur", JOptionPane.ERROR_MESSAGE);
-			return false;
-		}
-		
-		// 3. Créer le stationnement avec id_parking
-		String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
-		"id_parking, heure_arrivee, type_stationnement, statut_paiement, statut) " +
-		"VALUES (?, ?, ?, ?, ?, 'PARKING', 'NON_PAYE', 'ACTIF')";
-		
-		try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-			stmt.setInt(1, idUsager);
-			stmt.setString(2, typeVehicule);
-			stmt.setString(3, plaqueImmatriculation);
-			stmt.setString(4, idParking);	
-			stmt.setTimestamp(5, Timestamp.valueOf(heureArrivee));
-		
-			int lignesAffectees = stmt.executeUpdate();
-		
-			if (lignesAffectees > 0) {
-				conn.commit();
-				return true;
-			} else {
-				conn.rollback();
-				return false;
-			}
-		}
-		
-		} catch (SQLException e) {
-			try {
-				if (conn != null) conn.rollback();
-			} catch (SQLException ex) {
-				System.err.println("Erreur lors du rollback: " + ex.getMessage());
-			}
-			System.err.println("Erreur création stationnement parking: " + e.getMessage());
-			e.printStackTrace();
-			return false;
-		} finally {
-			try {
-				if (conn != null) {
-					conn.setAutoCommit(true);
-					conn.close();
-				}
-			} catch (SQLException e) {
-				System.err.println("Erreur fermeture connexion: " + e.getMessage());
-			}
-		}
+	    Connection conn = null;
+	    try {
+	        conn = MySQLConnection.getConnection();
+	        conn.setAutoCommit(false);
+	        
+	        // Récupérer les infos du parking
+	        Parking parking = ParkingDAO.getParkingById(idParking);
+	        if (parking == null) {
+	            JOptionPane.showMessageDialog(null, "Parking non trouvé", "Erreur", JOptionPane.ERROR_MESSAGE);
+	            return false;
+	        }
+	        
+	        // Vérifier les places selon le type de véhicule
+	        boolean isMoto = "Moto".equalsIgnoreCase(typeVehicule);
+	        
+	        if (isMoto && parking.hasMoto()) {
+	            // Vérifier places moto
+	            if (parking.getPlacesMotoDisponibles() <= 0) {
+	                JOptionPane.showMessageDialog(null, "Plus de places moto disponibles dans ce parking", 
+	                    "Parking complet", JOptionPane.WARNING_MESSAGE);
+	                return false;
+	            }
+	            
+	            // Décrémenter places moto
+	            boolean placesDecrementees = ParkingDAO.decrementerPlacesMotoDisponibles(idParking);
+	            if (!placesDecrementees) {
+	                conn.rollback();
+	                JOptionPane.showMessageDialog(null, "Erreur lors de la réservation de la place moto", 
+	                    "Erreur", JOptionPane.ERROR_MESSAGE);
+	                return false;
+	            }
+	        } else {
+	            // Vérifier places voiture/camion
+	            if (parking.getPlacesDisponibles() <= 0) {
+	                JOptionPane.showMessageDialog(null, "Plus de places disponibles dans ce parking", 
+	                    "Parking complet", JOptionPane.WARNING_MESSAGE);
+	                return false;
+	            }
+	            
+	            // Décrémenter places normales
+	            boolean placesDecrementees = ParkingDAO.decrementerPlacesDisponibles(idParking);
+	            if (!placesDecrementees) {
+	                conn.rollback();
+	                JOptionPane.showMessageDialog(null, "Erreur lors de la réservation de la place", 
+	                    "Erreur", JOptionPane.ERROR_MESSAGE);
+	                return false;
+	            }
+	        }
+	        
+	        // Créer le stationnement
+	        String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
+	                    "id_parking, heure_arrivee, type_stationnement, statut_paiement, statut) " +
+	                    "VALUES (?, ?, ?, ?, ?, 'PARKING', 'NON_PAYE', 'ACTIF')";
+	        
+	        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+	            stmt.setInt(1, idUsager);
+	            stmt.setString(2, typeVehicule);
+	            stmt.setString(3, plaqueImmatriculation);
+	            stmt.setString(4, idParking);
+	            stmt.setTimestamp(5, Timestamp.valueOf(heureArrivee));
+	        
+	            int lignesAffectees = stmt.executeUpdate();
+	        
+	            if (lignesAffectees > 0) {
+	                conn.commit();
+	                return true;
+	            } else {
+	                conn.rollback();
+	                return false;
+	            }
+	        }
+	        
+	    } catch (SQLException e) {
+	        try {
+	            if (conn != null) conn.rollback();
+	        } catch (SQLException ex) {
+	            System.err.println("Erreur lors du rollback: " + ex.getMessage());
+	        }
+	        System.err.println("Erreur création stationnement parking: " + e.getMessage());
+	        e.printStackTrace();
+	        return false;
+	    } finally {
+	        try {
+	            if (conn != null) {
+	                conn.setAutoCommit(true);
+	                conn.close();
+	            }
+	        } catch (SQLException e) {
+	            System.err.println("Erreur fermeture connexion: " + e.getMessage());
+	        }
+	    }
 	}
     
     
@@ -213,7 +243,7 @@ public class StationnementDAO {
     }
     
     /**
-     * Termine un stationnement parking et incrémente les places disponibles
+     * Termine un stationnement parking et libère les places selon le type de véhicule
      */
     public static boolean terminerStationnementParking(int idStationnement, LocalDateTime heureDepart, 
                                                       double cout, String idPaiement) {
@@ -223,18 +253,38 @@ public class StationnementDAO {
             conn = MySQLConnection.getConnection();
             conn.setAutoCommit(false);
             
-            // 1. Récupérer l'ID du parking depuis le stationnement
-            String idParking = getIdParkingFromStationnement(idStationnement);
+            // 1. Récupérer les infos du stationnement
+            String sqlSelect = "SELECT s.*, p.has_moto FROM Stationnement s " +
+                              "LEFT JOIN Parking p ON s.id_parking = p.id_parking " +
+                              "WHERE s.id_stationnement = ?";
+            
+            String idParking = null;
+            String typeVehicule = null;
+            boolean hasMoto = false;
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
+                stmt.setInt(1, idStationnement);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    idParking = rs.getString("id_parking");
+                    typeVehicule = rs.getString("type_vehicule");
+                    hasMoto = rs.getBoolean("has_moto");
+                } else {
+                    conn.rollback();
+                    return false;
+                }
+            }
+            
             if (idParking == null) {
                 conn.rollback();
                 return false;
             }
             
             // 2. Mettre à jour le stationnement
-            String sql = "UPDATE Stationnement SET statut = 'TERMINE', heure_depart = ?, cout = ?, " +
-                        "id_paiement = ?, statut_paiement = 'PAYE' WHERE id_stationnement = ?";
+            String sqlUpdate = "UPDATE Stationnement SET statut = 'TERMINE', heure_depart = ?, cout = ?, " +
+                              "id_paiement = ?, statut_paiement = 'PAYE' WHERE id_stationnement = ?";
             
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
                 stmt.setTimestamp(1, Timestamp.valueOf(heureDepart));
                 stmt.setDouble(2, cout);
                 stmt.setString(3, idPaiement);
@@ -243,9 +293,17 @@ public class StationnementDAO {
                 int lignesAffectees = stmt.executeUpdate();
                 
                 if (lignesAffectees > 0) {
-                    // 3. Incrémenter les places disponibles
-                    boolean placesIncrementees = ParkingDAO.incrementerPlacesDisponibles(idParking);
-                    if (placesIncrementees) {
+                    // 3. Libérer les places selon le type de véhicule
+                    boolean isMoto = "Moto".equalsIgnoreCase(typeVehicule);
+                    boolean placesLiberees;
+                    
+                    if (isMoto && hasMoto) {
+                        placesLiberees = ParkingDAO.incrementerPlacesMotoDisponibles(idParking);
+                    } else {
+                        placesLiberees = ParkingDAO.incrementerPlacesDisponibles(idParking);
+                    }
+                    
+                    if (placesLiberees) {
                         conn.commit();
                         return true;
                     } else {

@@ -7,9 +7,7 @@ import java.awt.Font;
 import java.awt.GridLayout;
 
 import javax.swing.Box;
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -86,9 +84,6 @@ public class Page_Accueil extends JFrame {
 		Component rigidArea_2 = Box.createRigidArea(new Dimension(0, 30));
 		panel.add(rigidArea_2);
 		
-		JComboBox fltCBox = new JComboBox();
-		fltCBox.setModel(new DefaultComboBoxModel(new String[] {"tous les parking", "un filtre", "un autre", "encore", "c long"}));
-		panel.add(fltCBox);
 		
 		JPanel btnPanel = new JPanel();
 		mainPanel.add(btnPanel, BorderLayout.SOUTH);

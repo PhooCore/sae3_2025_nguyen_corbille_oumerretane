@@ -14,90 +14,81 @@ import modele.dao.TarifParkingDAO;
 public class Page_Resultats_Recherche extends JFrame {
     
     private static final long serialVersionUID = 1L;
-    private String emailUtilisateur;          // Email de l'utilisateur connecté
-    private String termeRecherche;            // Terme de recherche saisi par l'utilisateur
-    private List<Parking> parkings;           // Liste des parkings correspondants
-    private List<Parking> parkingsFiltres;    // Liste des parkings après filtrage
-    private JPanel panelResultats;            // Panel pour afficher les résultats
-    private JComboBox<String> comboFiltres;   // Combo box pour les filtres
+    private String emailUtilisateur;
+    private String termeRecherche;
+    private List<Parking> parkings;
+    private List<Parking> parkingsFiltres;
+    private JPanel panelResultats;
+    private JComboBox<String> comboFiltres;
+    private JCheckBox checkGratuit, checkSoiree, checkRelais, checkMoto;
 
-    /**
-     * Constructeur de la page de résultats de recherche
-     * @param email l'email de l'utilisateur connecté
-     * @param termeRecherche le terme de recherche saisi
-     */
     public Page_Resultats_Recherche(String email, String termeRecherche) {
         this.emailUtilisateur = email;
         this.termeRecherche = termeRecherche;
-        // Recherche des parkings correspondants dans la base de données
         this.parkings = ParkingDAO.rechercherParkings(termeRecherche);
-        this.parkingsFiltres = new ArrayList<>(parkings); // Initialise avec tous les parkings
-        initialisePage(); // Initialisation de l'interface
+        this.parkingsFiltres = new ArrayList<>(parkings);
+        initialisePage();
     }
     
-    /**
-     * Initialise l'interface utilisateur de la page de résultats
-     */
     private void initialisePage() {
-        // Configuration de la fenêtre
         this.setTitle("Résultats de recherche - " + termeRecherche);
-        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Ne ferme que cette fenêtre
-        this.setSize(900, 700); 
-        this.setLocationRelativeTo(null); // Centre la fenêtre
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        this.setSize(900, 700);
+        this.setLocationRelativeTo(null);
         
-        // Panel principal avec bordures
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         mainPanel.setBackground(Color.WHITE);
         
-        // === EN-TÊTE DE LA PAGE AVEC FILTRES ===
         JPanel headerPanel = creerHeaderPanel();
         mainPanel.add(headerPanel, BorderLayout.NORTH);
         
-        // === ZONE DES RÉSULTATS ===
         panelResultats = new JPanel();
-        panelResultats.setLayout(new BoxLayout(panelResultats, BoxLayout.Y_AXIS)); // Layout vertical
+        panelResultats.setLayout(new BoxLayout(panelResultats, BoxLayout.Y_AXIS));
         panelResultats.setBackground(Color.WHITE);
         
-        // Scroll pane pour permettre le défilement si nombreux résultats
         JScrollPane scrollPane = new JScrollPane(panelResultats);
         scrollPane.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         
-        afficherResultats(); // Remplissage des résultats
+        afficherResultats();
         
         this.setContentPane(mainPanel);
     }
     
-    /**
-     * Crée le panel d'en-tête avec bouton retour, titre et filtres
-     */
     private JPanel creerHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(Color.WHITE);
         
-        // Bouton retour vers l'accueil
         JButton btnRetour = new JButton("← Retour");
         btnRetour.addActionListener(e -> retourAccueil());
         btnRetour.setBackground(Color.WHITE);
-        btnRetour.setFocusPainted(false); 
+        btnRetour.setFocusPainted(false);
         headerPanel.add(btnRetour, BorderLayout.WEST);
         
-        // Titre avec le nombre de résultats trouvés
         String titre = parkingsFiltres.size() + " résultat(s) pour \"" + termeRecherche + "\"";
         JLabel lblTitre = new JLabel(titre, SwingConstants.CENTER);
         lblTitre.setFont(new Font("Arial", Font.BOLD, 18));
         headerPanel.add(lblTitre, BorderLayout.CENTER);
         
-        // === PANEL DES FILTRES ===
         JPanel filtresPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         filtresPanel.setBackground(Color.WHITE);
         
-        // Label pour le filtre
-        JLabel lblFiltre = new JLabel("Trier par:");
+        JLabel lblFiltre = new JLabel("Filtrer:");
+        checkGratuit = new JCheckBox("Gratuits");
+        checkSoiree = new JCheckBox("Tarif soirée");
+        checkRelais = new JCheckBox("Parkings relais");
+        checkMoto = new JCheckBox("Places moto");
         
-        // Combo box avec les options de filtrage
+        checkGratuit.addActionListener(e -> appliquerFiltres());
+        checkSoiree.addActionListener(e -> appliquerFiltres());
+        checkRelais.addActionListener(e -> appliquerFiltres());
+        checkMoto.addActionListener(e -> appliquerFiltres());
+        
+        filtresPanel.add(Box.createRigidArea(new Dimension(20, 0)));
+        
+        JLabel lblTri = new JLabel("Trier par:");
         comboFiltres = new JComboBox<>(new String[]{
             "Pertinence",
             "Places disponibles (décroissant)",
@@ -105,26 +96,41 @@ public class Page_Resultats_Recherche extends JFrame {
             "Parkings gratuits",
             "Tarif soirée",
             "Parkings relais",
+            "Places moto disponibles",
             "Hauteur (décroissant)",
             "Hauteur (croissant)"
         });
-        
-        // Listener pour appliquer le filtre quand la sélection change
-        comboFiltres.addActionListener(e -> appliquerFiltre());
+        comboFiltres.addActionListener(e -> appliquerFiltres());
         
         filtresPanel.add(lblFiltre);
+        filtresPanel.add(checkGratuit);
+        filtresPanel.add(checkSoiree);
+        filtresPanel.add(checkRelais);
+        filtresPanel.add(checkMoto);
+        filtresPanel.add(lblTri);
         filtresPanel.add(comboFiltres);
+        
         headerPanel.add(filtresPanel, BorderLayout.EAST);
         
         return headerPanel;
     }
     
-    /**
-     * Applique le filtre sélectionné sur la liste des parkings
-     */
-    private void appliquerFiltre() {
+    private void appliquerFiltres() {
         String filtreSelectionne = (String) comboFiltres.getSelectedItem();
-        parkingsFiltres = new ArrayList<>(parkings); 
+        parkingsFiltres = new ArrayList<>(parkings);
+        
+        if (checkGratuit.isSelected()) {
+            parkingsFiltres.removeIf(p -> !TarifParkingDAO.estParkingGratuit(p.getIdParking()));
+        }
+        if (checkSoiree.isSelected()) {
+            parkingsFiltres.removeIf(p -> !TarifParkingDAO.proposeTarifSoiree(p.getIdParking()));
+        }
+        if (checkRelais.isSelected()) {
+            parkingsFiltres.removeIf(p -> !TarifParkingDAO.estParkingRelais(p.getIdParking()));
+        }
+        if (checkMoto.isSelected()) {
+            parkingsFiltres.removeIf(p -> !p.hasMoto() || !p.hasPlacesMotoDisponibles());
+        }
         
         switch (filtreSelectionne) {
             case "Places disponibles (décroissant)":
@@ -134,13 +140,33 @@ public class Page_Resultats_Recherche extends JFrame {
                 parkingsFiltres.sort(Comparator.comparingInt(Parking::getPlacesDisponibles));
                 break;
             case "Parkings gratuits":
-                parkingsFiltres.removeIf(p -> !TarifParkingDAO.estParkingGratuit(p.getIdParking()));
+                parkingsFiltres.sort((p1, p2) -> {
+                    boolean g1 = TarifParkingDAO.estParkingGratuit(p1.getIdParking());
+                    boolean g2 = TarifParkingDAO.estParkingGratuit(p2.getIdParking());
+                    return Boolean.compare(g2, g1);
+                });
                 break;
             case "Tarif soirée":
-                parkingsFiltres.removeIf(p -> !TarifParkingDAO.proposeTarifSoiree(p.getIdParking()));
+                parkingsFiltres.sort((p1, p2) -> Boolean.compare(p2.hasTarifSoiree(), p1.hasTarifSoiree()));
                 break;
             case "Parkings relais":
-                parkingsFiltres.removeIf(p -> !TarifParkingDAO.estParkingRelais(p.getIdParking()));
+                parkingsFiltres.sort((p1, p2) -> {
+                    boolean r1 = TarifParkingDAO.estParkingRelais(p1.getIdParking());
+                    boolean r2 = TarifParkingDAO.estParkingRelais(p2.getIdParking());
+                    return Boolean.compare(r2, r1);
+                });
+                break;
+            case "Places moto disponibles":
+                parkingsFiltres.sort((p1, p2) -> {
+                    if (p1.hasMoto() && p2.hasMoto()) {
+                        return Integer.compare(p2.getPlacesMotoDisponibles(), p1.getPlacesMotoDisponibles());
+                    } else if (p1.hasMoto()) {
+                        return -1;
+                    } else if (p2.hasMoto()) {
+                        return 1;
+                    }
+                    return 0;
+                });
                 break;
             case "Hauteur (décroissant)":
                 parkingsFiltres.sort(Comparator.comparingDouble(Parking::getHauteurParking).reversed());
@@ -150,150 +176,116 @@ public class Page_Resultats_Recherche extends JFrame {
                 break;
             case "Pertinence":
             default:
-                // Garde l'ordre original de pertinence
                 break;
         }
         
-        // Mettre à jour le titre avec le nouveau nombre de résultats
         String titre = parkingsFiltres.size() + " résultat(s) pour \"" + termeRecherche + "\"";
         ((JLabel)((JPanel)getContentPane().getComponent(0)).getComponent(1)).setText(titre);
         
-        afficherResultats(); 
+        afficherResultats();
     }
     
-    /**
-     * Affiche les résultats de recherche dans le panel
-     * Gère le cas où aucun résultat n'est trouvé
-     */
     private void afficherResultats() {
         panelResultats.removeAll();
         
         if (parkingsFiltres.isEmpty()) {
-            // === CAS AUCUN RÉSULTAT ===
-            
-            // Message principal
             JLabel lblAucunResultat = new JLabel("Aucun parking trouvé pour votre recherche.", SwingConstants.CENTER);
             lblAucunResultat.setFont(new Font("Arial", Font.PLAIN, 16));
             lblAucunResultat.setForeground(Color.GRAY);
-            lblAucunResultat.setAlignmentX(Component.CENTER_ALIGNMENT); 
+            lblAucunResultat.setAlignmentX(Component.CENTER_ALIGNMENT);
             panelResultats.add(lblAucunResultat);
             
-            // Suggestion pour l'utilisateur
             JLabel lblSuggestion = new JLabel("Essayez avec d'autres termes ou consultez tous les parkings.", SwingConstants.CENTER);
             lblSuggestion.setFont(new Font("Arial", Font.PLAIN, 14));
             lblSuggestion.setForeground(Color.GRAY);
             lblSuggestion.setAlignmentX(Component.CENTER_ALIGNMENT);
-            panelResultats.add(Box.createRigidArea(new Dimension(0, 10))); 
+            panelResultats.add(Box.createRigidArea(new Dimension(0, 10)));
             panelResultats.add(lblSuggestion);
             
-            // Bouton alternatif pour voir tous les parkings
             JButton btnTousParkings = new JButton("Voir tous les parkings");
             btnTousParkings.setAlignmentX(Component.CENTER_ALIGNMENT);
             btnTousParkings.addActionListener(e -> afficherTousParkings());
-            panelResultats.add(Box.createRigidArea(new Dimension(0, 20))); 
+            panelResultats.add(Box.createRigidArea(new Dimension(0, 20)));
             panelResultats.add(btnTousParkings);
             
         } else {
-            // === CAS AVEC RÉSULTATS ===
-            
-            // Création d'une carte pour chaque parking trouvé
             for (Parking parking : parkingsFiltres) {
                 panelResultats.add(creerCarteParking(parking));
                 panelResultats.add(Box.createRigidArea(new Dimension(0, 10)));
             }
         }
         
-        // Actualisation de l'affichage
         panelResultats.revalidate();
         panelResultats.repaint();
     }
     
-    /**
-     * Crée une carte visuelle pour représenter un parking
-     * @param parking l'objet Parking à afficher
-     * @return JPanel représentant la carte du parking
-     */
     private JPanel creerCarteParking(Parking parking) {
         JPanel carte = new JPanel();
         carte.setLayout(new BorderLayout());
         carte.setBackground(Color.WHITE);
-        // Bordure grise avec padding interne
         carte.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200)),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15) 
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
-        carte.setMaximumSize(new Dimension(800, 120)); 
-        carte.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Curseur main au survol
+        carte.setMaximumSize(new Dimension(800, 140));
+        carte.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // === PANEL DES INFORMATIONS (partie gauche) ===
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setBackground(Color.WHITE);
         
-        // Nom du parking (en bleu et gras)
         JLabel lblNom = new JLabel(parking.getLibelleParking());
         lblNom.setFont(new Font("Arial", Font.BOLD, 16));
-        lblNom.setForeground(new Color(0, 100, 200)); // Bleu
+        lblNom.setForeground(new Color(0, 100, 200));
         
-        // Adresse du parking
         JLabel lblAdresse = new JLabel(parking.getAdresseParking());
         lblAdresse.setFont(new Font("Arial", Font.PLAIN, 14));
         lblAdresse.setForeground(Color.DARK_GRAY);
         
-        // === PANEL DES DÉTAILS (indicateurs + infos techniques) ===
         JPanel detailsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
         detailsPanel.setBackground(Color.WHITE);
         
-        // Indicateur nombre de places
-        JLabel lblPlaces = new JLabel("Places: " + parking.getPlacesDisponibles() + "/" + parking.getNombrePlaces());
+        JLabel lblPlaces = new JLabel(parking.getPlacesDisponibles() + "/" + parking.getNombrePlaces() + " places");
         lblPlaces.setFont(new Font("Arial", Font.PLAIN, 12));
         
-        // Indicateur hauteur maximale
-        JLabel lblHauteur = new JLabel("Hauteur max: " + parking.getHauteurParking() + "m");
+        if (parking.hasMoto()) {
+            JLabel lblMoto = new JLabel(""+parking.getPlacesMotoDisponibles() + "/" + parking.getPlacesMoto() + " places moto");
+            lblMoto.setFont(new Font("Arial", Font.PLAIN, 12));
+            lblMoto.setForeground(new Color(100, 100, 100));
+            detailsPanel.add(lblMoto);
+        }
+        
+        JLabel lblHauteur = new JLabel(parking.getHauteurParking() + "m");
         lblHauteur.setFont(new Font("Arial", Font.PLAIN, 12));
         
-        // === INDICATEURS SPÉCIAUX ===
-        
-        // Indicateur parking gratuit (étoile verte)
         if (TarifParkingDAO.estParkingGratuit(parking.getIdParking())) {
-            JLabel lblGratuit = new JLabel("★ GRATUIT");
+            JLabel lblGratuit = new JLabel("☑ GRATUIT");
             lblGratuit.setFont(new Font("Arial", Font.BOLD, 12));
             lblGratuit.setForeground(Color.GREEN.darker());
             detailsPanel.add(lblGratuit);
         }
         
-        // Indicateur tarif soirée (étoile orange)
-        if (TarifParkingDAO.proposeTarifSoiree(parking.getIdParking())) {
-            JLabel lblSoiree = new JLabel("★ Tarif soirée");
+        if (parking.hasTarifSoiree()) {
+            JLabel lblSoiree = new JLabel("☽ Tarif soirée");
             lblSoiree.setFont(new Font("Arial", Font.BOLD, 12));
             lblSoiree.setForeground(Color.ORANGE.darker());
             detailsPanel.add(lblSoiree);
         }
         
-        // Indicateur parking relais (étoile bleue)
-        if (TarifParkingDAO.estParkingRelais(parking.getIdParking())) {
-            JLabel lblRelais = new JLabel("★ Parking relais");
-            lblRelais.setFont(new Font("Arial", Font.BOLD, 12));
-            lblRelais.setForeground(Color.BLUE.darker());
-            detailsPanel.add(lblRelais);
-        }
         
-        // Ajout des informations techniques
         detailsPanel.add(lblPlaces);
         detailsPanel.add(lblHauteur);
         
-        // === ASSEMBLAGE DU PANEL D'INFORMATIONS ===
         infoPanel.add(lblNom);
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Espacement
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         infoPanel.add(lblAdresse);
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Espacement
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         infoPanel.add(detailsPanel);
         
         carte.add(infoPanel, BorderLayout.CENTER);
         
-        // === BOUTON D'ACTION (partie droite) ===
         JButton btnSelect = new JButton("Stationner ici");
-        btnSelect.setPreferredSize(new Dimension(120, 35)); // Taille fixe
+        btnSelect.setPreferredSize(new Dimension(120, 35));
         btnSelect.addActionListener(e -> selectionnerParking(parking));
         
         carte.add(btnSelect, BorderLayout.EAST);
@@ -301,48 +293,34 @@ public class Page_Resultats_Recherche extends JFrame {
         return carte;
     }
     
-    /**
-     * Gère la sélection d'un parking par l'utilisateur
-     * Affiche une confirmation avant de rediriger vers la page de stationnement
-     * @param parking le parking sélectionné
-     */
     private void selectionnerParking(Parking parking) {
-        // Message de confirmation avec les détails du parking
         int choix = JOptionPane.showConfirmDialog(this,
             "Voulez-vous préparer un stationnement pour :\n" +
             parking.getLibelleParking() + "\n" +
             parking.getAdresseParking() + "\n\n" +
-            "Places disponibles: " + parking.getPlacesDisponibles() + "/" + parking.getNombrePlaces() + "\n" +
+            "Places voiture: " + parking.getPlacesDisponibles() + "/" + parking.getNombrePlaces() + "\n" +
+            (parking.hasMoto() ? "Places moto: " + parking.getPlacesMotoDisponibles() + "/" + parking.getPlacesMoto() + "\n" : "") +
             "Hauteur maximale: " + parking.getHauteurParking() + "m",
             "Confirmation",
             JOptionPane.YES_NO_OPTION);
             
         if (choix == JOptionPane.YES_OPTION) {
-
             Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur);
-
             pageParking.setVisible(true);
-            dispose(); // Ferme la page actuelle
+            dispose();
         }
     }
     
-    /**
-     * Affiche la page avec tous les parkings disponibles
-     * Alternative quand la recherche ne donne pas de résultats
-     */
     private void afficherTousParkings() {
         List<Parking> tousParkings = ParkingDAO.getAllParkings();
         Page_Tous_Parkings pageTousParkings = new Page_Tous_Parkings(emailUtilisateur, tousParkings);
         pageTousParkings.setVisible(true);
-        dispose(); // Ferme la page actuelle
+        dispose();
     }
     
-    /**
-     * Retourne à la page principale (accueil)
-     */
     private void retourAccueil() {
         Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
         pagePrincipale.setVisible(true);
-        dispose(); // Ferme la page actuelle
+        dispose();
     }
 }

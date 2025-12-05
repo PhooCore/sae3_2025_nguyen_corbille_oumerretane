@@ -4,14 +4,17 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import modele.dao.*;
 
 /**
  * Page d'administration pour gérer les parkings, utilisateurs, etc.
  */
 public class Page_Administration extends JFrame {
     
-    private String emailAdmin;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private String emailAdmin;
     private JPanel contentPane;
     private JButton btnGestionParkings;
     private JButton btnGestionUtilisateurs;

@@ -8,9 +8,14 @@ public class Parking {
     private int placesDisponibles;
     private double hauteurParking;
     private boolean tarifSoiree;
+    private boolean hasMoto;
+    private int placesMoto;
+    private int placesMotoDisponibles;
     
+    // Constructeur complet
     public Parking(String idParking, String libelleParking, String adresseParking, 
-                  int nombrePlaces, int placesDisponibles, double hauteurParking, boolean tarifSoiree) {
+                   int nombrePlaces, int placesDisponibles, double hauteurParking, 
+                   boolean tarifSoiree, boolean hasMoto, int placesMoto, int placesMotoDisponibles) {
         this.idParking = idParking;
         this.libelleParking = libelleParking;
         this.adresseParking = adresseParking;
@@ -18,6 +23,17 @@ public class Parking {
         this.placesDisponibles = placesDisponibles;
         this.hauteurParking = hauteurParking;
         this.tarifSoiree = tarifSoiree;
+        this.hasMoto = hasMoto;
+        this.placesMoto = placesMoto;
+        this.placesMotoDisponibles = placesMotoDisponibles;
+    }
+    
+    // Constructeur pour compatibilité (sans infos moto)
+    public Parking(String idParking, String libelleParking, String adresseParking, 
+                   int nombrePlaces, int placesDisponibles, double hauteurParking, 
+                   boolean tarifSoiree) {
+        this(idParking, libelleParking, adresseParking, nombrePlaces, 
+             placesDisponibles, hauteurParking, tarifSoiree, false, 0, 0);
     }
     
     // Getters et Setters
@@ -77,8 +93,43 @@ public class Parking {
         this.tarifSoiree = tarifSoiree;
     }
     
+    public boolean hasMoto() {
+        return hasMoto;
+    }
+    
+    public void setHasMoto(boolean hasMoto) {
+        this.hasMoto = hasMoto;
+    }
+    
+    public int getPlacesMoto() {
+        return placesMoto;
+    }
+    
+    public void setPlacesMoto(int placesMoto) {
+        this.placesMoto = placesMoto;
+    }
+    
+    public int getPlacesMotoDisponibles() {
+        return placesMotoDisponibles;
+    }
+    
+    public void setPlacesMotoDisponibles(int placesMotoDisponibles) {
+        this.placesMotoDisponibles = placesMotoDisponibles;
+    }
+    
+    // Méthodes utilitaires
+    public boolean hasPlacesMotoDisponibles() {
+        return hasMoto && placesMotoDisponibles > 0;
+    }
+    
+    public boolean hasPlacesDisponibles() {
+        return placesDisponibles > 0;
+    }
+    
     @Override
     public String toString() {
-        return libelleParking + " - " + adresseParking + " (" + placesDisponibles + "/" + nombrePlaces + " places)";
+        return libelleParking + " (" + adresseParking + ") - " + 
+               placesDisponibles + "/" + nombrePlaces + " places" +
+               (hasMoto ? " - " + placesMotoDisponibles + "/" + placesMoto + " places moto" : "");
     }
 }
