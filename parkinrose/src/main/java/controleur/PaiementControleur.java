@@ -84,7 +84,23 @@ public class PaiementControleur {
     public boolean traiterPaiementParking(String nomCarte, String numeroCarte, String dateExpiration, String cvv,
                                          double montant, int idStationnement, LocalDateTime heureDepart,
                                          Page_Paiement pagePaiement) {
-        
+        Stationnement stationnement = StationnementDAO.getStationnementById(idStationnement);
+        if (stationnement != null && "GRATUIT".equals(stationnement.getStatutPaiement())) {
+            // Si gratuit, pas besoin de paiement, terminer directement
+            boolean stationnementReussi = StationnementDAO.terminerStationnementParking(
+                idStationnement,
+                heureDepart,
+                0.0, // montant 0
+                null // pas d'id_paiement
+            );
+            
+            if (stationnementReussi) {
+                afficherConfirmationParking(0.0, idStationnement, pagePaiement);
+                redirigerVersAccueil(pagePaiement);
+                return true;
+            }
+            return false;
+        }
         if (!validerDonneesPaiement(nomCarte, numeroCarte, dateExpiration, cvv, pagePaiement)) {
             return false;
         }

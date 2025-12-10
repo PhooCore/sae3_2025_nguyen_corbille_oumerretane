@@ -282,7 +282,7 @@ public class Page_Principale extends JFrame {
                 pageGarer.setVisible(true);
                 dispose();
             } else if (choix == 1) {
-                Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur);
+                Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur,null);
                 pageParking.setVisible(true);
                 dispose();
             }

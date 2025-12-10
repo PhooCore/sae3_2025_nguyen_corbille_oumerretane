@@ -298,19 +298,17 @@ public class Page_Resultats_Recherche extends JFrame {
             "Voulez-vous préparer un stationnement pour :\n" +
             parking.getLibelleParking() + "\n" +
             parking.getAdresseParking() + "\n\n" +
-            "Places voiture: " + parking.getPlacesDisponibles() + "/" + parking.getNombrePlaces() + "\n" +
-            (parking.hasMoto() ? "Places moto: " + parking.getPlacesMotoDisponibles() + "/" + parking.getPlacesMoto() + "\n" : "") +
+            "Places disponibles: " + parking.getPlacesDisponibles() + "/" + parking.getNombrePlaces() + "\n" +
             "Hauteur maximale: " + parking.getHauteurParking() + "m",
             "Confirmation",
             JOptionPane.YES_NO_OPTION);
             
         if (choix == JOptionPane.YES_OPTION) {
-            Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur);
+            Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur, parking);
             pageParking.setVisible(true);
             dispose();
         }
     }
-    
     private void afficherTousParkings() {
         List<Parking> tousParkings = ParkingDAO.getAllParkings();
         Page_Tous_Parkings pageTousParkings = new Page_Tous_Parkings(emailUtilisateur, tousParkings);

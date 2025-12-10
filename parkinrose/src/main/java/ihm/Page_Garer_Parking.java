@@ -28,11 +28,13 @@ public class Page_Garer_Parking extends JFrame {
     private String emailUtilisateur;
     private Usager usager;
     private StationnementControleur controleur;
+    private Parking parkingPreSelectionne;
 
-    public Page_Garer_Parking(String email) {
+    public Page_Garer_Parking(String email,Parking parkingPreSelectionne) {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
         this.controleur = new StationnementControleur(email);
+        this.parkingPreSelectionne = parkingPreSelectionne;
         initialisePage();
         initialiseDonnees();
         initializeEventListeners();
@@ -171,19 +173,35 @@ public class Page_Garer_Parking extends JFrame {
         listeParkings = ParkingDAO.getAllParkings();
         
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
-        for (Parking parking : listeParkings) {
-            model.addElement(parking.getLibelleParking() + " - " + parking.getAdresseParking());
+        int indexSelectionne = -1;
+        
+        for (int i = 0; i < listeParkings.size(); i++) {
+            Parking parking = listeParkings.get(i);
+            String texte = parking.getLibelleParking() + " - " + parking.getAdresseParking();
+            model.addElement(texte);
+            
+            // Si ce parking est celui pré-sélectionné, mémoriser l'index
+            if (parkingPreSelectionne != null && 
+                parkingPreSelectionne.getIdParking().equals(parking.getIdParking())) {
+                indexSelectionne = i;
+            }
         }
+        
         comboParking.setModel(model);
+        
+        // Sélectionner le parking pré-sélectionné si spécifié
+        if (indexSelectionne != -1) {
+            comboParking.setSelectedIndex(indexSelectionne);
+            mettreAJourInfosParking(indexSelectionne);
+        } else if (!listeParkings.isEmpty()) {
+            mettreAJourInfosParking(0);
+        }
         
         if (lblPlaque.getText() == null || lblPlaque.getText().isEmpty()) {
             lblPlaque.setText("Non définie");
         }
-        
-        if (!listeParkings.isEmpty()) {
-            mettreAJourInfosParking(0);
-        }
     }
+    
     
     private void initializeEventListeners() {
         comboParking.addItemListener(new ItemListener() {
@@ -231,33 +249,40 @@ public class Page_Garer_Parking extends JFrame {
         int index = comboParking.getSelectedIndex();
         if (index >= 0 && index < listeParkings.size()) {
             Parking parking = listeParkings.get(index);
+            String typeVehicule = getTypeVehicule();
+            
+            //Vérif moto
+            if ("Moto".equals(typeVehicule)) {
+                if (!parking.hasMoto()) {
+                    JOptionPane.showMessageDialog(this,
+                        "Ce parking ne dispose pas de places pour les motos",
+                        "Parking non adapté",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (parking.getPlacesMotoDisponibles() <= 0) {
+                    JOptionPane.showMessageDialog(this,
+                        "Plus de places moto disponibles dans ce parking",
+                        "Parking complet",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            }
             
             boolean succes = controleur.preparerStationnementParking(
-                getTypeVehicule(),
+                typeVehicule,
                 lblPlaque.getText(),
                 parking.getIdParking(),
                 this
             );
         }
     }
-    
     private String getTypeVehicule() {
         if (radioVoiture.isSelected()) return "Voiture";
         if (radioMoto.isSelected()) return "Moto";
         return "Camion";
     }
 
-    
-    public static void main(String[] args) {
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    new Page_Garer_Parking("pho@email.com").setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
+
     
 }

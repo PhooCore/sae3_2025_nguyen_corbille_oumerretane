@@ -277,7 +277,7 @@ public class Page_Tous_Parkings extends JFrame {
             JOptionPane.YES_NO_OPTION);
             
         if (choix == JOptionPane.YES_OPTION) {
-            Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur);
+        	Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur, parking);
             pageParking.setVisible(true);
             dispose();
         }

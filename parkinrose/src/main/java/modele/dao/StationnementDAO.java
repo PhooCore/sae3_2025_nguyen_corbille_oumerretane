@@ -49,20 +49,86 @@ public class StationnementDAO {
 	                                                  LocalDateTime heureDepart, 
 	                                                  double cout, 
 	                                                  String idPaiement) {
-	    String sql = "UPDATE Stationnement SET heure_depart = ?, cout = ?, statut = 'TERMINE', " +
-	                 "id_paiement = ? WHERE id_stationnement = ?";
-	    
-	    try (Connection conn = MySQLConnection.getConnection();
-	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+	    Connection conn = null;
+	    try {
+	        conn = MySQLConnection.getConnection();
+	        conn.setAutoCommit(false);
 	        
-	        pstmt.setTimestamp(1, java.sql.Timestamp.valueOf(heureDepart));
-	        pstmt.setDouble(2, cout);
-	        pstmt.setString(3, idPaiement);
-	        pstmt.setInt(4, idStationnement);
+	        // 1. Récupérer les infos du stationnement
+	        String sqlSelect = "SELECT s.*, p.has_moto FROM Stationnement s " +
+	                          "LEFT JOIN Parking p ON s.id_parking = p.id_parking " +
+	                          "WHERE s.id_stationnement = ?";
 	        
-	        int rowsAffected = pstmt.executeUpdate();
-	        return rowsAffected > 0;
+	        String idParking = null;
+	        String typeVehicule = null;
+	        boolean hasMoto = false;
+	        String statutPaiementActuel = null; 
 	        
+	        try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
+	            stmt.setInt(1, idStationnement);
+	            ResultSet rs = stmt.executeQuery();
+	            if (rs.next()) {
+	                idParking = rs.getString("id_parking");
+	                typeVehicule = rs.getString("type_vehicule");
+	                hasMoto = rs.getBoolean("has_moto");
+	                statutPaiementActuel = rs.getString("statut_paiement"); // RÉCUPÉRER LE STATUT
+	            } else {
+	                conn.rollback();
+	                return false;
+	            }
+	        }
+	        
+	        if (idParking == null) {
+	            conn.rollback();
+	            return false;
+	        }
+	        
+	        boolean estGratuit = "GRATUIT".equals(statutPaiementActuel);
+	        
+	        // 2. Mettre à jour le stationnement 
+	        String sqlUpdate = "UPDATE Stationnement SET statut = 'TERMINE', heure_depart = ?, cout = ?, " +
+	                          "id_paiement = ?, statut_paiement = ? WHERE id_stationnement = ?";
+	        
+	        try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
+	            stmt.setTimestamp(1, Timestamp.valueOf(heureDepart));
+	            stmt.setDouble(2, cout);
+	            
+	            // Gérer les parkings gratuits :
+	            if (estGratuit) {
+	                stmt.setNull(3, java.sql.Types.VARCHAR); // id_paiement NULL
+	                stmt.setString(4, "GRATUIT"); // statut_paiement reste GRATUIT
+	            } else {
+	                stmt.setString(3, idPaiement);
+	                stmt.setString(4, "PAYE");
+	            }
+	            
+	            stmt.setInt(5, idStationnement);
+	            
+	            int lignesAffectees = stmt.executeUpdate();
+	            
+	            if (lignesAffectees > 0) {
+	                // 3. Libérer les places selon le type de véhicule
+	                boolean isMoto = "Moto".equalsIgnoreCase(typeVehicule);
+	                boolean placesLiberees;
+	                
+	                if (isMoto && hasMoto) {
+	                    placesLiberees = ParkingDAO.incrementerPlacesMotoDisponibles(idParking);
+	                } else {
+	                    placesLiberees = ParkingDAO.incrementerPlacesDisponibles(idParking);
+	                }
+	                
+	                if (placesLiberees) {
+	                    conn.commit();
+	                    return true;
+	                } else {
+	                    conn.rollback();
+	                    return false;
+	                }
+	            } else {
+	                conn.rollback();
+	                return false;
+	            }
+	        }
 	    } catch (SQLException e) {
 	        e.printStackTrace();
 	        return false;
@@ -86,18 +152,26 @@ public class StationnementDAO {
 	            JOptionPane.showMessageDialog(null, "Parking non trouvé", "Erreur", JOptionPane.ERROR_MESSAGE);
 	            return false;
 	        }
+	        //Vérifier si c'est un parking gratuit 
+	        boolean estGratuit = TarifParkingDAO.estParkingGratuit(idParking);
 	        
 	        // Vérifier les places selon le type de véhicule
 	        boolean isMoto = "Moto".equalsIgnoreCase(typeVehicule);
 	        
-	        if (isMoto && parking.hasMoto()) {
+	        if (isMoto) {
 	            // Vérifier places moto
-	            if (parking.getPlacesMotoDisponibles() <= 0) {
-	                JOptionPane.showMessageDialog(null, "Plus de places moto disponibles dans ce parking", 
-	                    "Parking complet", JOptionPane.WARNING_MESSAGE);
+	            if (parking.hasMoto()) {
+	                JOptionPane.showMessageDialog(null, "Ce parking ne dispose pas de places pour les motos", 
+	                    "Parking non adapté", JOptionPane.WARNING_MESSAGE);
 	                return false;
 	            }
-	            
+	            if (parking.getPlacesMotoDisponibles()<=0) {
+	                JOptionPane.showMessageDialog(null, 
+	                        "Plus de places moto disponibles dans ce parking",
+	                        "Parking complet", 
+	                        JOptionPane.WARNING_MESSAGE);
+	                    return false;	
+	            }
 	            // Décrémenter places moto
 	            boolean placesDecrementees = ParkingDAO.decrementerPlacesMotoDisponibles(idParking);
 	            if (!placesDecrementees) {
@@ -126,8 +200,8 @@ public class StationnementDAO {
 	        
 	        // Créer le stationnement
 	        String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
-	                    "id_parking, heure_arrivee, type_stationnement, statut_paiement, statut) " +
-	                    "VALUES (?, ?, ?, ?, ?, 'PARKING', 'NON_PAYE', 'ACTIF')";
+                    "id_parking, heure_arrivee, type_stationnement, statut_paiement, statut, cout) " +
+                    "VALUES (?, ?, ?, ?, ?, 'PARKING', ?, 'ACTIF', ?)";
 	        
 	        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 	            stmt.setInt(1, idUsager);
@@ -136,10 +210,34 @@ public class StationnementDAO {
 	            stmt.setString(4, idParking);
 	            stmt.setTimestamp(5, Timestamp.valueOf(heureArrivee));
 	        
+	            if (estGratuit) {
+	                stmt.setString(6, "GRATUIT");
+	                stmt.setDouble(7, 0.0); // Coût 0 pour les parkings gratuits
+	            } else {
+	                stmt.setString(6, "NON_PAYE");
+	                stmt.setDouble(7, 0.0); // Coût initial à 0
+	            }
+	            
 	            int lignesAffectees = stmt.executeUpdate();
 	        
 	            if (lignesAffectees > 0) {
 	                conn.commit();
+	                String message;
+	                if (estGratuit) {
+	                    message = "Stationnement confirmé !\n\n" +
+	                            "Votre place est réservée dans le parking " + parking.getLibelleParking() + ".\n" +
+	                            "Ce parking est gratuit.\n" +
+	                            "N'oubliez pas de valider votre sortie.";
+	                } else {
+	                    message = "Stationnement confirmé !\n\n" +
+	                            "Votre place est réservée dans le parking " + parking.getLibelleParking() + ".\n" +
+	                            "N'oubliez pas de valider votre sortie pour le paiement.";
+	                }
+	                
+	                JOptionPane.showMessageDialog(null,
+	                    message,
+	                    "Réservation réussie",
+	                    JOptionPane.INFORMATION_MESSAGE);
 	                return true;
 	            } else {
 	                conn.rollback();
