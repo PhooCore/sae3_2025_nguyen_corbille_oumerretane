@@ -2,28 +2,36 @@ package ihm;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
 import modele.Parking;
 import modele.dao.ParkingDAO;
 import modele.dao.TarifParkingDAO;
+import controleur.ControleurTousParkings; // Ajout de l'import
 
 public class Page_Tous_Parkings extends JFrame {
     
     private static final long serialVersionUID = 1L;
-    private String emailUtilisateur;
-    private List<Parking> parkings;
-    private List<Parking> parkingsFiltres;
+    public String emailUtilisateur;
+    public List<Parking> parkings;
+    public List<Parking> parkingsFiltres;
     private JPanel panelParkings;
-    private JComboBox<String> comboFiltres;
-    private JCheckBox checkGratuit, checkSoiree, checkRelais, checkMoto;
+    
+    // Variables rendues publiques pour le contrôleur
+    public JComboBox<String> comboFiltres;
+    public JCheckBox checkGratuit, checkSoiree, checkRelais, checkMoto;
 
     public Page_Tous_Parkings(String email, List<Parking> parkings) {
         this.emailUtilisateur = email;
         this.parkings = parkings;
         this.parkingsFiltres = new ArrayList<>(parkings);
         initialisePage();
+        
+        // Créer et lier le contrôleur
+        new ControleurTousParkings(this);
     }
     
     private void initialisePage() {
@@ -58,9 +66,7 @@ public class Page_Tous_Parkings extends JFrame {
         headerPanel.setBackground(Color.WHITE);
         
         JButton btnRetour = new JButton("← Retour");
-        btnRetour.addActionListener(e -> retourAccueil());
-        btnRetour.setBackground(Color.WHITE);
-        btnRetour.setFocusPainted(false);
+        btnRetour.setActionCommand("RETOUR");
         headerPanel.add(btnRetour, BorderLayout.WEST);
         
         JLabel lblTitre = new JLabel("Tous les parkings (" + parkingsFiltres.size() + ")", SwingConstants.CENTER);
@@ -76,11 +82,6 @@ public class Page_Tous_Parkings extends JFrame {
         checkRelais = new JCheckBox("Parkings relais");
         checkMoto = new JCheckBox("Places moto");
         
-        checkGratuit.addActionListener(e -> appliquerFiltres());
-        checkSoiree.addActionListener(e -> appliquerFiltres());
-        checkRelais.addActionListener(e -> appliquerFiltres());
-        checkMoto.addActionListener(e -> appliquerFiltres());
-        
         filtresPanel.add(Box.createRigidArea(new Dimension(20, 0)));
         
         JLabel lblTri = new JLabel("Trier par:");
@@ -95,7 +96,6 @@ public class Page_Tous_Parkings extends JFrame {
             "Hauteur (décroissant)",
             "Hauteur (croissant)"
         });
-        comboFiltres.addActionListener(e -> appliquerFiltres());
         
         filtresPanel.add(lblFiltresType);
         filtresPanel.add(checkGratuit);
@@ -110,7 +110,7 @@ public class Page_Tous_Parkings extends JFrame {
         return headerPanel;
     }
     
-    private void appliquerFiltres() {
+    public void appliquerFiltres() {
         String triSelectionne = (String) comboFiltres.getSelectedItem();
         parkingsFiltres = new ArrayList<>(parkings);
         
@@ -182,8 +182,9 @@ public class Page_Tous_Parkings extends JFrame {
             lblAucun.setAlignmentX(Component.CENTER_ALIGNMENT);
             panelParkings.add(lblAucun);
         } else {
-            for (Parking parking : parkingsFiltres) {
-                panelParkings.add(creerCarteParking(parking));
+            for (int i = 0; i < parkingsFiltres.size(); i++) {
+                Parking parking = parkingsFiltres.get(i);
+                panelParkings.add(creerCarteParking(parking, i));
                 panelParkings.add(Box.createRigidArea(new Dimension(0, 10)));
             }
         }
@@ -192,7 +193,7 @@ public class Page_Tous_Parkings extends JFrame {
         panelParkings.repaint();
     }
     
-    private JPanel creerCarteParking(Parking parking) {
+    private JPanel creerCarteParking(Parking parking, int index) {
         JPanel carte = new JPanel();
         carte.setLayout(new BorderLayout());
         carte.setBackground(Color.WHITE);
@@ -257,35 +258,11 @@ public class Page_Tous_Parkings extends JFrame {
         carte.add(infoPanel, BorderLayout.CENTER);
         
         JButton btnSelect = new JButton("Stationner ici");
+        btnSelect.setActionCommand("STATIONNER_" + index);
         btnSelect.setPreferredSize(new Dimension(120, 35));
-        btnSelect.addActionListener(e -> selectionnerParking(parking));
         
         carte.add(btnSelect, BorderLayout.EAST);
         
         return carte;
-    }
-    
-    private void selectionnerParking(Parking parking) {
-        int choix = JOptionPane.showConfirmDialog(this,
-            "Voulez-vous préparer un stationnement pour :\n" +
-            parking.getLibelleParking() + "\n" +
-            parking.getAdresseParking() + "\n\n" +
-            "Places voiture: " + parking.getPlacesDisponibles() + "/" + parking.getNombrePlaces() + "\n" +
-            (parking.hasMoto() ? "Places moto: " + parking.getPlacesMotoDisponibles() + "/" + parking.getPlacesMoto() + "\n" : "") +
-            "Hauteur maximale: " + parking.getHauteurParking() + "m",
-            "Confirmation",
-            JOptionPane.YES_NO_OPTION);
-            
-        if (choix == JOptionPane.YES_OPTION) {
-        	Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur, parking);
-            pageParking.setVisible(true);
-            dispose();
-        }
-    }
-    
-    private void retourAccueil() {
-        Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-        pagePrincipale.setVisible(true);
-        dispose();
     }
 }

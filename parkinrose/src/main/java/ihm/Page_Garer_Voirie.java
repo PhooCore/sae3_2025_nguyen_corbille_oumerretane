@@ -1,7 +1,7 @@
 package ihm;
 
 import javax.swing.*;
-import controleur.StationnementControleur;
+import controleur.ControleurGarerVoirie; // Ajouter cette importation
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -16,24 +16,30 @@ import java.util.List;
 public class Page_Garer_Voirie extends JFrame {
     private static final long serialVersionUID = 1L;
     
-    private JPanel contentPanel;
-    private JLabel lblNom, lblPrenom, lblEmail, lblPlaque;
-    private JComboBox<String> comboZone, comboHeures, comboMinutes;
-    private JLabel lblCout;
-    private JRadioButton radioVoiture, radioMoto, radioCamion;
-    private ButtonGroup groupeTypeVehicule;
-    private List<Zone> zones;
-    private String emailUtilisateur;
-    private Usager usager;
-    private StationnementControleur controleur;
+    // Variables rendues publiques pour le contrôleur
+    public JPanel contentPanel;
+    public JLabel lblNom, lblPrenom, lblEmail, lblPlaque;
+    public JComboBox<String> comboZone, comboHeures, comboMinutes;
+    public JLabel lblCout;
+    public JRadioButton radioVoiture, radioMoto, radioCamion;
+    public ButtonGroup groupeTypeVehicule;
+    public List<Zone> zones; // Rendre public
+    public String emailUtilisateur;
+    public Usager usager;
+    
+    // Boutons rendus publics pour le contrôleur
+    public JButton btnAnnuler;
+    public JButton btnValider;
+    public JButton btnModifierPlaque;
 
     public Page_Garer_Voirie(String email) {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
-        this.controleur = new StationnementControleur(email);
         initialisePage();
-        initialiseDonnees();
-        initializeEventListeners();
+        initialiserDonnees();
+        
+        // Créer et lier le contrôleur
+        new ControleurGarerVoirie(this);
     }
     
     private void initialisePage() {
@@ -104,8 +110,7 @@ public class Page_Garer_Voirie extends JFrame {
         lblPlaque.setFont(new Font("Arial", Font.PLAIN, 14));
         panelPlaque.add(lblPlaque);
         
-        JButton btnModifierPlaque = new JButton("Modifier");
-        btnModifierPlaque.addActionListener(e -> modifierPlaque());
+        btnModifierPlaque = new JButton("Modifier");
         panelPlaque.add(btnModifierPlaque);
         
         panelVehicule.add(panelPlaque, BorderLayout.SOUTH);
@@ -146,8 +151,8 @@ public class Page_Garer_Voirie extends JFrame {
         
         JPanel panelBoutons = new JPanel(new FlowLayout());
         
-        JButton btnAnnuler = new JButton("Annuler");
-        JButton btnValider = new JButton("Valider");
+        btnAnnuler = new JButton("Annuler");
+        btnValider = new JButton("Valider");
         
         panelBoutons.add(btnAnnuler);
         panelBoutons.add(btnValider);
@@ -155,21 +160,7 @@ public class Page_Garer_Voirie extends JFrame {
         contentPanel.add(panelBoutons, BorderLayout.SOUTH);
     }
     
-    private void modifierPlaque() {
-        String nouvellePlaque = JOptionPane.showInputDialog(this, 
-            "Entrez la plaque d'immatriculation (format: AA-123-AA):", 
-            lblPlaque.getText());
-        
-        if (nouvellePlaque != null && !nouvellePlaque.trim().isEmpty()) {
-            String plaqueNettoyee = nouvellePlaque.trim().toUpperCase();
-            
-            if (controleur.validerPlaque(plaqueNettoyee)) {
-                lblPlaque.setText(plaqueNettoyee);
-            }
-        }
-    }
-
-    private void initialiseDonnees() {
+    private void initialiserDonnees() {
         this.zones = ZoneDAO.getAllZones();
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
         
@@ -181,87 +172,16 @@ public class Page_Garer_Voirie extends JFrame {
         if (lblPlaque.getText() == null || lblPlaque.getText().isEmpty()) {
             lblPlaque.setText("Non définie");
         }
-        
-        calculerCout();
-    }
-    
-    private void initializeEventListeners() {
-        ItemListener calculateurCout = new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                calculerCout();
-            }
-        };
-        
-        comboZone.addItemListener(calculateurCout);
-        comboHeures.addItemListener(calculateurCout);
-        comboMinutes.addItemListener(calculateurCout);
-        
-        JButton btnAnnuler = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(0);
-        btnAnnuler.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-                pagePrincipale.setVisible(true);
-                dispose();
-            }
-        });
-        
-        JButton btnValider = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(1);
-        btnValider.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                validerStationnement();
-            }
-        });
-    }
-    
-    private void calculerCout() {
-        try {
-            int heures = Integer.parseInt(comboHeures.getSelectedItem().toString());
-            int minutes = Integer.parseInt(comboMinutes.getSelectedItem().toString());
-            int dureeTotaleMinutes = (heures * 60) + minutes;
-            
-            int index = comboZone.getSelectedIndex();
-            if (index >= 0 && index < zones.size()) {
-                Zone zone = zones.get(index);
-                double cout = zone.calculerCout(dureeTotaleMinutes);
-                lblCout.setText(String.format("%.2f €", cout));
-            }
-        } catch (Exception e) {
-            lblCout.setText("0.00 €");
-        }
-    }
-    
-    private void validerStationnement() {
-        int index = comboZone.getSelectedIndex();
-        String idZone = "";
-        String nomZone = "";
-        
-        if (index >= 0 && index < zones.size()) {
-            Zone zoneSelectionnee = zones.get(index);
-            idZone = zoneSelectionnee.getIdZone();
-            nomZone = zoneSelectionnee.getLibelleZone();
-        }
-        
-        boolean succes = controleur.preparerStationnementVoirie(
-            getTypeVehicule(),
-            lblPlaque.getText(),
-            idZone,
-            Integer.parseInt(comboHeures.getSelectedItem().toString()),
-            Integer.parseInt(comboMinutes.getSelectedItem().toString()),
-            this
-        );
-    }
-    
-    private String getTypeVehicule() {
-        if (radioVoiture.isSelected()) return "Voiture";
-        if (radioMoto.isSelected()) return "Moto";
-        return "Camion";
     }
     
     public static void main(String[] args) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 try {
-                    new Page_Bienvenue().setVisible(true);
+                    // Pour tester, utilisez un email de test
+                    String emailTest = "test@example.com";
+                    Page_Garer_Voirie frame = new Page_Garer_Voirie(emailTest);
+                    frame.setVisible(true);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

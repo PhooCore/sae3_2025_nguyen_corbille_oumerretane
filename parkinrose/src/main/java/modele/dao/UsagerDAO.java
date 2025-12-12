@@ -118,4 +118,35 @@ public class UsagerDAO {
         }
         return null; // Aucun utilisateur trouvé
     }
+    /**
+     * Modifie le mot de passe d'un utilisateur
+     * @param email l'email de l'utilisateur
+     * @param nouveauMotDePasse le nouveau mot de passe
+     * @return true si la modification a réussi, false sinon
+     */
+    public static boolean modifierMotDePasse(String email, String nouveauMotDePasse) {
+        String sql = "UPDATE Usager SET mot_de_passe = ? WHERE mail_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, nouveauMotDePasse);
+            stmt.setString(2, email);
+            
+            int lignesAffectees = stmt.executeUpdate();
+            
+            if (lignesAffectees > 0) {
+                System.out.println("Mot de passe modifié pour l'utilisateur: " + email);
+                return true;
+            } else {
+                System.out.println("Aucun utilisateur trouvé avec l'email: " + email);
+                return false;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la modification du mot de passe: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

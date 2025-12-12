@@ -1,36 +1,32 @@
 package ihm;
 
 import javax.swing.*;
-
-import controleur.PaiementControleur;
-
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import modele.Abonnement;
-import modele.Paiement;
 import modele.Usager;
-import modele.dao.AbonnementDAO;
-import modele.dao.PaiementDAO;
 import modele.dao.UsagerDAO;
+import java.awt.*;
+import controleur.ControleurPaiementAbonnement;
 
 public class Page_Paiement_Abonnement extends JFrame {
     
     private static final long serialVersionUID = 1L;
-    
-    private Abonnement abonnement;
     private String emailUtilisateur;
+    private Abonnement abonnement;
     private Usager usager;
     private double montant;
     
+    // Composants d'interface
     private JTextField txtNomCarte;
     private JTextField txtNumeroCarte;
     private JTextField txtDateExpiration;
     private JTextField txtCVV;
     
-    private JLabel lblMontant;
-    private JLabel lblLibelleAbonnement;
-    private JLabel lblPeriode;
+    // Boutons
+    private JButton btnAnnuler;
+    private JButton btnPayer;
+    
+    // Référence au contrôleur
+    private ControleurPaiementAbonnement controleur;
     
     public Page_Paiement_Abonnement(String emailUtilisateur, Abonnement abonnement) {
         this.emailUtilisateur = emailUtilisateur;
@@ -39,14 +35,17 @@ public class Page_Paiement_Abonnement extends JFrame {
         this.montant = abonnement.getTarifAbonnement();
         
         initialisePage();
+        
+        // Initialiser le contrôleur APRÈS avoir créé l'interface
+        this.controleur = new ControleurPaiementAbonnement(this);
     }
     
     private void initialisePage() {
         this.setTitle("Paiement d'abonnement");
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.setSize(700, 800); // Taille augmentée
+        this.setSize(700, 800);
         this.setLocationRelativeTo(null);
-        this.setResizable(true); // Permettre le redimensionnement
+        this.setResizable(true);
         
         JPanel mainPanel = new JPanel();
         mainPanel.setBackground(Color.WHITE);
@@ -76,11 +75,11 @@ public class Page_Paiement_Abonnement extends JFrame {
         JPanel panelInfosDetails = new JPanel(new GridLayout(0, 1, 10, 10));
         panelInfosDetails.setBackground(new Color(240, 245, 255));
         
-        lblLibelleAbonnement = new JLabel(abonnement.getLibelleAbonnement());
+        JLabel lblLibelleAbonnement = new JLabel(abonnement.getLibelleAbonnement());
         lblLibelleAbonnement.setFont(new Font("Arial", Font.BOLD, 20));
         lblLibelleAbonnement.setForeground(new Color(0, 80, 180));
         
-        lblMontant = new JLabel(String.format("%.2f €", montant));
+        JLabel lblMontant = new JLabel(String.format("%.2f €", montant));
         lblMontant.setFont(new Font("Arial", Font.BOLD, 24));
         lblMontant.setForeground(new Color(0, 150, 0));
         
@@ -105,7 +104,7 @@ public class Page_Paiement_Abonnement extends JFrame {
             periode += "Selon formule";
         }
         
-        lblPeriode = new JLabel(periode);
+        JLabel lblPeriode = new JLabel(periode);
         lblPeriode.setFont(new Font("Arial", Font.PLAIN, 16));
         
         JLabel lblReference = new JLabel("Référence : " + abonnement.getIdAbonnement());
@@ -230,22 +229,22 @@ public class Page_Paiement_Abonnement extends JFrame {
         panelBoutons.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
         
         // Bouton Annuler
-        JButton btnAnnuler = new JButton("Annuler");
+        btnAnnuler = new JButton("Annuler");
         btnAnnuler.setFont(new Font("Arial", Font.PLAIN, 14));
         btnAnnuler.setPreferredSize(new Dimension(120, 45));
-        btnAnnuler.addActionListener(e -> annuler());
+        btnAnnuler.setActionCommand("ANNULER");
         
         // Panel pour le bouton de paiement
         JPanel panelPaiement = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panelPaiement.setBackground(Color.WHITE);
         
-        JButton btnPayer = new JButton("Payer " + String.format("%.2f", montant) + " €");
+        btnPayer = new JButton("Payer " + String.format("%.2f", montant) + " €");
         btnPayer.setFont(new Font("Arial", Font.BOLD, 16));
         btnPayer.setBackground(new Color(70, 130, 180));
         btnPayer.setForeground(Color.WHITE);
         btnPayer.setFocusPainted(false);
         btnPayer.setPreferredSize(new Dimension(200, 50));
-        btnPayer.addActionListener(e -> traiterPaiementAbonnement());
+        btnPayer.setActionCommand("PAYER");
         
         panelPaiement.add(btnPayer);
         
@@ -292,116 +291,23 @@ public class Page_Paiement_Abonnement extends JFrame {
         }
     }
     
-    private void annuler() {
-        int confirmation = JOptionPane.showConfirmDialog(this,
-            "Êtes-vous sûr de vouloir annuler le paiement de l'abonnement ?",
-            "Confirmation d'annulation",
-            JOptionPane.YES_NO_OPTION);
-            
-        if (confirmation == JOptionPane.YES_OPTION) {
-            // Retour à la page des abonnements
-            new Page_Abonnements(emailUtilisateur).setVisible(true);
-            this.dispose();
-        }
-    }
+    // Getters pour le contrôleur
+    public JTextField getTxtTitulaire() { return txtNomCarte; }
+    public JTextField getTxtNumeroCarte() { return txtNumeroCarte; }
+    public JTextField getTxtExpiration() { return txtDateExpiration; }
+    public JTextField getTxtCrypto() { return txtCVV; }
     
-    private void traiterPaiementAbonnement() {
-        // D'abord valider le formulaire
-        if (!validerFormulaire()) {
-            return;
-        }
-        
-        try {
-            // Simuler le paiement
-            PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
-            boolean paiementSimuleReussi = controleur.simulerPaiement(
-                montant,
-                txtNumeroCarte.getText().trim(),
-                txtDateExpiration.getText().trim(),
-                txtCVV.getText().trim()
-            );
-            
-            if (!paiementSimuleReussi) {
-                JOptionPane.showMessageDialog(this,
-                    "Le paiement a été refusé par la banque. Veuillez vérifier vos informations.",
-                    "Paiement refusé",
-                    JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            
-            // 1. D'abord insérer le paiement d'abonnement avec toutes les informations de carte
-            boolean paiementEnregistre = PaiementDAO.insererPaiementAbonnement(
-                usager.getIdUsager(),
-                abonnement.getIdAbonnement(),
-                montant,
-                txtNomCarte.getText().trim(),        // nom_carte
-                txtNumeroCarte.getText().trim(),     // numero_carte
-                txtCVV.getText().trim()              // code_secret_carte
-            );
-            
-            if (!paiementEnregistre) {
-                JOptionPane.showMessageDialog(this,
-                    "Erreur lors de l'enregistrement du paiement. Veuillez réessayer.",
-                    "Erreur technique",
-                    JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            
-            // 2. Ensuite associer l'abonnement à l'utilisateur
-            boolean abonnementAssigne = AbonnementDAO.ajouterAbonnementUtilisateur(
-                usager.getIdUsager(),
-                abonnement.getIdAbonnement()
-            );
-            
-            if (abonnementAssigne) {
-                afficherConfirmation();
-                retourPageUtilisateur();
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Erreur lors de l'activation de l'abonnement. Le paiement a été effectué mais l'abonnement n'a pas été activé. Contactez le support.",
-                    "Erreur d'activation",
-                    JOptionPane.WARNING_MESSAGE);
-            }
-            
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                "Erreur lors du traitement du paiement: " + e.getMessage(),
-                "Erreur",
-                JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-
-    private boolean validerFormulaire() {
-        PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
-        
-        return controleur.validerFormulairePaiementComplet(
-            txtNomCarte.getText().trim(),
-            txtNumeroCarte.getText().trim(),
-            txtDateExpiration.getText().trim(),
-            txtCVV.getText().trim(),
-            this
-        );
-    }
+    public Abonnement getAbonnement() { return abonnement; }
+    public String getEmailUtilisateur() { return emailUtilisateur; }
+    public double getMontant() { return montant; }
+    public Usager getUsager() { return usager; }
     
-    private void afficherConfirmation() {
-        String message = "🎉 Félicitations !\n\n" +
-                       "Votre abonnement a été activé avec succès.\n\n" +
-                       "Abonnement : " + abonnement.getLibelleAbonnement() + "\n" +
-                       "Montant : " + String.format("%.2f €", montant) + "\n" +
-                       "Référence : " + abonnement.getIdAbonnement() + "\n\n" +
-                       "Vous recevrez un email de confirmation sous peu.\n" +
-                       "Vos avantages sont désormais accessibles.";
-        
-        JOptionPane.showMessageDialog(this,
-            message,
-            "Abonnement activé",
-            JOptionPane.INFORMATION_MESSAGE);
-    }
+    // GETTERS POUR LES BOUTONS
+    public JButton getBtnAnnuler() { return btnAnnuler; }
+    public JButton getBtnPayer() { return btnPayer; }
     
-    private void retourPageUtilisateur() {
-        // Retour à la page utilisateur avec rafraîchissement
-        new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
-        this.dispose();
+    // Méthode pour obtenir le parent frame (si nécessaire)
+    public JFrame getParentFrame() {
+        return null;
     }
 }

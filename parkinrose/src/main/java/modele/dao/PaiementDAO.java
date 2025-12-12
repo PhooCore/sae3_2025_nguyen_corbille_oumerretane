@@ -22,59 +22,138 @@ public class PaiementDAO {
             pstmt.setInt(1, idUsager);
             ResultSet rs = pstmt.executeQuery();
             
+            System.out.println("DEBUG PaiementDAO: Recherche paiements pour usager " + idUsager);
+            
             while (rs.next()) {
                 Paiement paiement = new Paiement();
                 paiement.setIdPaiement(rs.getString("id_paiement"));
+                paiement.setNomCarte(rs.getString("nom_carte"));
+                paiement.setNumeroCarte(rs.getString("numero_carte"));
+                paiement.setCodeSecretCarte(rs.getString("code_secret_carte"));
                 paiement.setMontant(rs.getDouble("montant"));
                 paiement.setIdUsager(rs.getInt("id_usager"));
                 paiement.setDatePaiement(rs.getTimestamp("date_paiement").toLocalDateTime());
                 paiement.setMethodePaiement(rs.getString("methode_paiement"));
                 paiement.setStatut(rs.getString("statut"));
+                paiement.setIdAbonnement(rs.getString("id_abonnement"));
                 
-                // Gérer le type de paiement (abonnement ou stationnement)
-                if (rs.getString("id_abonnement") != null) {
+                // Déterminer le type
+                if (paiement.getIdAbonnement() != null && !paiement.getIdAbonnement().isEmpty()) {
                     paiement.setTypePaiement("Abonnement");
-                    paiement.setIdAbonnement(rs.getString("id_abonnement"));
                 } else {
                     paiement.setTypePaiement("Stationnement");
                 }
                 
+                System.out.println("DEBUG: Paiement trouvé - " + paiement.getIdPaiement() + 
+                                 " - " + paiement.getMontant() + "€");
+                
                 paiements.add(paiement);
             }
+            
+            System.out.println("DEBUG PaiementDAO: " + paiements.size() + " paiements trouvés");
+            
         } catch (SQLException e) {
+            System.err.println("❌ Erreur dans getPaiementsByUsager:");
             e.printStackTrace();
         }
         return paiements;
     }
     
     /**
-     * Enregistre un nouveau paiement
+     * Enregistre un paiement
      * @param paiement L'objet Paiement à enregistrer
      * @return true si l'insertion a réussi, false sinon
      */
-    public static boolean insert(Paiement paiement) {
-        String sql = "INSERT INTO Paiement (id_paiement, id_usager, montant, methode_paiement, " +
-                    "date_paiement, statut, id_abonnement, type_paiement) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    public static boolean enregistrerPaiement(Paiement paiement) {
+        String sql = "INSERT INTO Paiement (id_paiement, nom_carte, numero_carte, " +
+                    "code_secret_carte, id_abonnement, montant, id_usager, date_paiement, " +
+                    "methode_paiement, statut) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 'CARTE', 'REUSSI')";
         
         try (Connection conn = MySQLConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            pstmt.setString(1, paiement.getIdPaiement());
-            pstmt.setInt(2, paiement.getIdUsager());
-            pstmt.setDouble(3, paiement.getMontant());
-            pstmt.setString(4, paiement.getMethodePaiement());
-            pstmt.setTimestamp(5, Timestamp.valueOf(paiement.getDatePaiement()));
-            pstmt.setString(6, paiement.getStatut());
-            pstmt.setString(7, paiement.getIdAbonnement());
-            pstmt.setString(8, paiement.getTypePaiement());
+            System.out.println("=== ENREGISTREMENT PAIEMENT ===");
+            System.out.println("ID Paiement: " + paiement.getIdPaiement());
+            System.out.println("Nom carte: " + paiement.getNomCarte());
+            System.out.println("Montant: " + paiement.getMontant());
+            System.out.println("ID Usager: " + paiement.getIdUsager());
+            System.out.println("ID Abonnement: " + paiement.getIdAbonnement());
             
-            int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
+            pstmt.setString(1, paiement.getIdPaiement());
+            pstmt.setString(2, paiement.getNomCarte());
+            pstmt.setString(3, paiement.getNumeroCarte());
+            pstmt.setString(4, paiement.getCodeSecretCarte());
+            
+            // Gérer l'id_abonnement qui peut être null
+            if (paiement.getIdAbonnement() != null && !paiement.getIdAbonnement().isEmpty()) {
+                pstmt.setString(5, paiement.getIdAbonnement());
+                System.out.println("Type: Abonnement");
+            } else {
+                pstmt.setNull(5, java.sql.Types.VARCHAR);
+                System.out.println("Type: Stationnement");
+            }
+            
+            pstmt.setDouble(6, paiement.getMontant());
+            pstmt.setInt(7, paiement.getIdUsager());
+            
+            int rows = pstmt.executeUpdate();
+            System.out.println("✅ " + rows + " ligne(s) affectée(s)");
+            
+            return rows > 0;
             
         } catch (SQLException e) {
+            System.err.println("❌ Erreur SQL lors de l'enregistrement du paiement:");
+            System.err.println("Message: " + e.getMessage());
+            System.err.println("SQL State: " + e.getSQLState());
+            System.err.println("Error Code: " + e.getErrorCode());
             e.printStackTrace();
             return false;
+        }
+    }
+    
+    /**
+     * Test direct pour débogage
+     * @param idUsager ID de l'utilisateur
+     */
+    public static void debugPaiements(int idUsager) {
+        System.out.println("\n=== DEBUG Paiements pour usager " + idUsager + " ===");
+        
+        try (Connection conn = MySQLConnection.getConnection()) {
+            String sql = "SELECT COUNT(*) as total FROM Paiement WHERE id_usager = ?";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, idUsager);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                int total = rs.getInt("total");
+                System.out.println("Total paiements en base: " + total);
+            }
+            
+            rs.close();
+            pstmt.close();
+            
+            // Détails
+            String sqlDetails = "SELECT id_paiement, montant, date_paiement, id_abonnement FROM Paiement WHERE id_usager = ?";
+            PreparedStatement pstmt2 = conn.prepareStatement(sqlDetails);
+            pstmt2.setInt(1, idUsager);
+            ResultSet rs2 = pstmt2.executeQuery();
+            
+            int count = 0;
+            while (rs2.next()) {
+                count++;
+                System.out.println("Paiement " + count + ":");
+                System.out.println("  ID: " + rs2.getString("id_paiement"));
+                System.out.println("  Montant: " + rs2.getDouble("montant") + "€");
+                System.out.println("  Date: " + rs2.getTimestamp("date_paiement"));
+                System.out.println("  Abonnement: " + rs2.getString("id_abonnement"));
+            }
+            
+            rs2.close();
+            pstmt2.close();
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur debug: " + e.getMessage());
         }
     }
     
@@ -110,77 +189,5 @@ public class PaiementDAO {
             e.printStackTrace();
         }
         return paiements;
-    }
-
-    /**
-     * Enregistre un paiement (alias de la méthode insert pour compatibilité)
-     * @param paiement L'objet Paiement à enregistrer
-     * @return true si l'insertion a réussi, false sinon
-     */
-    public static boolean enregistrerPaiement(Paiement paiement) {
-        String sql = "INSERT INTO Paiement (id_paiement, nom_carte, numero_carte, code_secret_carte, " +
-                    "id_abonnement, montant, id_usager, date_paiement, methode_paiement, statut) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, paiement.getIdPaiement());
-            pstmt.setString(2, paiement.getNomCarte());
-            pstmt.setString(3, paiement.getNumeroCarte());
-            pstmt.setString(4, paiement.getCodeSecretCarte());
-            
-            // Gérer id_abonnement qui peut être NULL
-            if (paiement.getIdAbonnement() != null) {
-                pstmt.setString(5, paiement.getIdAbonnement());
-            } else {
-                pstmt.setString(5, "ABO_SIMPLE"); // Valeur par défaut
-            }
-            
-            pstmt.setDouble(6, paiement.getMontant());
-            pstmt.setInt(7, paiement.getIdUsager());
-            pstmt.setTimestamp(8, Timestamp.valueOf(paiement.getDatePaiement()));
-            pstmt.setString(9, paiement.getMethodePaiement());
-            pstmt.setString(10, paiement.getStatut());
-            
-            int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
-            
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        } 
-    }
-    
-    /* VIENS D'ETRE AJOUTE*/
- // Dans modele.dao.PaiementDAO
-    public static boolean insererPaiementAbonnement(int idUsager, String idAbonnement, double montant, 
-                                                    String nomCarte, String numeroCarte, String codeSecret) {
-        // Générer un ID de paiement unique
-        String idPaiement = "PAI_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
-        
-        String sql = "INSERT INTO Paiement (id_paiement, nom_carte, numero_carte, code_secret_carte, " +
-                     "id_abonnement, montant, id_usager, date_paiement, methode_paiement, statut) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 'CARTE', 'REUSSI')";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, idPaiement);
-            pstmt.setString(2, nomCarte);
-            pstmt.setString(3, numeroCarte);
-            pstmt.setString(4, codeSecret);
-            pstmt.setString(5, idAbonnement);
-            pstmt.setDouble(6, montant);
-            pstmt.setInt(7, idUsager);
-            
-            int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur lors de l'insertion du paiement abonnement: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
     }
 }

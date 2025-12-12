@@ -21,10 +21,8 @@ public class Stationnement {
     private String statutPaiement;
     private String idPaiement;
 
-  
     public Stationnement() {
     }
-
 
     public Stationnement(int idUsager, String typeVehicule, String plaqueImmatriculation, 
                         String idTarification, String zone, int dureeHeures, int dureeMinutes, 
@@ -43,12 +41,10 @@ public class Stationnement {
         this.typeStationnement = "VOIRIE";
         this.statutPaiement = "PAYE";
         
-        // Calcul de la date de fin pour la voirie
         int dureeTotaleMinutes = (dureeHeures * 60) + dureeMinutes;
         this.dateFin = this.dateCreation.plusMinutes(dureeTotaleMinutes);
     }
 
-    // Constructeur pour parking (paiement différé)
     public Stationnement(int idUsager, String typeVehicule, String plaqueImmatriculation, 
                         String idTarification, String nomParking, LocalDateTime heureArrivee) {
         this.idUsager = idUsager;
@@ -64,7 +60,6 @@ public class Stationnement {
         this.cout = 0.0;
     }
 
-    // Getters et Setters
     public int getIdStationnement() { return idStationnement; }
     public void setIdStationnement(int idStationnement) { this.idStationnement = idStationnement; }
 
@@ -116,7 +111,6 @@ public class Stationnement {
     public String getIdPaiement() { return idPaiement; }
     public void setIdPaiement(String idPaiement) { this.idPaiement = idPaiement; }
 
-    // Méthodes utilitaires
     public boolean estParking() {
         return "PARKING".equals(typeStationnement);
     }
@@ -141,9 +135,6 @@ public class Stationnement {
         return "EXPIRE".equals(statut);
     }
 
-    /**
-     * Vérifie si le stationnement est expiré (date de fin dépassée)
-     */
     public boolean estTempsEcoule() {
         if (estVoirie() && dateFin != null) {
             return LocalDateTime.now().isAfter(dateFin);
@@ -151,9 +142,6 @@ public class Stationnement {
         return false;
     }
 
-    /**
-     * Calcule la durée écoulée pour un stationnement parking
-     */
     public long getDureeEcouleeMinutes() {
         if (estParking() && heureArrivee != null) {
             LocalDateTime endTime = (heureDepart != null) ? heureDepart : LocalDateTime.now();
@@ -162,13 +150,10 @@ public class Stationnement {
         return 0;
     }
 
-    /**
-     * Calcule le temps restant pour un stationnement voirie
-     */
     public long getTempsRestantMinutes() {
         if (estVoirie() && dateFin != null) {
             long minutesRestantes = java.time.Duration.between(LocalDateTime.now(), dateFin).toMinutes();
-            return Math.max(0, minutesRestantes); // Évite les valeurs négatives
+            return Math.max(0, minutesRestantes);
         }
         return 0;
     }
@@ -187,9 +172,6 @@ public class Stationnement {
                 '}';
     }
 
-    /**
-     * Méthode pour l'affichage utilisateur
-     */
     public String getAffichageSimplifie() {
         String base = typeVehicule + " - " + plaqueImmatriculation + " (" + zone + ")";
         if (estVoirie()) {
@@ -199,16 +181,10 @@ public class Stationnement {
         }
     }
 
-    /**
-     * Vérifie si le stationnement nécessite un paiement
-     */
     public boolean necessitePaiement() {
         return "NON_PAYE".equals(statutPaiement) && estParking();
     }
 
-    /**
-     * Marque le stationnement comme payé
-     */
     public void marquerCommePaye(String idPaiement, double montant) {
         this.statutPaiement = "PAYE";
         this.idPaiement = idPaiement;

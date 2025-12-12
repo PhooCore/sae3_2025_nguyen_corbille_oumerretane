@@ -3,6 +3,7 @@ package ihm;
 import javax.swing.*;
 import modele.Abonnement;
 import modele.dao.AbonnementDAO;
+import modele.dao.UsagerDAO;
 import java.awt.*;
 import java.util.List;
 import java.util.ArrayList;
@@ -23,10 +24,11 @@ public class Page_Abonnements extends JFrame {
     // Add these as instance variables to store references
     private JPanel headerPanel;
     private JLabel lblTitre;
+    private JButton btnRetour; // Ajout de la référence au bouton
     
     public Page_Abonnements(String email) {
         this.emailUtilisateur = email;
-        this.idUsager = modele.dao.UsagerDAO.getUsagerByEmail(email).getIdUsager();
+        this.idUsager = UsagerDAO.getUsagerByEmail(email).getIdUsager();
         this.abonnements = AbonnementDAO.getAllAbonnements();
         this.abonnementsFiltres = new ArrayList<>(abonnements);
         initialiserPage();
@@ -57,7 +59,7 @@ public class Page_Abonnements extends JFrame {
         afficherAbonnements();
         
         // Bouton retour
-        JButton btnRetour = new JButton("Retour au compte");
+        btnRetour = new JButton("Retour au compte"); // Initialisation du bouton
         btnRetour.addActionListener(e -> {
             new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
             dispose();
@@ -340,6 +342,7 @@ public class Page_Abonnements extends JFrame {
         
         // Partie droite : Bouton de sélection
         JButton btnChoisir = new JButton("Choisir cet abonnement");
+        btnChoisir.setActionCommand("SOUSCRIRE_" + abonnement.getIdAbonnement()); // Ajout de l'action command
         btnChoisir.setBackground(new Color(0, 120, 215));
         btnChoisir.setForeground(Color.WHITE);
         btnChoisir.setFont(new Font("Arial", Font.BOLD, 14));
@@ -410,5 +413,32 @@ public class Page_Abonnements extends JFrame {
         carte.add(panelBouton, BorderLayout.EAST);
         
         return carte;
+    }
+    
+    // Getters pour les tests ou extensions
+    public String getEmailUtilisateur() {
+        return emailUtilisateur;
+    }
+    
+    public int getIdUsager() {
+        return idUsager;
+    }
+    
+    public List<Abonnement> getAbonnements() {
+        return abonnements;
+    }
+    
+    public List<Abonnement> getAbonnementsFiltres() {
+        return abonnementsFiltres;
+    }
+    
+    // GETTERS POUR LE CONTROLEUR
+    public JButton getBtnRetour() {
+        return btnRetour;
+    }
+    
+    // Méthode pour obtenir l'utilisateur (si nécessaire pour le contrôleur)
+    public modele.Usager getUsager() {
+        return modele.dao.UsagerDAO.getUsagerByEmail(emailUtilisateur);
     }
 }

@@ -1,9 +1,6 @@
 package ihm;
 
 import javax.swing.*;
-
-import controleur.PaiementControleur;
-
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -32,10 +29,11 @@ public class Page_Paiement_Parking extends JFrame {
     private Stationnement stationnement;
     private Parking parking;
     
-    private JTextField txtNomCarte;
-    private JTextField txtNumeroCarte;
-    private JTextField txtDateExpiration;
-    private JTextField txtCVV;
+    // Rendre les champs publics ou avec getters pour le contrôleur
+    public JTextField txtNomCarte;
+    public JTextField txtNumeroCarte;
+    public JTextField txtDateExpiration;
+    public JTextField txtCVV;
     
     private JLabel lblMontant;
     private JLabel lblDuree;
@@ -44,6 +42,10 @@ public class Page_Paiement_Parking extends JFrame {
     private JLabel lblTarifHoraire;
     private JLabel lblTypeTarif;
     
+    // Boutons
+    private JButton btnAnnuler;
+    private JButton btnPayer;
+
     public Page_Paiement_Parking(Integer idStationnement, String emailUtilisateur) {
         this.idStationnement = idStationnement;
         this.emailUtilisateur = emailUtilisateur;
@@ -238,16 +240,17 @@ public class Page_Paiement_Parking extends JFrame {
         
         JPanel panelBoutons = new JPanel(new FlowLayout());
         
-        JButton btnAnnuler = new JButton("Annuler");
-        JButton btnPayer = new JButton("Payer " + String.format("%.2f", montant) + " €");
+        btnAnnuler = new JButton("Annuler");
+        btnPayer = new JButton("Payer " + String.format("%.2f", montant) + " €");
         
         btnPayer.setBackground(new Color(70, 130, 180));
         btnPayer.setForeground(Color.WHITE);
         btnPayer.setFocusPainted(false);
         btnPayer.setFont(new Font("Arial", Font.BOLD, 14));
         
-        btnAnnuler.addActionListener(e -> annuler());
-        btnPayer.addActionListener(e -> traiterPaiement());
+        // Les ActionListeners seront ajoutés par le contrôleur
+        // btnAnnuler.addActionListener(e -> annuler());
+        // btnPayer.addActionListener(e -> traiterPaiement());
         
         panelBoutons.add(btnAnnuler);
         panelBoutons.add(btnPayer);
@@ -257,98 +260,24 @@ public class Page_Paiement_Parking extends JFrame {
         this.setContentPane(mainPanel);
     }
     
-    private void annuler() {
-        int confirmation = JOptionPane.showConfirmDialog(this,
-            "Êtes-vous sûr de vouloir annuler le paiement ?",
-            "Confirmation d'annulation",
-            JOptionPane.YES_NO_OPTION);
-            
-        if (confirmation == JOptionPane.YES_OPTION) {
-            this.dispose();
-        }
-    }
+    // Getters pour le contrôleur
+    public JButton getBtnAnnuler() { return btnAnnuler; }
+    public JButton getBtnPayer() { return btnPayer; }
     
-    private void traiterPaiement() {
-        if (!validerFormulaire()) {
-            return;
-        }
-        
-        try {
-            // Créer le paiement
-            Paiement paiement = new Paiement(
-                txtNomCarte.getText().trim(),
-                txtNumeroCarte.getText().trim(),
-                txtCVV.getText().trim(),
-                montant,
-                usager.getIdUsager()
-            );
-            
-            // Simuler le paiement via le contrôleur
-            PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
-            boolean paiementSimuleReussi = controleur.simulerPaiement(
-                montant,
-                txtNumeroCarte.getText().trim(),
-                txtDateExpiration.getText().trim(),
-                txtCVV.getText().trim()
-            );
-            
-            if (!paiementSimuleReussi) {
-                JOptionPane.showMessageDialog(this,
-                    "Le paiement a été refusé par la banque",
-                    "Paiement refusé",
-                    JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            
-            // Enregistrer le paiement dans la base
-            boolean paiementEnregistre = PaiementDAO.enregistrerPaiement(paiement);
-            
-            if (paiementEnregistre) {
-                // Mettre à jour le stationnement
-                boolean operationReussie = StationnementDAO.terminerStationnementParking(
-                    idStationnement,
-                    LocalDateTime.now(),
-                    montant,
-                    paiement.getIdPaiement()
-                );
-                
-                if (operationReussie) {
-                    afficherConfirmation();
-                    retourAccueil();
-                } else {
-                    JOptionPane.showMessageDialog(this,
-                        "Erreur lors de la mise à jour du stationnement",
-                        "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
-                }
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Erreur lors de l'enregistrement du paiement",
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                "Erreur lors du traitement du paiement: " + e.getMessage(),
-                "Erreur",
-                JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-
-    private boolean validerFormulaire() {
-        PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
-        
-        return controleur.validerFormulairePaiementComplet(
-            txtNomCarte.getText().trim(),
-            txtNumeroCarte.getText().trim(),
-            txtDateExpiration.getText().trim(),
-            txtCVV.getText().trim(),
-            this
-        );
-    }
+    public double getMontant() { return montant; }
+    public String getEmailUtilisateur() { return emailUtilisateur; }
+    public Usager getUsager() { return usager; }
+    public Integer getIdStationnement() { return idStationnement; }
+    public Stationnement getStationnement() { return stationnement; }
+    public Parking getParking() { return parking; }
     
-    private void afficherConfirmation() {
+    public JLabel getLblMontant() { return lblMontant; }
+    public JLabel getLblDuree() { return lblDuree; }
+    public JLabel getLblHeureArrivee() { return lblHeureArrivee; }
+    public JLabel getLblHeureDepart() { return lblHeureDepart; }
+    
+    // Méthodes pour afficher la confirmation (appelées par le contrôleur)
+    public void afficherConfirmation() {
         String message = "Paiement effectué avec succès !\n\n" +
                        "Stationnement terminé pour " + stationnement.getPlaqueImmatriculation() + "\n" +
                        "Parking: " + parking.getLibelleParking() + "\n" +
@@ -362,11 +291,9 @@ public class Page_Paiement_Parking extends JFrame {
             JOptionPane.INFORMATION_MESSAGE);
     }
     
-    private void retourAccueil() {
-        Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
+    public void retourAccueil() {
+        ihm.Page_Principale pagePrincipale = new ihm.Page_Principale(emailUtilisateur);
         pagePrincipale.setVisible(true);
         this.dispose();
     }
-   
-
 }

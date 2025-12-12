@@ -12,7 +12,6 @@ public class Parking {
     private int placesMoto;
     private int placesMotoDisponibles;
     
-    // Constructeur complet
     public Parking(String idParking, String libelleParking, String adresseParking, 
                    int nombrePlaces, int placesDisponibles, double hauteurParking, 
                    boolean tarifSoiree, boolean hasMoto, int placesMoto, int placesMotoDisponibles) {
@@ -28,7 +27,6 @@ public class Parking {
         this.placesMotoDisponibles = placesMotoDisponibles;
     }
     
-    // Constructeur pour compatibilité (sans infos moto)
     public Parking(String idParking, String libelleParking, String adresseParking, 
                    int nombrePlaces, int placesDisponibles, double hauteurParking, 
                    boolean tarifSoiree) {
@@ -36,7 +34,6 @@ public class Parking {
              placesDisponibles, hauteurParking, tarifSoiree, false, 0, 0);
     }
     
-    // Getters et Setters
     public String getIdParking() {
         return idParking;
     }
@@ -117,7 +114,6 @@ public class Parking {
         this.placesMotoDisponibles = placesMotoDisponibles;
     }
     
-    // Méthodes utilitaires
     public boolean hasPlacesMotoDisponibles() {
         return hasMoto && placesMotoDisponibles > 0;
     }
