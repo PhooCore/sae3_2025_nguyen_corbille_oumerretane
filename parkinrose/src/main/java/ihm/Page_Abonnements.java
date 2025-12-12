@@ -10,6 +10,7 @@ import java.util.Comparator;
 
 public class Page_Abonnements extends JFrame {
     
+	// attributs necessaires
     private String emailUtilisateur;
     private int idUsager;
     private List<Abonnement> abonnements;

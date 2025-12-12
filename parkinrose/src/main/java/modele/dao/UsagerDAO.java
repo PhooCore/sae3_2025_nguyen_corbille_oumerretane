@@ -118,4 +118,34 @@ public class UsagerDAO {
         }
         return null; // Aucun utilisateur trouvé
     }
+    
+    /**
+     * Vérifie si un utilisateur est administrateur à partir de son email
+     * 
+     * @param email l'adresse email de l'utilisateur à vérifier
+     * @return true si l'utilisateur est administrateur, false sinon ou si non trouvé
+     */
+    public static boolean estAdmin(String email) {
+        // Requête SQL pour vérifier le statut admin d'un utilisateur
+        String sql = "SELECT is_admin FROM Usager WHERE mail_usager = ?";
+        
+        try (
+            Connection conn = MySQLConnection.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+            stmt.setString(1, email); // 1er ? : email de l'utilisateur
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    // Retourne la valeur de la colonne is_admin
+                    return rs.getBoolean("is_admin");
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la vérification du statut admin: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false; // Par défaut, non admin ou utilisateur non trouvé
+    }
 }

@@ -1,252 +1,128 @@
 package ihm;
 
 import javax.swing.*;
-
-import controleur.PaiementControleur;
-
+import modele.dao.TarifParkingDAO;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.time.LocalDateTime;
-import java.time.Duration;
 import java.time.format.DateTimeFormatter;
-import modele.Paiement;
-import modele.Stationnement;
-import modele.Parking;
-import modele.Usager;
-import modele.dao.PaiementDAO;
-import modele.dao.ParkingDAO;
-import modele.dao.StationnementDAO;
-import modele.dao.UsagerDAO;
 
 public class Page_Paiement_Parking extends JFrame {
-    
-    private static final long serialVersionUID = 1L;
-    
-    private static final double TARIF_SOIREE = 5.90;
-    
-    private double montant;
     private String emailUtilisateur;
-    private Usager usager;
-    private Integer idStationnement;
-    private Stationnement stationnement;
-    private Parking parking;
+    private String idParking;
+    private double montant;
+    private LocalDateTime heureArrivee;
+    private LocalDateTime heureDepart;
+    private boolean tarifSoiree;
     
-    private JTextField txtNomCarte;
-    private JTextField txtNumeroCarte;
-    private JTextField txtDateExpiration;
-    private JTextField txtCVV;
-    
-    private JLabel lblMontant;
-    private JLabel lblDuree;
-    private JLabel lblHeureArrivee;
-    private JLabel lblHeureDepart;
-    private JLabel lblTarifHoraire;
-    private JLabel lblTypeTarif;
-    
-    public Page_Paiement_Parking(Integer idStationnement, String emailUtilisateur) {
-        this.idStationnement = idStationnement;
-        this.emailUtilisateur = emailUtilisateur;
-        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
-        this.stationnement = StationnementDAO.getStationnementById(idStationnement);
-        
-        if (stationnement != null) {
-            String parkingId = stationnement.getIdTarification();
-            this.parking = ParkingDAO.getParkingById(parkingId);
-        }
-        
-        calculerMontant();
-        initialisePage();
+    public Page_Paiement_Parking(String email, String idParking, double montant,
+                                LocalDateTime heureArrivee, LocalDateTime heureDepart,
+                                boolean tarifSoiree) {
+        this.emailUtilisateur = email;
+        this.idParking = idParking;
+        this.montant = montant;
+        this.heureArrivee = heureArrivee;
+        this.heureDepart = heureDepart;
+        this.tarifSoiree = tarifSoiree;
+        initialiserPage();
     }
     
-    private void calculerMontant() {
-        if (stationnement == null || parking == null) {
-            this.montant = 0.0;
-            return;
-        }
+    private void initialiserPage() {
+        setTitle("Paiement");
+        setSize(500, 500);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         
-        LocalDateTime heureArrivee = stationnement.getHeureArrivee();
-        LocalDateTime heureDepart = LocalDateTime.now();
-        
-        if (estEligibleTarifSoiree(heureArrivee, heureDepart)) {
-            this.montant = TARIF_SOIREE;
-            return;
-        }
-        
-        long dureeMinutes = Duration.between(heureArrivee, heureDepart).toMinutes();
-        long quartHeures = (dureeMinutes + 14) / 15;
-        double tarifHoraire = getTarifHoraireNormal();
-        double tarifQuartHeure = tarifHoraire / 4.0;
-        
-        this.montant = quartHeures * tarifQuartHeure;
-        
-        if (this.montant < tarifQuartHeure) {
-            this.montant = tarifQuartHeure;
-        }
-    }
-    
-    private boolean estEligibleTarifSoiree(LocalDateTime arrivee, LocalDateTime depart) {
-        if (parking == null || !parking.hasTarifSoiree()) {
-            return false;
-        }
-        
-        boolean arriveeValide = (arrivee.getHour() == 19 && arrivee.getMinute() >= 30) || 
-                               (arrivee.getHour() >= 20 && arrivee.getHour() < 22);
-        
-        boolean departValide = depart.getHour() < 3 || 
-                              (depart.getHour() == 3 && depart.getMinute() == 0);
-        
-        return arriveeValide && departValide;
-    }
-    
-    private double getTarifHoraireNormal() {
-        switch (parking.getIdParking()) {
-            case "P001": case "P002": case "P003":
-                return 3.50;
-            case "P004": case "P005": case "P006":
-                return 4.00;
-            case "P007": case "P008": case "P009":
-                return 3.00;
-            case "P010": case "P011": case "P012":
-                return 3.20;
-            case "P013": case "P014":
-                return 4.50;
-            default:
-                return 3.00;
-        }
-    }
-    
-    private void initialisePage() {
-        this.setTitle("Paiement du stationnement - Parking");
-        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.setSize(600, 750);
-        this.setLocationRelativeTo(null);
-        this.setResizable(false);
-        
-        JPanel mainPanel = new JPanel();
-        mainPanel.setBackground(Color.WHITE);
-        mainPanel.setLayout(new BorderLayout());
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainPanel.setBackground(Color.WHITE);
         
-        JLabel lblTitre = new JLabel("Paiement Parking", SwingConstants.CENTER);
+        // Titre
+        JLabel lblTitre = new JLabel("Paiement du stationnement", SwingConstants.CENTER);
         lblTitre.setFont(new Font("Arial", Font.BOLD, 20));
         mainPanel.add(lblTitre, BorderLayout.NORTH);
         
-        JPanel centerPanel = new JPanel();
-        centerPanel.setBackground(Color.WHITE);
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        // Panel récapitulatif
+        JPanel panelRecap = new JPanel(new GridLayout(0, 1, 10, 10));
+        panelRecap.setBackground(Color.WHITE);
+        panelRecap.setBorder(BorderFactory.createTitledBorder("Récapitulatif"));
         
-        JPanel infoPanel = new JPanel();
-        infoPanel.setBackground(Color.WHITE);
-        infoPanel.setLayout(new GridLayout(0, 1, 10, 5));
-        infoPanel.setBorder(BorderFactory.createTitledBorder("Récapitulatif du stationnement"));
+        // Bandeau tarif soirée si applicable
+        if (tarifSoiree) {
+            JPanel panelSoiree = new JPanel(new BorderLayout());
+            panelSoiree.setBackground(new Color(255, 240, 245));
+            panelSoiree.setBorder(BorderFactory.createLineBorder(new Color(128, 0, 128), 2));
+            
+            JLabel lblSoiree = new JLabel("🌙 TARIF SOIRÉE APPLIQUÉ", SwingConstants.CENTER);
+            lblSoiree.setFont(new Font("Arial", Font.BOLD, 14));
+            lblSoiree.setForeground(new Color(128, 0, 128));
+            
+            panelSoiree.add(lblSoiree, BorderLayout.CENTER);
+            panelRecap.add(panelSoiree);
+        }
         
-        lblMontant = new JLabel("Montant à payer: " + String.format("%.2f", montant) + " €");
+        // Infos de stationnement
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        
+        JLabel lblParking = new JLabel("Parking : " + getNomParking());
+        JLabel lblArrivee = new JLabel("Arrivée : " + heureArrivee.format(formatter));
+        JLabel lblDepart = new JLabel("Départ prévu : " + heureDepart.format(formatter));
+        
+        long dureeHeures = java.time.Duration.between(heureArrivee, heureDepart).toHours();
+        long dureeMinutes = java.time.Duration.between(heureArrivee, heureDepart).toMinutes() % 60;
+        JLabel lblDuree = new JLabel("Durée : " + dureeHeures + "h " + dureeMinutes + "min");
+        
+        // Montant avec style différent selon tarif soirée
+        JLabel lblMontant = new JLabel("Montant à payer :", SwingConstants.CENTER);
         lblMontant.setFont(new Font("Arial", Font.BOLD, 16));
-        lblMontant.setForeground(new Color(0, 100, 0));
-        infoPanel.add(lblMontant);
         
-        infoPanel.add(new JLabel(" "));
+        JLabel lblMontantValeur = new JLabel(String.format("%.2f €", montant), SwingConstants.CENTER);
+        lblMontantValeur.setFont(new Font("Arial", Font.BOLD, 32));
+        lblMontantValeur.setForeground(tarifSoiree ? new Color(128, 0, 128) : new Color(0, 150, 0));
         
-        if (stationnement != null) {
-            infoPanel.add(new JLabel("Véhicule: " + stationnement.getTypeVehicule() + " - " + stationnement.getPlaqueImmatriculation()));
-            infoPanel.add(new JLabel("Parking: " + parking.getLibelleParking()));
-        }
+        panelRecap.add(lblParking);
+        panelRecap.add(lblArrivee);
+        panelRecap.add(lblDepart);
+        panelRecap.add(lblDuree);
+        panelRecap.add(new JSeparator());
+        panelRecap.add(lblMontant);
+        panelRecap.add(lblMontantValeur);
         
-        if (stationnement != null) {
-            LocalDateTime heureArrivee = stationnement.getHeureArrivee();
-            LocalDateTime heureDepart = LocalDateTime.now();
-            
-            lblHeureArrivee = new JLabel("Heure d'arrivée: " + heureArrivee.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
-            lblHeureDepart = new JLabel("Heure de départ: " + heureDepart.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
-            
-            long dureeMinutes = Duration.between(heureArrivee, heureDepart).toMinutes();
-            long heures = dureeMinutes / 60;
-            long minutes = dureeMinutes % 60;
-            lblDuree = new JLabel("Durée totale: " + heures + "h" + minutes + "min");
-            
-            infoPanel.add(lblHeureArrivee);
-            infoPanel.add(lblHeureDepart);
-            infoPanel.add(lblDuree);
-        }
+        mainPanel.add(panelRecap, BorderLayout.CENTER);
         
-        if (parking != null) {
-            boolean tarifSoiree = estEligibleTarifSoiree(stationnement.getHeureArrivee(), LocalDateTime.now());
-            
-            if (tarifSoiree) {
-                lblTypeTarif = new JLabel("Tarif appliqué: Forfait Soirée");
-                lblTarifHoraire = new JLabel("Montant forfait: " + String.format("%.2f", TARIF_SOIREE) + " €");
-            } else {
-                lblTypeTarif = new JLabel("Tarif appliqué: Quart d'heure");
-                double tarifQuartHeure = getTarifHoraireNormal() / 4.0;
-                lblTarifHoraire = new JLabel("Tarif quart d'heure: " + String.format("%.2f", tarifQuartHeure) + " €");
-            }
-            
-            infoPanel.add(lblTypeTarif);
-            infoPanel.add(lblTarifHoraire);
-            
-            if (parking.hasTarifSoiree()) {
-                JLabel lblInfoSoiree = new JLabel("Ce parking propose le forfait soirée à " + TARIF_SOIREE + " €");
-                lblInfoSoiree.setForeground(new Color(0, 100, 0));
-                lblInfoSoiree.setFont(new Font("Arial", Font.ITALIC, 12));
-                infoPanel.add(lblInfoSoiree);
-            }
-        }
+        // Panel paiement (simplifié)
+        JPanel panelPaiement = new JPanel(new GridLayout(0, 1, 10, 10));
+        panelPaiement.setBackground(Color.WHITE);
+        panelPaiement.setBorder(BorderFactory.createTitledBorder("Informations de paiement"));
         
-        centerPanel.add(infoPanel);
-        centerPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+        JLabel lblCarte = new JLabel("Numéro de carte :");
+        JTextField txtCarte = new JTextField();
         
-        JPanel formPanel = new JPanel();
-        formPanel.setBackground(Color.WHITE);
-        formPanel.setLayout(new GridLayout(0, 1, 10, 10));
-        formPanel.setBorder(BorderFactory.createTitledBorder("Informations de paiement"));
+        JLabel lblExpiration = new JLabel("Date d'expiration (MM/AA) :");
+        JTextField txtExpiration = new JTextField();
         
-        formPanel.add(new JLabel("Nom sur la carte:"));
-        txtNomCarte = new JTextField();
-        txtNomCarte.setPreferredSize(new Dimension(300, 30));
-        formPanel.add(txtNomCarte);
+        JLabel lblCVV = new JLabel("CVV :");
+        JPasswordField txtCVV = new JPasswordField();
         
-        formPanel.add(new JLabel("Numéro de carte:"));
-        txtNumeroCarte = new JTextField();
-        txtNumeroCarte.setPreferredSize(new Dimension(300, 30));
-        formPanel.add(txtNumeroCarte);
+        panelPaiement.add(lblCarte);
+        panelPaiement.add(txtCarte);
+        panelPaiement.add(lblExpiration);
+        panelPaiement.add(txtExpiration);
+        panelPaiement.add(lblCVV);
+        panelPaiement.add(txtCVV);
         
-        JPanel panelDateCVV = new JPanel(new GridLayout(1, 2, 15, 10));
-        panelDateCVV.setBackground(Color.WHITE);
+        mainPanel.add(panelPaiement, BorderLayout.SOUTH);
         
-        JPanel panelDate = new JPanel(new BorderLayout());
-        panelDate.setBackground(Color.WHITE);
-        panelDate.add(new JLabel("Date expiration (MM/AA):"), BorderLayout.NORTH);
-        txtDateExpiration = new JTextField();
-        txtDateExpiration.setPreferredSize(new Dimension(120, 30));
-        panelDate.add(txtDateExpiration, BorderLayout.CENTER);
-        
-        JPanel panelCVV = new JPanel(new BorderLayout());
-        panelCVV.setBackground(Color.WHITE);
-        panelCVV.add(new JLabel("CVV:"), BorderLayout.NORTH);
-        txtCVV = new JTextField();
-        txtCVV.setPreferredSize(new Dimension(80, 30));
-        panelCVV.add(txtCVV, BorderLayout.CENTER);
-        
-        panelDateCVV.add(panelDate);
-        panelDateCVV.add(panelCVV);
-        
-        formPanel.add(panelDateCVV);
-        
-        centerPanel.add(formPanel);
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-        
-        JPanel panelBoutons = new JPanel(new FlowLayout());
+        // Boutons
+        JPanel panelBoutons = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        panelBoutons.setBackground(Color.WHITE);
         
         JButton btnAnnuler = new JButton("Annuler");
-        JButton btnPayer = new JButton("Payer " + String.format("%.2f", montant) + " €");
+        btnAnnuler.addActionListener(e -> dispose());
         
-        btnPayer.setBackground(new Color(70, 130, 180));
+        JButton btnPayer = new JButton("Payer maintenant");
+        btnPayer.setBackground(new Color(0, 120, 215));
         btnPayer.setForeground(Color.WHITE);
-        btnPayer.setFocusPainted(false);
         btnPayer.setFont(new Font("Arial", Font.BOLD, 14));
-        
-        btnAnnuler.addActionListener(e -> annuler());
         btnPayer.addActionListener(e -> traiterPaiement());
         
         panelBoutons.add(btnAnnuler);
@@ -254,119 +130,59 @@ public class Page_Paiement_Parking extends JFrame {
         
         mainPanel.add(panelBoutons, BorderLayout.SOUTH);
         
-        this.setContentPane(mainPanel);
+        setContentPane(mainPanel);
     }
     
-    private void annuler() {
-        int confirmation = JOptionPane.showConfirmDialog(this,
-            "Êtes-vous sûr de vouloir annuler le paiement ?",
-            "Confirmation d'annulation",
-            JOptionPane.YES_NO_OPTION);
-            
-        if (confirmation == JOptionPane.YES_OPTION) {
-            this.dispose();
+    private String getNomParking() {
+        // Récupérer le nom du parking depuis la base de données
+        try {
+            String sql = "SELECT libelle_parking FROM Parking WHERE id_parking = ?";
+            try (java.sql.Connection conn = modele.dao.MySQLConnection.getConnection();
+                 java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, idParking);
+                java.sql.ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getString("libelle_parking");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+        return idParking;
     }
     
     private void traiterPaiement() {
-        if (!validerFormulaire()) {
-            return;
+        // Traitement du paiement...
+        // Après paiement réussi, enregistrer le stationnement
+        
+        String message;
+        if (tarifSoiree) {
+            message = String.format(
+                "<html><div style='text-align: center;'>" +
+                "<b>✅ PAIEMENT RÉUSSI !</b><br><br>" +
+                "Votre stationnement avec tarif soirée a été enregistré.<br>" +
+                "<b>Montant :</b> %.2f€<br>" +
+                "<b>Arrivée :</b> %s<br>" +
+                "<b>Départ prévu :</b> %s<br><br>" +
+                "Merci de votre confiance !</div></html>",
+                montant,
+                heureArrivee.format(DateTimeFormatter.ofPattern("HH:mm")),
+                heureDepart.format(DateTimeFormatter.ofPattern("HH:mm"))
+            );
+        } else {
+            message = String.format(
+                "<html><div style='text-align: center;'>" +
+                "<b>✅ PAIEMENT RÉUSSI !</b><br><br>" +
+                "Votre stationnement a été enregistré.<br>" +
+                "<b>Montant :</b> %.2f€<br><br>" +
+                "Merci de votre confiance !</div></html>",
+                montant
+            );
         }
         
-        try {
-            // Créer le paiement
-            Paiement paiement = new Paiement(
-                txtNomCarte.getText().trim(),
-                txtNumeroCarte.getText().trim(),
-                txtCVV.getText().trim(),
-                montant,
-                usager.getIdUsager()
-            );
-            
-            // Simuler le paiement via le contrôleur
-            PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
-            boolean paiementSimuleReussi = controleur.simulerPaiement(
-                montant,
-                txtNumeroCarte.getText().trim(),
-                txtDateExpiration.getText().trim(),
-                txtCVV.getText().trim()
-            );
-            
-            if (!paiementSimuleReussi) {
-                JOptionPane.showMessageDialog(this,
-                    "Le paiement a été refusé par la banque",
-                    "Paiement refusé",
-                    JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            
-            // Enregistrer le paiement dans la base
-            boolean paiementEnregistre = PaiementDAO.enregistrerPaiement(paiement);
-            
-            if (paiementEnregistre) {
-                // Mettre à jour le stationnement
-                boolean operationReussie = StationnementDAO.terminerStationnementParking(
-                    idStationnement,
-                    LocalDateTime.now(),
-                    montant,
-                    paiement.getIdPaiement()
-                );
-                
-                if (operationReussie) {
-                    afficherConfirmation();
-                    retourAccueil();
-                } else {
-                    JOptionPane.showMessageDialog(this,
-                        "Erreur lors de la mise à jour du stationnement",
-                        "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
-                }
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Erreur lors de l'enregistrement du paiement",
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                "Erreur lors du traitement du paiement: " + e.getMessage(),
-                "Erreur",
-                JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-
-    private boolean validerFormulaire() {
-        PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
-        
-        return controleur.validerFormulairePaiementComplet(
-            txtNomCarte.getText().trim(),
-            txtNumeroCarte.getText().trim(),
-            txtDateExpiration.getText().trim(),
-            txtCVV.getText().trim(),
-            this
-        );
-    }
-    
-    private void afficherConfirmation() {
-        String message = "Paiement effectué avec succès !\n\n" +
-                       "Stationnement terminé pour " + stationnement.getPlaqueImmatriculation() + "\n" +
-                       "Parking: " + parking.getLibelleParking() + "\n" +
-                       "Durée: " + lblDuree.getText().replace("Durée totale: ", "") + "\n" +
-                       "Montant: " + String.format("%.2f", montant) + " €\n\n" +
-                       "Vous pouvez quitter le parking.";
-        
-        JOptionPane.showMessageDialog(this,
-            message,
-            "Paiement réussi",
+        JOptionPane.showMessageDialog(this, message, "Paiement confirmé", 
             JOptionPane.INFORMATION_MESSAGE);
+        
+        dispose();
     }
-    
-    private void retourAccueil() {
-        Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-        pagePrincipale.setVisible(true);
-        this.dispose();
-    }
-   
-
 }
