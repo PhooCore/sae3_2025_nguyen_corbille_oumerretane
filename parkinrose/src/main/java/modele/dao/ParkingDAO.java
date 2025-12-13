@@ -11,25 +11,22 @@ public class ParkingDAO {
     /**
      * Récupère tous les parkings
      */
-    public static List<Parking> getAllParkings() {
+	public static List<Parking> getAllParkings() {
         List<Parking> parkings = new ArrayList<>();
+        String sql = "SELECT * FROM Parking ORDER BY libelle_parking";
         
-        String sql = "SELECT id_parking, libelle_parking, adresse_parking, " +
-                    "nombre_places, places_disponibles, hauteur_parking, tarif_soiree, " +
-                    "has_moto, places_moto, places_moto_disponibles FROM Parking " +
-                    "ORDER BY libelle_parking";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
+        try (
+            Connection conn = MySQLConnection.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery()
+        ) {
             while (rs.next()) {
                 Parking parking = new Parking(
                     rs.getString("id_parking"),
                     rs.getString("libelle_parking"),
                     rs.getString("adresse_parking"),
+                    rs.getInt("places_disponibles"),
                     rs.getInt("nombre_places"),
-                    rs.getInt("places_disponibles"), 
                     rs.getDouble("hauteur_parking"),
                     rs.getBoolean("tarif_soiree"),
                     rs.getBoolean("has_moto"),
@@ -38,13 +35,104 @@ public class ParkingDAO {
                 );
                 parkings.add(parking);
             }
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération parkings: " + e.getMessage());
+        }
+        return parkings;
+    }
+    
+    /**
+     * Modifie un parking existant dans la base de données
+     */
+    public static boolean modifierParking(Parking parking) {
+        String sql = "UPDATE Parking SET " +
+                     "libelle_parking = ?, " +
+                     "nombre_places = ?, " +
+                     "places_disponibles = ?, " +
+                     "adresse_parking = ?, " +
+                     "hauteur_parking = ?, " +
+                     "tarif_soiree = ?, " +
+                     "has_moto = ?, " +
+                     "places_moto = ?, " +
+                     "places_moto_disponibles = ? " +
+                     "WHERE id_parking = ?";
+        
+        try (
+            Connection conn = MySQLConnection.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+            stmt.setString(1, parking.getLibelleParking());
+            stmt.setInt(2, parking.getNombrePlaces());
+            stmt.setInt(3, parking.getPlacesDisponibles());
+            stmt.setString(4, parking.getAdresseParking());
+            stmt.setDouble(5, parking.getHauteurParking());
+            stmt.setBoolean(6, parking.hasTarifSoiree());
+            stmt.setBoolean(7, parking.hasMoto());
+            stmt.setInt(8, parking.getPlacesMoto());
+            stmt.setInt(9, parking.getPlacesMotoDisponibles());
+            stmt.setString(10, parking.getIdParking());
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
             
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération des parkings: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Erreur modification parking: " + e.getMessage());
+            return false;
         }
+    }
+    
+    /**
+     * Ajoute un nouveau parking dans la base de données
+     */
+    public static boolean ajouterParking(Parking parking) {
+        String sql = "INSERT INTO Parking " +
+                     "(id_parking, libelle_parking, nombre_places, places_disponibles, " +
+                     "adresse_parking, hauteur_parking, tarif_soiree, has_moto, " +
+                     "places_moto, places_moto_disponibles) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
-        return parkings;
+        try (
+            Connection conn = MySQLConnection.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+            stmt.setString(1, parking.getIdParking());
+            stmt.setString(2, parking.getLibelleParking());
+            stmt.setInt(3, parking.getNombrePlaces());
+            stmt.setInt(4, parking.getPlacesDisponibles());
+            stmt.setString(5, parking.getAdresseParking());
+            stmt.setDouble(6, parking.getHauteurParking());
+            stmt.setBoolean(7, parking.hasTarifSoiree());
+            stmt.setBoolean(8, parking.hasMoto());
+            stmt.setInt(9, parking.getPlacesMoto());
+            stmt.setInt(10, parking.getPlacesMotoDisponibles());
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur ajout parking: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Supprime un parking de la base de données
+     */
+    public static boolean supprimerParking(String idParking) {
+        String sql = "DELETE FROM Parking WHERE id_parking = ?";
+        
+        try (
+            Connection conn = MySQLConnection.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+            stmt.setString(1, idParking);
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur suppression parking: " + e.getMessage());
+            return false;
+        }
     }
     
     /**

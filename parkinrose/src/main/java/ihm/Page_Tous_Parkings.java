@@ -2,6 +2,8 @@ package ihm;
 
 import javax.swing.*;
 import java.awt.*;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -243,7 +245,25 @@ public class Page_Tous_Parkings extends JFrame {
             lblSoiree.setFont(new Font("Arial", Font.BOLD, 12));
             lblSoiree.setForeground(Color.ORANGE.darker());
             detailsPanel.add(lblSoiree);
+            
+            if (TarifParkingDAO.proposeTarifSoiree(parking.getIdParking())) {
+                boolean tarifSoireeMaintenant = TarifParkingDAO.tarifSoireeApplicableMaintenant(parking.getIdParking());
+                
+                JLabel lblSoireeInfo = new JLabel();
+                if (tarifSoireeMaintenant) {
+                    LocalTime maintenant = LocalTime.now();
+                    lblSoireeInfo.setText("🌙 Tarif soirée ACTIF (" + maintenant.format(DateTimeFormatter.ofPattern("HH:mm")) + ")");
+                    lblSoireeInfo.setFont(new Font("Arial", Font.BOLD, 11));
+                    lblSoireeInfo.setForeground(new Color(128, 0, 128));
+                } else {
+                    lblSoireeInfo.setText("🌙 Tarif soirée dispo (19h30-22h00)");
+                    lblSoireeInfo.setFont(new Font("Arial", Font.PLAIN, 11));
+                    lblSoireeInfo.setForeground(Color.GRAY);
+                }
+                detailsPanel.add(lblSoireeInfo);
+            }
         }
+        
         
         detailsPanel.add(lblPlaces);
         detailsPanel.add(lblHauteur);
