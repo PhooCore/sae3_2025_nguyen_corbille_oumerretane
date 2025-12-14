@@ -368,24 +368,24 @@ public class ControleurPaiement implements ActionListener {
         
         if (vue.idStationnement == null) {
             message = "<html><div style='text-align: center;'>"
-                    + "<h2 style='color: green;'>✅ Paiement effectué avec succès !</h2>"
+                    + "<h2 style='color: green;'>Paiement effectué avec succès !</h2>"
                     + "<p>Votre stationnement en voirie est maintenant actif.</p>"
                     + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left; margin: 15px;'>"
-                    + "<p><b>📍 Zone:</b> " + vue.nomZone + "</p>"
-                    + "<p><b>🚗 Véhicule:</b> " + vue.typeVehicule + " - " + vue.plaqueImmatriculation + "</p>"
-                    + "<p><b>⏱️ Durée:</b> " + vue.dureeHeures + "h" + vue.dureeMinutes + "min</p>"
-                    + "<p><b>💰 Montant:</b> " + String.format("%.2f", vue.montant) + " €</p>"
+                    + "<p><b>Zone:</b> " + vue.nomZone + "</p>"
+                    + "<p><b>Véhicule:</b> " + vue.typeVehicule + " - " + vue.plaqueImmatriculation + "</p>"
+                    + "<p><b>Durée:</b> " + vue.dureeHeures + "h" + vue.dureeMinutes + "min</p>"
+                    + "<p><b>Montant:</b> " + String.format("%.2f", vue.montant) + " €</p>"
                     + "</div>"
                     + "<p style='color: #666;'>N'oubliez pas de valider la fin de votre stationnement.</p>"
                     + "</div></html>";
         } else {
             message = "<html><div style='text-align: center;'>"
-                    + "<h2 style='color: green;'>✅ Paiement effectué avec succès !</h2>"
+                    + "<h2 style='color: green;'>Paiement effectué avec succès !</h2>"
                     + "<p>Votre stationnement en parking est maintenant terminé.</p>"
                     + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left; margin: 15px;'>"
-                    + "<p><b>📍 Parking:</b> " + vue.nomZone + "</p>"
-                    + "<p><b>🚗 Véhicule:</b> " + vue.typeVehicule + " - " + vue.plaqueImmatriculation + "</p>"
-                    + "<p><b>💰 Montant:</b> " + String.format("%.2f", vue.montant) + " €</p>"
+                    + "<p><b>Parking:</b> " + vue.nomZone + "</p>"
+                    + "<p><b>Véhicule:</b> " + vue.typeVehicule + " - " + vue.plaqueImmatriculation + "</p>"
+                    + "<p><b>Montant:</b> " + String.format("%.2f", vue.montant) + " €</p>"
                     + "</div>"
                     + "<p style='color: #666;'>Vous pouvez maintenant quitter le parking.</p>"
                     + "</div></html>";
@@ -399,12 +399,12 @@ public class ControleurPaiement implements ActionListener {
     
     private void afficherConfirmationParkingGratuit() {
         String message = "<html><div style='text-align: center;'>"
-                + "<h2 style='color: green;'>✅ Stationnement terminé !</h2>"
+                + "<h2 style='color: green;'>Stationnement terminé !</h2>"
                 + "<p>Votre stationnement en parking est maintenant terminé.</p>"
                 + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left; margin: 15px;'>"
-                + "<p><b>📍 Parking:</b> " + vue.nomZone + "</p>"
-                + "<p><b>🚗 Véhicule:</b> " + vue.typeVehicule + " - " + vue.plaqueImmatriculation + "</p>"
-                + "<p><b>💰 Montant:</b> GRATUIT (15 premières minutes)</p>"
+                + "<p><b>Parking:</b> " + vue.nomZone + "</p>"
+                + "<p><b>Véhicule:</b> " + vue.typeVehicule + " - " + vue.plaqueImmatriculation + "</p>"
+                + "<p><b>Montant:</b> GRATUIT (15 premières minutes)</p>"
                 + "</div>"
                 + "<p style='color: #666;'>Vous pouvez maintenant quitter le parking.</p>"
                 + "</div></html>";

@@ -166,7 +166,7 @@ public class ControleurUtilisateur implements ActionListener {
         
         if (modificationReussie) {
             JOptionPane.showMessageDialog(vue,
-                "✅ Mot de passe modifié avec succès !\n" +
+                "Mot de passe modifié avec succès !\n" +
                 "Votre nouveau mot de passe est maintenant actif.",
                 "Modification réussie",
                 JOptionPane.INFORMATION_MESSAGE);
@@ -194,12 +194,5 @@ public class ControleurUtilisateur implements ActionListener {
         return emailUtilisateur;
     }
     
-    /**
-     * Rafraîchit l'affichage de la page utilisateur
-     */
-    public void rafraichirAffichage() {
-        // Vous pourriez vouloir implémenter un rafraîchissement ici
-        // Par exemple, réinitialiser les onglets
-        System.out.println("Affichage de la page utilisateur rafraîchi");
-    }
+
 }

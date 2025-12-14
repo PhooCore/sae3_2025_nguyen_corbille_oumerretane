@@ -276,43 +276,56 @@ public class Page_Resultats_Recherche extends JFrame {
         carte.setMaximumSize(new Dimension(800, 140));
         carte.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
+        // Panel pour les infos à gauche - changement clé ici
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setBackground(Color.WHITE);
+        infoPanel.setAlignmentY(Component.TOP_ALIGNMENT); // Alignement en haut
         
+        // Nom du parking
         JLabel lblNom = new JLabel(parking.getLibelleParking());
         lblNom.setFont(new Font("Arial", Font.BOLD, 16));
         lblNom.setForeground(new Color(0, 100, 200));
+        lblNom.setAlignmentX(Component.LEFT_ALIGNMENT); // Alignement à gauche
         
+        // Adresse
         JLabel lblAdresse = new JLabel(parking.getAdresseParking());
         lblAdresse.setFont(new Font("Arial", Font.PLAIN, 14));
         lblAdresse.setForeground(Color.DARK_GRAY);
+        lblAdresse.setAlignmentX(Component.LEFT_ALIGNMENT); // Alignement à gauche
         
+        // Détails horizontaux
         JPanel detailsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
         detailsPanel.setBackground(Color.WHITE);
+        detailsPanel.setAlignmentX(Component.LEFT_ALIGNMENT); // Alignement à gauche
         
+        // Places disponibles
         JLabel lblPlaces = new JLabel(parking.getPlacesDisponibles() + "/" + parking.getNombrePlaces() + " places");
         lblPlaces.setFont(new Font("Arial", Font.PLAIN, 12));
         
+        // Places moto
         if (parking.hasMoto()) {
-            JLabel lblMoto = new JLabel(""+parking.getPlacesMotoDisponibles() + "/" + parking.getPlacesMoto() + " places moto");
+            JLabel lblMoto = new JLabel(parking.getPlacesMotoDisponibles() + "/" + parking.getPlacesMoto() + " places moto");
             lblMoto.setFont(new Font("Arial", Font.PLAIN, 12));
             lblMoto.setForeground(new Color(100, 100, 100));
             detailsPanel.add(lblMoto);
         }
         
+        // Hauteur
         JLabel lblHauteur = new JLabel(parking.getHauteurParking() + "m");
         lblHauteur.setFont(new Font("Arial", Font.PLAIN, 12));
         
+        // Gratuit
         if (TarifParkingDAO.estParkingGratuit(parking.getIdParking())) {
-            JLabel lblGratuit = new JLabel("☑ GRATUIT");
+            JLabel lblGratuit = new JLabel("GRATUIT");
             lblGratuit.setFont(new Font("Arial", Font.BOLD, 12));
             lblGratuit.setForeground(Color.GREEN.darker());
             detailsPanel.add(lblGratuit);
         }
         
+        // Tarif soirée
         if (parking.hasTarifSoiree()) {
-            JLabel lblSoiree = new JLabel("☽ Tarif soirée");
+            JLabel lblSoiree = new JLabel("Tarif soirée");
             lblSoiree.setFont(new Font("Arial", Font.BOLD, 12));
             lblSoiree.setForeground(Color.ORANGE.darker());
             detailsPanel.add(lblSoiree);
@@ -321,19 +334,32 @@ public class Page_Resultats_Recherche extends JFrame {
         detailsPanel.add(lblPlaces);
         detailsPanel.add(lblHauteur);
         
+        // Ajouter les composants dans l'ordre
         infoPanel.add(lblNom);
         infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         infoPanel.add(lblAdresse);
         infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         infoPanel.add(detailsPanel);
         
-        carte.add(infoPanel, BorderLayout.CENTER);
+        // Créer un conteneur pour centrer verticalement les infos
+        JPanel centerContainer = new JPanel(new BorderLayout());
+        centerContainer.setBackground(Color.WHITE);
+        centerContainer.add(infoPanel, BorderLayout.WEST); // Tous les éléments à gauche
         
+        carte.add(centerContainer, BorderLayout.CENTER);
+        
+        // Bouton à droite
         JButton btnSelect = new JButton("Stationner ici");
         btnSelect.setActionCommand("STATIONNER_" + index);
         btnSelect.setPreferredSize(new Dimension(120, 35));
         
-        carte.add(btnSelect, BorderLayout.EAST);
+        // Conteneur pour centrer verticalement le bouton
+        JPanel buttonContainer = new JPanel(new BorderLayout());
+        buttonContainer.setBackground(Color.WHITE);
+        buttonContainer.add(btnSelect, BorderLayout.NORTH); // Alignement en haut
+        buttonContainer.add(Box.createVerticalGlue(), BorderLayout.CENTER); // Glue pour centrer
+        
+        carte.add(buttonContainer, BorderLayout.EAST);
         
         return carte;
     }

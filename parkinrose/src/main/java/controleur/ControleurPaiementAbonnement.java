@@ -275,12 +275,12 @@ public class ControleurPaiementAbonnement implements ActionListener {
     
     private void afficherConfirmation() {
         String message = "<html><div style='text-align: center;'>"
-                + "<h2 style='color: green;'>✅ Abonnement activé !</h2>"
+                + "<h2 style='color: green;'>Abonnement activé !</h2>"
                 + "<p>Votre abonnement <b>" + abonnement.getLibelleAbonnement() + "</b> a été activé avec succès.</p>"
                 + "<br>"
                 + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
-                + "<p><b>📅 Date d'activation :</b> " + java.time.LocalDate.now() + "</p>"
-                + "<p><b>💰 Prix :</b> " + String.format("%.2f €", abonnement.getTarifAbonnement()) + "</p>"
+                + "<p><b>Date d'activation :</b> " + java.time.LocalDate.now() + "</p>"
+                + "<p><b>Prix :</b> " + String.format("%.2f €", abonnement.getTarifAbonnement()) + "</p>"
                 + "</div>"
                 + "</div></html>";
         

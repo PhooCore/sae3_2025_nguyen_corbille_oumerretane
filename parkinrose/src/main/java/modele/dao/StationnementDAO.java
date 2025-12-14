@@ -378,28 +378,7 @@ public class StationnementDAO {
         
         return stationnements;
     }
-    /**
-     * Récupère l'ID du parking depuis un stationnement
-     */
-    private static String getIdParkingFromStationnement(int idStationnement) {
-        String sql = "SELECT id_parking FROM Stationnement WHERE id_stationnement = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, idStationnement);
-            ResultSet rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                return rs.getString("id_parking");
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur récupération ID parking: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null;
-    }
+
     
     /**
      * Récupère les stationnements d'un usager filtrés par statut
@@ -841,4 +820,28 @@ public class StationnementDAO {
         }
     }
     
+    /**
+     * Vérifie s'il y a des stationnements en cours dans un parking
+     */
+    public static boolean hasStationnementEnCours(String idParking) {
+        String sql = "SELECT COUNT(*) as count FROM Stationnement " +
+                    "WHERE id_parking = ? AND date_fin IS NULL";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, idParking);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getInt("count") > 0;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur vérification stationnements en cours: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
 }

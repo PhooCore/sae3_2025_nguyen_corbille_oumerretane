@@ -116,7 +116,7 @@ public class Page_Abonnements extends JFrame {
         });
         
         // Bouton de recherche avec icône
-        rechercheBtn = new JButton("🔍 Rechercher");
+        rechercheBtn = new JButton("Rechercher");
         rechercheBtn.setPreferredSize(new Dimension(120, 30));
         rechercheBtn.setFont(new Font("Arial", Font.PLAIN, 12));
         rechercheBtn.setFocusPainted(false);
@@ -305,25 +305,25 @@ public class Page_Abonnements extends JFrame {
         
         String idUpper = abonnement.getIdAbonnement().toUpperCase();
         if (idUpper.contains("ANNUEL")) {
-            JLabel badge = new JLabel("📅 Annuel");
+            JLabel badge = new JLabel("Annuel");
             badge.setFont(new Font("Arial", Font.PLAIN, 11));
             badge.setForeground(new Color(0, 100, 200));
             badgesPanel.add(badge);
         }
         if (idUpper.contains("HEBDO") || idUpper.contains("SEMAINE")) {
-            JLabel badge = new JLabel("📆 Hebdomadaire");
+            JLabel badge = new JLabel("Hebdomadaire");
             badge.setFont(new Font("Arial", Font.PLAIN, 11));
             badge.setForeground(new Color(0, 100, 200));
             badgesPanel.add(badge);
         }
         if (idUpper.contains("MOTO")) {
-            JLabel badge = new JLabel("🏍️ Moto");
+            JLabel badge = new JLabel("Ⓜ Moto");
             badge.setFont(new Font("Arial", Font.PLAIN, 11));
             badge.setForeground(new Color(100, 100, 100));
             badgesPanel.add(badge);
         }
         if (idUpper.contains("RESIDENT")) {
-            JLabel badge = new JLabel("🏠 Résident");
+            JLabel badge = new JLabel("⛫ Résident");
             badge.setFont(new Font("Arial", Font.PLAIN, 11));
             badge.setForeground(new Color(150, 75, 0));
             badgesPanel.add(badge);
@@ -378,7 +378,7 @@ public class Page_Abonnements extends JFrame {
                         if (success) {
                             JOptionPane.showMessageDialog(
                                 this,
-                                "✅ Abonnement souscrit avec succès !\n" +
+                                "Abonnement souscrit avec succès !\n" +
                                 "Votre abonnement \"" + abonnement.getLibelleAbonnement() + "\" est maintenant actif.",
                                 "Abonnement activé",
                                 JOptionPane.INFORMATION_MESSAGE

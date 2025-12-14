@@ -165,13 +165,13 @@ public class ControleurModificationMDP implements ActionListener {
     
     private void afficherConfirmation(String email) {
         String message = "<html><div style='text-align: center;'>"
-                + "<h2 style='color: green;'>✅ Mot de passe modifié !</h2>"
+                + "<h2 style='color: green;'>Mot de passe modifié !</h2>"
                 + "<p>Votre mot de passe a été modifié avec succès.</p>"
                 + "<br>"
                 + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
-                + "<p><b>📧 Email:</b> " + email + "</p>"
-                + "<p><b>📅 Date de modification:</b> " + java.time.LocalDate.now() + "</p>"
-                + "<p><b>⚠️ Sécurité:</b> Vous devez utiliser votre nouveau mot de passe pour vous connecter.</p>"
+                + "<p><b>Email:</b> " + email + "</p>"
+                + "<p><b>Date de modification:</b> " + java.time.LocalDate.now() + "</p>"
+                + "<p><b>Sécurité:</b> Vous devez utiliser votre nouveau mot de passe pour vous connecter.</p>"
                 + "</div>"
                 + "</div></html>";
         

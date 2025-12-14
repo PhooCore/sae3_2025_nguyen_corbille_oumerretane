@@ -73,6 +73,8 @@ public class ControleurAdministration implements ActionListener {
                 } else if (action.equals("RAPPORTS")) {
                     etat = EtatAdministration.STATISTIQUES;
                     genererRapports();
+                } else if (action.equals("GESTION_CARTE")) {
+                    // La carte s'ouvre directement depuis la vue
                 }
                 break;
                 
@@ -84,10 +86,6 @@ public class ControleurAdministration implements ActionListener {
     
     private void ouvrirGestionParkings() {
         // TODO: Implémenter l'ouverture de la gestion des parkings
-        JOptionPane.showMessageDialog(vue,
-            "Fonctionnalité en cours de développement",
-            "Gestion des Parkings",
-            JOptionPane.INFORMATION_MESSAGE);
         etat = EtatAdministration.NAVIGATION;
     }
     
@@ -147,8 +145,10 @@ public class ControleurAdministration implements ActionListener {
         if (texte != null) {
             if (texte.contains("Retour")) {
                 return "RETOUR";
-            } else if (texte.contains("Parkings")) {
+            } else if (texte.contains("Parkings") && !texte.contains("Carte")) {
                 return "GESTION_PARKINGS";
+            } else if (texte.contains("Carte")) {
+                return "GESTION_CARTE"; 
             } else if (texte.contains("Utilisateurs")) {
                 return "GESTION_UTILISATEURS";
             } else if (texte.contains("Statistiques")) {

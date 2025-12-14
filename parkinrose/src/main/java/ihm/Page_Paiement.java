@@ -26,8 +26,8 @@ public class Page_Paiement extends JFrame {
     public JTextField txtCVV;
     
     // Boutons
-    public JButton btnAnnuler; // Rendre public
-    public JButton btnPayer;   // Rendre public
+    public JButton btnAnnuler; 
+    public JButton btnPayer;   
 
     // **CONSTRUCTEUR POUR VOIRIE** - SANS idStationnement
     public Page_Paiement(double montant, String emailUtilisateur, String typeVehicule, 
@@ -179,7 +179,4 @@ public class Page_Paiement extends JFrame {
         this.setContentPane(mainPanel);
     }
     
-    // PAS BESOIN de validerFormulaire() - c'est géré par le contrôleur
-    
-    // PAS BESOIN de getters - les boutons sont publics
 }

@@ -11,10 +11,32 @@ public class Parking {
     private boolean hasMoto;
     private int placesMoto;
     private int placesMotoDisponibles;
+    private boolean estRelais;
+    private Float positionX;  // Nouveau - position relative X (0.0 à 1.0)
+    private Float positionY;  // Nouveau - position relative Y (0.0 à 1.0)
     
+    // Constructeur existant (sans positions)
     public Parking(String idParking, String libelleParking, String adresseParking, 
                    int nombrePlaces, int placesDisponibles, double hauteurParking, 
                    boolean tarifSoiree, boolean hasMoto, int placesMoto, int placesMotoDisponibles) {
+        this(idParking, libelleParking, adresseParking, nombrePlaces, placesDisponibles, 
+             hauteurParking, tarifSoiree, hasMoto, placesMoto, placesMotoDisponibles, false, null, null);
+    }
+    
+    // Constructeur avec estRelais
+    public Parking(String idParking, String libelleParking, String adresseParking, 
+                   int nombrePlaces, int placesDisponibles, double hauteurParking, 
+                   boolean tarifSoiree, boolean hasMoto, int placesMoto, int placesMotoDisponibles,
+                   boolean estRelais) {
+        this(idParking, libelleParking, adresseParking, nombrePlaces, placesDisponibles, 
+             hauteurParking, tarifSoiree, hasMoto, placesMoto, placesMotoDisponibles, estRelais, null, null);
+    }
+    
+    // Nouveau constructeur avec positions
+    public Parking(String idParking, String libelleParking, String adresseParking, 
+                   int nombrePlaces, int placesDisponibles, double hauteurParking, 
+                   boolean tarifSoiree, boolean hasMoto, int placesMoto, int placesMotoDisponibles,
+                   boolean estRelais, Float positionX, Float positionY) {
         this.idParking = idParking;
         this.libelleParking = libelleParking;
         this.adresseParking = adresseParking;
@@ -25,8 +47,35 @@ public class Parking {
         this.hasMoto = hasMoto;
         this.placesMoto = placesMoto;
         this.placesMotoDisponibles = placesMotoDisponibles;
+        this.estRelais = estRelais;
+        this.positionX = positionX;
+        this.positionY = positionY;
     }
     
+    // Getters et setters pour les nouvelles propriétés
+    public Float getPositionX() {
+        return positionX;
+    }
+    
+    public void setPositionX(Float positionX) {
+        this.positionX = positionX;
+    }
+    
+    public Float getPositionY() {
+        return positionY;
+    }
+    
+    public void setPositionY(Float positionY) {
+        this.positionY = positionY;
+    }
+    
+    public boolean isEstRelais() {
+        return estRelais;
+    }
+    
+    public void setEstRelais(boolean estRelais) {
+        this.estRelais = estRelais;
+    }
     public Parking(String idParking, String libelleParking, String adresseParking, 
                    int nombrePlaces, int placesDisponibles, double hauteurParking, 
                    boolean tarifSoiree) {

@@ -227,13 +227,13 @@ public class Page_Stationnement_En_Cours extends JFrame {
         
         if (succes) {
             JOptionPane.showMessageDialog(this, 
-                "✅ Stationnement arrêté avec succès !", 
+                "Stationnement arrêté avec succès !", 
                 "Succès", 
                 JOptionPane.INFORMATION_MESSAGE);
             retourAccueil();
         } else {
             JOptionPane.showMessageDialog(this,
-                "❌ Erreur lors de l'arrêt du stationnement",
+                "X Erreur lors de l'arrêt du stationnement",
                 "Erreur",
                 JOptionPane.ERROR_MESSAGE);
         }

@@ -101,7 +101,7 @@ public class ControleurHistoriqueStationnements implements ActionListener {
             
             if ("ACTIF".equals(stationnement.getStatut())) {
                 details.append("<hr><p style='color: red; font-weight: bold;'>")
-                       .append("⚠️ Ce stationnement est toujours actif.<br>")
+                       .append("Ce stationnement est toujours actif.<br>")
                        .append("Conservez votre ticket de stationnement.</p>");
             }
             
