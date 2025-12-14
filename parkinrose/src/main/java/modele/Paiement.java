@@ -15,7 +15,6 @@ public class Paiement {
     private String statut;
     private String typePaiement;
 
-    // Constructeur pour les stationnements
     public Paiement(String nomCarte, String numeroCarte, String codeSecretCarte, double montant, int idUsager) {
         this.nomCarte = nomCarte;
         this.numeroCarte = numeroCarte;
@@ -29,7 +28,6 @@ public class Paiement {
         this.typePaiement = "Stationnement";
     }
 
-    // Constructeur pour les abonnements
     public Paiement(String nomCarte, String numeroCarte, String codeSecretCarte, double montant, int idUsager, String idAbonnement) {
         this(nomCarte, numeroCarte, codeSecretCarte, montant, idUsager);
         this.idAbonnement = idAbonnement;
@@ -39,7 +37,6 @@ public class Paiement {
     public Paiement() {
     }
 
-    // Getters et Setters
     public String getIdPaiement() { return idPaiement; }
     public void setIdPaiement(String idPaiement) { this.idPaiement = idPaiement; }
     
@@ -72,7 +69,6 @@ public class Paiement {
 
     public String getTypePaiement() { 
         if (typePaiement == null) {
-            // Détermine automatiquement le type en fonction de l'ID abonnement
             return idAbonnement != null && !idAbonnement.isEmpty() ? "Abonnement" : "Stationnement";
         }
         return typePaiement; 

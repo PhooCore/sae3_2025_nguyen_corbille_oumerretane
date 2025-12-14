@@ -20,7 +20,6 @@ public class Zone {
         this.dureeMax = dureeMax;
     }
 
-    // Getters
     public String getIdZone() { return idZone; }
     public String getLibelleZone() { return libelleZone; }
     public String getCouleurZone() { return couleurZone; }
@@ -31,10 +30,6 @@ public class Zone {
         return dureeMax.getHour() * 60 + dureeMax.getMinute();
     }
 
-    /**
-     * Calcule le coût selon les règles spécifiques de chaque zone
-     * Version simplifiée sans les horaires complexes
-     */
     public double calculerCout(int dureeMinutes) {
         switch (idZone) {
             case "ZONE_BLEUE":
@@ -52,97 +47,78 @@ public class Zone {
         }
     }
 
-    /**
-     * Zone Bleue - Gratuit 1h30, puis majoration
-     */
     private double calculerCoutBleue(int dureeMinutes) {
-        if (dureeMinutes <= 90) { // 1h30
-            return 0.00; // Gratuit
-        } else if (dureeMinutes <= 120) { // 2h
+        if (dureeMinutes <= 90) {
+            return 0.00;
+        } else if (dureeMinutes <= 120) {
             return 2.00;
-        } else { // Au-delà de 2h
-            return 2.00 + 30.00; // Majoration 30€
+        } else {
+            return 2.00 + 30.00;
         }
     }
 
-    /**
-     * Zone Verte - Tarif progressif
-     */
     private double calculerCoutVerte(int dureeMinutes) {
-        if (dureeMinutes <= 60) { // 1h
+        if (dureeMinutes <= 60) {
             return 0.50;
-        } else if (dureeMinutes <= 120) { // 2h
+        } else if (dureeMinutes <= 120) {
             return 1.00;
-        } else if (dureeMinutes <= 180) { // 3h
+        } else if (dureeMinutes <= 180) {
             return 1.50;
-        } else if (dureeMinutes <= 240) { // 4h
+        } else if (dureeMinutes <= 240) {
             return 2.00;
-        } else if (dureeMinutes <= 300) { // 5h
+        } else if (dureeMinutes <= 300) {
             return 2.50;
         } else {
-            return 2.50 + 30.00; // Majoration au-delà de 5h
+            return 2.50 + 30.00;
         }
     }
 
-    /**
-     * Zone Jaune - Tarif avec majoration
-     */
     private double calculerCoutJaune(int dureeMinutes) {
-        if (dureeMinutes <= 60) { // 1h
+        if (dureeMinutes <= 60) {
             return 1.50;
-        } else if (dureeMinutes <= 120) { // 2h
+        } else if (dureeMinutes <= 120) {
             return 3.00;
-        } else if (dureeMinutes <= 150) { // 2h30
-            return 3.00 + 30.00; // Majoration 30€
+        } else if (dureeMinutes <= 150) {
+            return 3.00 + 30.00;
         } else {
-            return 3.00 + 30.00; // Majoration maintenue
+            return 3.00 + 30.00;
         }
     }
 
-    /**
-     * Zone Orange - Tarif progressif avec majoration
-     */
     private double calculerCoutOrange(int dureeMinutes) {
-        if (dureeMinutes <= 60) { // 1h
+        if (dureeMinutes <= 60) {
             return 1.00;
-        } else if (dureeMinutes <= 120) { // 2h
+        } else if (dureeMinutes <= 120) {
             return 2.00;
-        } else if (dureeMinutes <= 180) { // 3h
+        } else if (dureeMinutes <= 180) {
             return 4.00;
-        } else if (dureeMinutes <= 240) { // 4h
+        } else if (dureeMinutes <= 240) {
             return 6.00;
-        } else if (dureeMinutes <= 300) { // 5h
-            return 6.00 + 30.00; // Majoration 30€
+        } else if (dureeMinutes <= 300) {
+            return 6.00 + 30.00;
         } else {
-            return 6.00 + 30.00; // Majoration maintenue
+            return 6.00 + 30.00;
         }
     }
 
-    /**
-     * Zone Rouge - 30 minutes gratuites par demi-journée
-     */
     private double calculerCoutRouge(int dureeMinutes) {
-        // 30 minutes gratuites
         if (dureeMinutes <= 30) {
             return 0.00;
         }
         
-        // Au-delà de 30 minutes, on calcule sur la durée payante
         int minutesPayantes = dureeMinutes - 30;
         
-        if (minutesPayantes <= 60) { // 1h payante (soit 1h30 au total)
+        if (minutesPayantes <= 60) {
             return 1.00;
-        } else if (minutesPayantes <= 120) { // 2h payantes (soit 2h30 au total)
+        } else if (minutesPayantes <= 120) {
             return 2.00;
-        } else if (minutesPayantes <= 150) { // 2h30 payantes (soit 3h au total)
-            return 2.00 + 30.00; // Majoration 30€
+        } else if (minutesPayantes <= 150) {
+            return 2.00 + 30.00;
         } else {
-            return 2.00 + 30.00; // Majoration maintenue
+            return 2.00 + 30.00;
         }
     }
-    /**
-     * Calcul normal pour les autres zones
-     */
+    
     private double calculerCoutNormal(int dureeMinutes) {
         double dureeHeures = dureeMinutes / 60.0;
         return dureeHeures * tarifParHeure;

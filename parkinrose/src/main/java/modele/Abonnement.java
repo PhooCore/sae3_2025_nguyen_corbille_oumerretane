@@ -3,9 +3,8 @@ package modele;
 public class Abonnement {
     private String idAbonnement;
     private String libelleAbonnement;
-    private double tarifApplique;  // Changez le nom pour correspondre à la BDD
+    private double tarifApplique;
     
-    // Constructeurs
     public Abonnement() {}
     
     public Abonnement(String idAbonnement, String libelleAbonnement, double tarifApplique) {
@@ -14,7 +13,6 @@ public class Abonnement {
         this.tarifApplique = tarifApplique;
     }
     
-    // Getters et Setters
     public String getIdAbonnement() {
         return idAbonnement;
     }

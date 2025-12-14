@@ -2,6 +2,7 @@ package ihm;
 
 import javax.swing.*;
 
+import controleur.ControleurPrincipale; // Import du contrôleur
 import controleur.StationnementControleur;
 
 import java.awt.*;
@@ -19,9 +20,12 @@ import modele.dao.UsagerDAO;
 public class Page_Principale extends JFrame {
     
     private static final long serialVersionUID = 1L;
-    private String emailUtilisateur;
+    public String emailUtilisateur;
     private Usager usager;
-    private JButton btnStationnement;
+    public JButton btnStationnement;
+    public JButton btnUtilisateur;
+    public JButton btnPreparerStationnement;
+    public JButton btnSearch;
     private Timer timer;
     private JTextField searchField;
     private JPanel headerPanel;
@@ -34,6 +38,9 @@ public class Page_Principale extends JFrame {
         
         initialisePage();
         startStationnementCheck();
+        
+        // Créer et lier le contrôleur
+        new ControleurPrincipale(this, email);
     }
     
     private void initialisePage() {
@@ -62,6 +69,7 @@ public class Page_Principale extends JFrame {
             ajouterBoutonAdmin();
         }
     }
+    
     private void ajouterBoutonAdmin() {
         JButton btnAdmin = new JButton("Administration");
         btnAdmin.setPreferredSize(new Dimension(130, 35));
@@ -89,6 +97,7 @@ public class Page_Principale extends JFrame {
         headerPanel.revalidate();
         headerPanel.repaint();
     }
+    
     private JPanel creerBarrePanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(new Color(240, 240, 240));
@@ -123,7 +132,7 @@ public class Page_Principale extends JFrame {
             }
         });
         
-        JButton btnSearch = new JButton();
+        btnSearch = new JButton();
         btnSearch.setBackground(Color.WHITE);
         btnSearch.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
         btnSearch.setPreferredSize(new Dimension(50, 40));
@@ -131,22 +140,6 @@ public class Page_Principale extends JFrame {
         
         JLabel lblLoupe = chargerIconeLabel("/images/loupe.png", 16, 16, "");
         btnSearch.add(lblLoupe);
-        
-        btnSearch.addActionListener(e -> {
-            String recherche = searchField.getText().trim();
-            if (!recherche.isEmpty() && !recherche.equals("Rechercher un parking...")) {
-                Page_Resultats_Recherche pageResultats = new Page_Resultats_Recherche(emailUtilisateur, recherche);
-                pageResultats.setVisible(true);
-                dispose();
-            } else {
-                JOptionPane.showMessageDialog(Page_Principale.this, 
-                    "Veuillez saisir un terme de recherche", 
-                    "Recherche vide", 
-                    JOptionPane.WARNING_MESSAGE);
-            }
-        });
-        
-        searchField.addActionListener(e -> btnSearch.doClick());
         
         searchPanel.add(searchField);
         searchPanel.add(btnSearch);
@@ -168,9 +161,8 @@ public class Page_Principale extends JFrame {
         
         btnStationnement.add(lblIconePark, BorderLayout.CENTER);
         btnStationnement.add(lblTextPark, BorderLayout.SOUTH);
-        btnStationnement.addActionListener(e -> ouvrirPageStationnement());
         
-        JButton btnUtilisateur = new JButton();
+        btnUtilisateur = new JButton();
         btnUtilisateur.setLayout(new BorderLayout());
         btnUtilisateur.setBackground(new Color(240, 240, 240));
         btnUtilisateur.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
@@ -184,7 +176,6 @@ public class Page_Principale extends JFrame {
         
         btnUtilisateur.add(lblIconeUser, BorderLayout.CENTER);
         btnUtilisateur.add(lblTextUser, BorderLayout.SOUTH);
-        btnUtilisateur.addActionListener(e -> ouvrirPageUtilisateur());
         
         iconsPanel.add(btnStationnement);
         iconsPanel.add(btnUtilisateur);
@@ -214,16 +205,13 @@ public class Page_Principale extends JFrame {
         bottomPanel.setBackground(Color.WHITE);
         bottomPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 30, 20));
         
-        JButton btnPreparerStationnement = new JButton("Préparer un stationnement");
+        btnPreparerStationnement = new JButton("Préparer un stationnement");
         btnPreparerStationnement.setFont(new Font("Arial", Font.BOLD, 16));
         btnPreparerStationnement.setBackground(new Color(70, 130, 180));
         btnPreparerStationnement.setForeground(Color.WHITE);
         btnPreparerStationnement.setFocusPainted(false);
         btnPreparerStationnement.setBorder(BorderFactory.createEmptyBorder(15, 40, 15, 40));
         btnPreparerStationnement.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnPreparerStationnement.addActionListener(e -> {
-            ouvrirPageStationnement();
-        });
         
         bottomPanel.add(btnPreparerStationnement);
         
@@ -258,43 +246,6 @@ public class Page_Principale extends JFrame {
         return label;
     }
     
-    private void ouvrirPageStationnement() {
-        StationnementControleur controleur = new StationnementControleur(emailUtilisateur);
-        Stationnement stationnementActif = controleur.getStationnementActif();
-        
-        if (stationnementActif != null) {
-            Page_Stationnement_En_Cours pageStationnement = new Page_Stationnement_En_Cours(emailUtilisateur);
-            pageStationnement.setVisible(true);
-            dispose();
-        } else {
-            Object[] options = {"Stationnement en Voirie", "Stationnement en Parking"};
-            int choix = JOptionPane.showOptionDialog(this,
-                "Choisissez le type de stationnement :",
-                "Nouveau stationnement",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[0]);
-                
-            if (choix == 0) {
-                Page_Garer_Voirie pageGarer = new Page_Garer_Voirie(emailUtilisateur);
-                pageGarer.setVisible(true);
-                dispose();
-            } else if (choix == 1) {
-                Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur,null);
-                pageParking.setVisible(true);
-                dispose();
-            }
-        }
-    }
-    
-    private void ouvrirPageUtilisateur() {
-        Page_Utilisateur pageUtilisateur = new Page_Utilisateur(emailUtilisateur);
-        pageUtilisateur.setVisible(true);
-        dispose();
-    }
-    
     private void startStationnementCheck() {
         timer = new Timer(10000, e -> updateStationnementIcon());
         timer.start();
@@ -305,15 +256,66 @@ public class Page_Principale extends JFrame {
         Stationnement stationnementActif = controleur.getStationnementActif();
         
         if (stationnementActif != null) {
-            btnStationnement.setBackground(new Color(255, 220, 220));
+            // STATIONNEMENT ACTIF - Garder la taille normale de l'icône
+            btnStationnement.setBackground(new Color(255, 240, 240));
+            
+            // ENCADRÉ ROUGE AUTOUR DU BOUTON, pas autour de l'icône
             btnStationnement.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.RED, 2),
-                BorderFactory.createEmptyBorder(3, 13, 3, 13)
+                BorderFactory.createLineBorder(Color.RED, 2), // Bordure fine
+                BorderFactory.createEmptyBorder(10, 20, 10, 20) // PLUS DE PADDING pour éviter la coupure
             ));
+            
+            // Récupérer les composants
+            Component[] components = btnStationnement.getComponents();
+            
+            if (components.length >= 2) {
+                JLabel lblIcone = (JLabel) components[0];
+                JLabel lblTexte = (JLabel) components[1];
+                
+                // NE PAS CHANGER LA TAILLE DE L'ICÔNE - juste l'encadrer mieux
+                // L'icône garde sa taille normale (40x40)
+                
+                // Assurer que l'icône est centrée
+                lblIcone.setHorizontalAlignment(SwingConstants.CENTER);
+                lblIcone.setVerticalAlignment(SwingConstants.CENTER);
+                
+                // Modifier le texte
+                lblTexte.setText("<html><center><b>STATIONNEMENT</b><br><font color='red' size='2'>● ACTIF</font></center></html>");
+                lblTexte.setForeground(Color.RED);
+                lblTexte.setFont(new Font("Arial", Font.BOLD, 11));
+            }
+            
         } else {
+            // AUCUN STATIONNEMENT - Style normal
             btnStationnement.setBackground(new Color(240, 240, 240));
-            btnStationnement.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+            
+            // Bordure normale avec suffisamment d'espace
+            btnStationnement.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+            
+            // Récupérer les composants
+            Component[] components = btnStationnement.getComponents();
+            
+            if (components.length >= 2) {
+                JLabel lblIcone = (JLabel) components[0];
+                JLabel lblTexte = (JLabel) components[1];
+                
+                // S'assurer que l'icône est centrée
+                lblIcone.setHorizontalAlignment(SwingConstants.CENTER);
+                lblIcone.setVerticalAlignment(SwingConstants.CENTER);
+                
+                // Restaurer le texte normal
+                lblTexte.setText("Stationnement");
+                lblTexte.setForeground(Color.DARK_GRAY);
+                lblTexte.setFont(new Font("Arial", Font.PLAIN, 5));
+            }
         }
+        
+        btnStationnement.revalidate();
+        btnStationnement.repaint();
+    }
+    // Getter pour le champ de recherche
+    public JTextField getSearchField() {
+        return searchField;
     }
     
     @Override

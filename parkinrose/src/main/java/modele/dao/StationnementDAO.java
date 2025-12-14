@@ -11,262 +11,7 @@ import java.util.List;
 import javax.swing.JOptionPane;
 
 public class StationnementDAO {
-    
-    /**
-     * Crée un nouveau stationnement en voirie
-     */
-	public static boolean creerStationnementVoirie(Stationnement stationnement) {
-	    String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
-	                 "id_zone, type_stationnement, duree_heures, duree_minutes, cout, " +
-	                 "statut, date_creation, id_paiement) " +
-	                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-	    
-	    try (Connection conn = MySQLConnection.getConnection();
-	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
-	        
-	        pstmt.setInt(1, stationnement.getIdUsager());
-	        pstmt.setString(2, stationnement.getTypeVehicule());
-	        pstmt.setString(3, stationnement.getPlaqueImmatriculation());
-	        pstmt.setString(4, stationnement.getIdTarification()); // Ce sera l'ID de la zone
-	        pstmt.setString(5, stationnement.getTypeStationnement());
-	        pstmt.setInt(6, stationnement.getDureeHeures());
-	        pstmt.setInt(7, stationnement.getDureeMinutes());
-	        pstmt.setDouble(8, stationnement.getCout());
-	        pstmt.setString(9, stationnement.getStatut());
-	        pstmt.setTimestamp(10, java.sql.Timestamp.valueOf(stationnement.getDateCreation()));
-	        pstmt.setString(11, stationnement.getIdPaiement());
-	        
-	        int rowsAffected = pstmt.executeUpdate();
-	        return rowsAffected > 0;
-	        
-	    } catch (SQLException e) {
-	        e.printStackTrace();
-	        return false;
-	    }
-	}
 
-	public static boolean terminerStationnementParking(Integer idStationnement, 
-	                                                  LocalDateTime heureDepart, 
-	                                                  double cout, 
-	                                                  String idPaiement) {
-	    Connection conn = null;
-	    try {
-	        conn = MySQLConnection.getConnection();
-	        conn.setAutoCommit(false);
-	        
-	        // 1. Récupérer les infos du stationnement
-	        String sqlSelect = "SELECT s.*, p.has_moto FROM Stationnement s " +
-	                          "LEFT JOIN Parking p ON s.id_parking = p.id_parking " +
-	                          "WHERE s.id_stationnement = ?";
-	        
-	        String idParking = null;
-	        String typeVehicule = null;
-	        boolean hasMoto = false;
-	        String statutPaiementActuel = null; 
-	        
-	        try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
-	            stmt.setInt(1, idStationnement);
-	            ResultSet rs = stmt.executeQuery();
-	            if (rs.next()) {
-	                idParking = rs.getString("id_parking");
-	                typeVehicule = rs.getString("type_vehicule");
-	                hasMoto = rs.getBoolean("has_moto");
-	                statutPaiementActuel = rs.getString("statut_paiement"); // RÉCUPÉRER LE STATUT
-	            } else {
-	                conn.rollback();
-	                return false;
-	            }
-	        }
-	        
-	        if (idParking == null) {
-	            conn.rollback();
-	            return false;
-	        }
-	        
-	        boolean estGratuit = "GRATUIT".equals(statutPaiementActuel);
-	        
-	        // 2. Mettre à jour le stationnement 
-	        String sqlUpdate = "UPDATE Stationnement SET statut = 'TERMINE', heure_depart = ?, cout = ?, " +
-	                          "id_paiement = ?, statut_paiement = ? WHERE id_stationnement = ?";
-	        
-	        try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
-	            stmt.setTimestamp(1, Timestamp.valueOf(heureDepart));
-	            stmt.setDouble(2, cout);
-	            
-	            // Gérer les parkings gratuits :
-	            if (estGratuit) {
-	                stmt.setNull(3, java.sql.Types.VARCHAR); // id_paiement NULL
-	                stmt.setString(4, "GRATUIT"); // statut_paiement reste GRATUIT
-	            } else {
-	                stmt.setString(3, idPaiement);
-	                stmt.setString(4, "PAYE");
-	            }
-	            
-	            stmt.setInt(5, idStationnement);
-	            
-	            int lignesAffectees = stmt.executeUpdate();
-	            
-	            if (lignesAffectees > 0) {
-	                // 3. Libérer les places selon le type de véhicule
-	                boolean isMoto = "Moto".equalsIgnoreCase(typeVehicule);
-	                boolean placesLiberees;
-	                
-	                if (isMoto && hasMoto) {
-	                    placesLiberees = ParkingDAO.incrementerPlacesMotoDisponibles(idParking);
-	                } else {
-	                    placesLiberees = ParkingDAO.incrementerPlacesDisponibles(idParking);
-	                }
-	                
-	                if (placesLiberees) {
-	                    conn.commit();
-	                    return true;
-	                } else {
-	                    conn.rollback();
-	                    return false;
-	                }
-	            } else {
-	                conn.rollback();
-	                return false;
-	            }
-	        }
-	    } catch (SQLException e) {
-	        e.printStackTrace();
-	        return false;
-	    }
-	}
-    
-	/**
-	 * Crée un stationnement en parking avec gestion des places selon le type de véhicule
-	 */
-	public static boolean creerStationnementParking(int idUsager, String typeVehicule, String plaqueImmatriculation,
-	        String idParking, LocalDateTime heureArrivee) {
-
-	    Connection conn = null;
-	    try {
-	        conn = MySQLConnection.getConnection();
-	        conn.setAutoCommit(false);
-	        
-	        // Récupérer les infos du parking
-	        Parking parking = ParkingDAO.getParkingById(idParking);
-	        if (parking == null) {
-	            JOptionPane.showMessageDialog(null, "Parking non trouvé", "Erreur", JOptionPane.ERROR_MESSAGE);
-	            return false;
-	        }
-	        //Vérifier si c'est un parking gratuit 
-	        boolean estGratuit = TarifParkingDAO.estParkingGratuit(idParking);
-	        
-	        // Vérifier les places selon le type de véhicule
-	        boolean isMoto = "Moto".equalsIgnoreCase(typeVehicule);
-	        
-	        if (isMoto) {
-	            // Vérifier places moto
-	            if (parking.hasMoto()) {
-	                JOptionPane.showMessageDialog(null, "Ce parking ne dispose pas de places pour les motos", 
-	                    "Parking non adapté", JOptionPane.WARNING_MESSAGE);
-	                return false;
-	            }
-	            if (parking.getPlacesMotoDisponibles()<=0) {
-	                JOptionPane.showMessageDialog(null, 
-	                        "Plus de places moto disponibles dans ce parking",
-	                        "Parking complet", 
-	                        JOptionPane.WARNING_MESSAGE);
-	                    return false;	
-	            }
-	            // Décrémenter places moto
-	            boolean placesDecrementees = ParkingDAO.decrementerPlacesMotoDisponibles(idParking);
-	            if (!placesDecrementees) {
-	                conn.rollback();
-	                JOptionPane.showMessageDialog(null, "Erreur lors de la réservation de la place moto", 
-	                    "Erreur", JOptionPane.ERROR_MESSAGE);
-	                return false;
-	            }
-	        } else {
-	            // Vérifier places voiture/camion
-	            if (parking.getPlacesDisponibles() <= 0) {
-	                JOptionPane.showMessageDialog(null, "Plus de places disponibles dans ce parking", 
-	                    "Parking complet", JOptionPane.WARNING_MESSAGE);
-	                return false;
-	            }
-	            
-	            // Décrémenter places normales
-	            boolean placesDecrementees = ParkingDAO.decrementerPlacesDisponibles(idParking);
-	            if (!placesDecrementees) {
-	                conn.rollback();
-	                JOptionPane.showMessageDialog(null, "Erreur lors de la réservation de la place", 
-	                    "Erreur", JOptionPane.ERROR_MESSAGE);
-	                return false;
-	            }
-	        }
-	        
-	        // Créer le stationnement
-	        String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
-                    "id_parking, heure_arrivee, type_stationnement, statut_paiement, statut, cout) " +
-                    "VALUES (?, ?, ?, ?, ?, 'PARKING', ?, 'ACTIF', ?)";
-	        
-	        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-	            stmt.setInt(1, idUsager);
-	            stmt.setString(2, typeVehicule);
-	            stmt.setString(3, plaqueImmatriculation);
-	            stmt.setString(4, idParking);
-	            stmt.setTimestamp(5, Timestamp.valueOf(heureArrivee));
-	        
-	            if (estGratuit) {
-	                stmt.setString(6, "GRATUIT");
-	                stmt.setDouble(7, 0.0); // Coût 0 pour les parkings gratuits
-	            } else {
-	                stmt.setString(6, "NON_PAYE");
-	                stmt.setDouble(7, 0.0); // Coût initial à 0
-	            }
-	            
-	            int lignesAffectees = stmt.executeUpdate();
-	        
-	            if (lignesAffectees > 0) {
-	                conn.commit();
-	                String message;
-	                if (estGratuit) {
-	                    message = "Stationnement confirmé !\n\n" +
-	                            "Votre place est réservée dans le parking " + parking.getLibelleParking() + ".\n" +
-	                            "Ce parking est gratuit.\n" +
-	                            "N'oubliez pas de valider votre sortie.";
-	                } else {
-	                    message = "Stationnement confirmé !\n\n" +
-	                            "Votre place est réservée dans le parking " + parking.getLibelleParking() + ".\n" +
-	                            "N'oubliez pas de valider votre sortie pour le paiement.";
-	                }
-	                
-	                JOptionPane.showMessageDialog(null,
-	                    message,
-	                    "Réservation réussie",
-	                    JOptionPane.INFORMATION_MESSAGE);
-	                return true;
-	            } else {
-	                conn.rollback();
-	                return false;
-	            }
-	        }
-	        
-	    } catch (SQLException e) {
-	        try {
-	            if (conn != null) conn.rollback();
-	        } catch (SQLException ex) {
-	            System.err.println("Erreur lors du rollback: " + ex.getMessage());
-	        }
-	        System.err.println("Erreur création stationnement parking: " + e.getMessage());
-	        e.printStackTrace();
-	        return false;
-	    } finally {
-	        try {
-	            if (conn != null) {
-	                conn.setAutoCommit(true);
-	                conn.close();
-	            }
-	        } catch (SQLException e) {
-	            System.err.println("Erreur fermeture connexion: " + e.getMessage());
-	        }
-	    }
-	}
-    
-    
     /**
      * Récupère le stationnement actif d'un usager
      */
@@ -654,6 +399,446 @@ public class StationnementDAO {
             e.printStackTrace();
         }
         return null;
+    }
+    
+    /**
+     * Récupère les stationnements d'un usager filtrés par statut
+     * @param idUsager ID de l'usager
+     * @param statut Statut à filtrer (ACTIF, TERMINE, EXPIRE)
+     * @return Liste des stationnements filtrés
+     */
+    public static List<Stationnement> getStationnementsParStatut(int idUsager, String statut) {
+        List<Stationnement> stationnements = new ArrayList<>();
+        String sql = "SELECT s.* FROM Stationnement s " +
+                    "WHERE s.id_usager = ? AND s.statut = ? " +
+                    "ORDER BY s.date_creation DESC";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, idUsager);
+            stmt.setString(2, statut);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Stationnement stationnement = mapResultSetToStationnement(rs);
+                    stationnements.add(stationnement);
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération des stationnements par statut: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return stationnements;
+    }
+    
+    /**
+     * Récupère l'historique des stationnements d'un usager avec possibilité de filtre par type
+     * @param idUsager ID de l'usager
+     * @param typeStationnement Type de stationnement (VOIRIE, PARKING, ou null pour tous)
+     * @return Liste des stationnements
+     */
+    public static List<Stationnement> getHistoriqueStationnementsFiltre(int idUsager, String typeStationnement) {
+        List<Stationnement> stationnements = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT s.* FROM Stationnement s WHERE s.id_usager = ?");
+        
+        if (typeStationnement != null && !typeStationnement.isEmpty()) {
+            sql.append(" AND s.type_stationnement = ?");
+        }
+        
+        sql.append(" ORDER BY s.date_creation DESC");
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+            
+            stmt.setInt(1, idUsager);
+            
+            if (typeStationnement != null && !typeStationnement.isEmpty()) {
+                stmt.setString(2, typeStationnement);
+            }
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Stationnement stationnement = mapResultSetToStationnement(rs);
+                    stationnements.add(stationnement);
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération historique filtré: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return stationnements;
+    }
+    
+    /**
+     * Récupère les stationnements avec filtres multiples
+     * @param idUsager ID de l'usager
+     * @param statut Statut (ACTIF, TERMINE, EXPIRE) ou null pour tous
+     * @param typeStationnement Type (VOIRIE, PARKING) ou null pour tous
+     * @param dateDebut Date de début ou null
+     * @param dateFin Date de fin ou null
+     * @return Liste des stationnements filtrés
+     */
+    public static List<Stationnement> getStationnementsAvecFiltres(int idUsager, String statut, 
+                                                                  String typeStationnement,
+                                                                  LocalDateTime dateDebut, 
+                                                                  LocalDateTime dateFin) {
+        List<Stationnement> stationnements = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT s.* FROM Stationnement s WHERE s.id_usager = ?");
+        List<Object> parametres = new ArrayList<>();
+        parametres.add(idUsager);
+        
+        if (statut != null && !statut.isEmpty()) {
+            sql.append(" AND s.statut = ?");
+            parametres.add(statut);
+        }
+        
+        if (typeStationnement != null && !typeStationnement.isEmpty()) {
+            sql.append(" AND s.type_stationnement = ?");
+            parametres.add(typeStationnement);
+        }
+        
+        if (dateDebut != null) {
+            sql.append(" AND s.date_creation >= ?");
+            parametres.add(Timestamp.valueOf(dateDebut));
+        }
+        
+        if (dateFin != null) {
+            sql.append(" AND s.date_creation <= ?");
+            parametres.add(Timestamp.valueOf(dateFin));
+        }
+        
+        sql.append(" ORDER BY s.date_creation DESC");
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+            
+            for (int i = 0; i < parametres.size(); i++) {
+                stmt.setObject(i + 1, parametres.get(i));
+            }
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Stationnement stationnement = mapResultSetToStationnement(rs);
+                    stationnements.add(stationnement);
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération avec filtres: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return stationnements;
+    }
+    
+    /**
+     * Récupère les statistiques des stationnements d'un usager
+     * @param idUsager ID de l'usager
+     * @return Tableau avec [total, actifs, voirie, parking, totalCout]
+     */
+    public static Object[] getStatistiquesStationnements(int idUsager) {
+        String sql = "SELECT " +
+                    "COUNT(*) as total, " +
+                    "SUM(CASE WHEN statut = 'ACTIF' THEN 1 ELSE 0 END) as actifs, " +
+                    "SUM(CASE WHEN type_stationnement = 'VOIRIE' THEN 1 ELSE 0 END) as voirie, " +
+                    "SUM(CASE WHEN type_stationnement = 'PARKING' THEN 1 ELSE 0 END) as parking, " +
+                    "COALESCE(SUM(cout), 0) as total_cout " +
+                    "FROM Stationnement WHERE id_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, idUsager);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return new Object[] {
+                        rs.getInt("total"),
+                        rs.getInt("actifs"),
+                        rs.getInt("voirie"),
+                        rs.getInt("parking"),
+                        rs.getDouble("total_cout")
+                    };
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération statistiques: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return new Object[] {0, 0, 0, 0, 0.0};
+    }
+    
+    
+    /**
+     * Crée un nouveau stationnement en voirie
+     */
+    public static boolean creerStationnementVoirie(Stationnement stationnement) {
+        String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
+                     "id_zone, duree_heures, duree_minutes, cout, " +
+                     "statut, date_creation, date_fin, type_stationnement, statut_paiement, id_paiement) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), " +
+                     "DATE_ADD(NOW(), INTERVAL ? MINUTE), 'VOIRIE', 'PAYE', ?)";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, stationnement.getIdUsager());
+            pstmt.setString(2, stationnement.getTypeVehicule());
+            pstmt.setString(3, stationnement.getPlaqueImmatriculation());
+            pstmt.setString(4, stationnement.getIdTarification()); // C'est l'ID de la zone
+            pstmt.setInt(5, stationnement.getDureeHeures());
+            pstmt.setInt(6, stationnement.getDureeMinutes());
+            pstmt.setDouble(7, stationnement.getCout());
+            pstmt.setString(8, "ACTIF");
+            
+            int dureeTotaleMinutes = (stationnement.getDureeHeures() * 60) + stationnement.getDureeMinutes();
+            pstmt.setInt(9, dureeTotaleMinutes);
+            
+            pstmt.setString(10, stationnement.getIdPaiement());
+            
+            int rowsAffected = pstmt.executeUpdate();
+            System.out.println("Stationnement voirie créé, lignes affectées: " + rowsAffected);
+            return rowsAffected > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur SQL lors de la création du stationnement voirie:");
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Termine un stationnement parking avec libération des places
+     */
+    public static boolean terminerStationnementParking(Integer idStationnement, 
+                                                      LocalDateTime heureDepart, 
+                                                      double cout, 
+                                                      String idPaiement) {
+        Connection conn = null;
+        try {
+            conn = MySQLConnection.getConnection();
+            conn.setAutoCommit(false);
+            
+            // 1. Récupérer les infos du stationnement
+            String sqlSelect = "SELECT s.*, p.has_moto FROM Stationnement s " +
+                              "LEFT JOIN Parking p ON s.id_parking = p.id_parking " +
+                              "WHERE s.id_stationnement = ?";
+            
+            String idParking = null;
+            String typeVehicule = null;
+            boolean hasMoto = false;
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
+                stmt.setInt(1, idStationnement);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    idParking = rs.getString("id_parking");
+                    typeVehicule = rs.getString("type_vehicule");
+                    hasMoto = rs.getBoolean("has_moto");
+                } else {
+                    conn.rollback();
+                    return false;
+                }
+            }
+            
+            if (idParking == null) {
+                conn.rollback();
+                return false;
+            }
+            
+            // 2. Mettre à jour le stationnement 
+            String sqlUpdate = "UPDATE Stationnement SET statut = 'TERMINE', heure_depart = ?, cout = ?, " +
+                              "id_paiement = ?, statut_paiement = 'PAYE' WHERE id_stationnement = ?";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
+                stmt.setTimestamp(1, Timestamp.valueOf(heureDepart));
+                stmt.setDouble(2, cout);
+                stmt.setString(3, idPaiement);
+                stmt.setInt(4, idStationnement);
+                
+                int lignesAffectees = stmt.executeUpdate();
+                
+                if (lignesAffectees > 0) {
+                    // 3. Libérer les places selon le type de véhicule
+                    boolean isMoto = "Moto".equalsIgnoreCase(typeVehicule);
+                    boolean placesLiberees;
+                    
+                    if (isMoto && hasMoto) {
+                        placesLiberees = ParkingDAO.incrementerPlacesMotoDisponibles(idParking);
+                    } else {
+                        placesLiberees = ParkingDAO.incrementerPlacesDisponibles(idParking);
+                    }
+                    
+                    if (placesLiberees) {
+                        conn.commit();
+                        System.out.println("Stationnement parking terminé et places libérées");
+                        return true;
+                    } else {
+                        conn.rollback();
+                        System.err.println("Erreur lors de la libération des places");
+                        return false;
+                    }
+                } else {
+                    conn.rollback();
+                    System.err.println("Aucune ligne affectée lors de la mise à jour");
+                    return false;
+                }
+            }
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Erreur lors du rollback: " + ex.getMessage());
+            }
+            System.err.println("Erreur SQL lors de la terminaison du stationnement parking:");
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                System.err.println("Erreur fermeture connexion: " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Crée un stationnement en parking avec gestion des places
+     */
+    public static boolean creerStationnementParking(int idUsager, String typeVehicule, String plaqueImmatriculation,
+            String idParking, LocalDateTime heureArrivee) {
+
+        Connection conn = null;
+        try {
+            conn = MySQLConnection.getConnection();
+            conn.setAutoCommit(false);
+            
+            // Récupérer les infos du parking
+            Parking parking = ParkingDAO.getParkingById(idParking);
+            if (parking == null) {
+                JOptionPane.showMessageDialog(null, "Parking non trouvé", "Erreur", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+            
+            // Vérifier si c'est un parking gratuit 
+            boolean estGratuit = TarifParkingDAO.estParkingGratuit(idParking);
+            
+            // Vérifier les places selon le type de véhicule
+            boolean isMoto = "Moto".equalsIgnoreCase(typeVehicule);
+            
+            if (isMoto) {
+                if (!parking.hasMoto()) {
+                    JOptionPane.showMessageDialog(null, "Ce parking ne dispose pas de places pour les motos", 
+                        "Parking non adapté", JOptionPane.WARNING_MESSAGE);
+                    return false;
+                }
+                if (parking.getPlacesMotoDisponibles() <= 0) {
+                    JOptionPane.showMessageDialog(null, 
+                            "Plus de places moto disponibles dans ce parking",
+                            "Parking complet", 
+                            JOptionPane.WARNING_MESSAGE);
+                        return false;	
+                }
+                // Décrémenter places moto
+                boolean placesDecrementees = ParkingDAO.decrementerPlacesMotoDisponibles(idParking);
+                if (!placesDecrementees) {
+                    conn.rollback();
+                    JOptionPane.showMessageDialog(null, "Erreur lors de la réservation de la place moto", 
+                        "Erreur", JOptionPane.ERROR_MESSAGE);
+                    return false;
+                }
+            } else {
+                if (parking.getPlacesDisponibles() <= 0) {
+                    JOptionPane.showMessageDialog(null, "Plus de places disponibles dans ce parking", 
+                        "Parking complet", JOptionPane.WARNING_MESSAGE);
+                    return false;
+                }
+                
+                // Décrémenter places normales
+                boolean placesDecrementees = ParkingDAO.decrementerPlacesDisponibles(idParking);
+                if (!placesDecrementees) {
+                    conn.rollback();
+                    JOptionPane.showMessageDialog(null, "Erreur lors de la réservation de la place", 
+                        "Erreur", JOptionPane.ERROR_MESSAGE);
+                    return false;
+                }
+            }
+            
+            // Créer le stationnement
+            String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
+                    "id_parking, heure_arrivee, type_stationnement, statut_paiement, statut, cout) " +
+                    "VALUES (?, ?, ?, ?, ?, 'PARKING', ?, 'ACTIF', ?)";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setInt(1, idUsager);
+                stmt.setString(2, typeVehicule);
+                stmt.setString(3, plaqueImmatriculation);
+                stmt.setString(4, idParking);
+                stmt.setTimestamp(5, Timestamp.valueOf(heureArrivee));
+            
+                if (estGratuit) {
+                    stmt.setString(6, "GRATUIT");
+                    stmt.setDouble(7, 0.0); // Coût 0 pour les parkings gratuits
+                } else {
+                    stmt.setString(6, "NON_PAYE");
+                    stmt.setDouble(7, 0.0); // Coût initial à 0
+                }
+                
+                int lignesAffectees = stmt.executeUpdate();
+            
+                if (lignesAffectees > 0) {
+                    conn.commit();
+                    String message;
+                    if (estGratuit) {
+                        message = "Stationnement confirmé !\n\n" +
+                                "Votre place est réservée dans le parking " + parking.getLibelleParking() + ".\n" +
+                                "Ce parking est gratuit.\n" +
+                                "N'oubliez pas de valider votre sortie.";
+                    } else {
+                        message = "Stationnement confirmé !\n\n" +
+                                "Votre place est réservée dans le parking " + parking.getLibelleParking() + ".\n" +
+                                "N'oubliez pas de valider votre sortie pour le paiement.";
+                    }
+                    
+                    JOptionPane.showMessageDialog(null,
+                        message,
+                        "Réservation réussie",
+                        JOptionPane.INFORMATION_MESSAGE);
+                    return true;
+                } else {
+                    conn.rollback();
+                    return false;
+                }
+            }
+            
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Erreur lors du rollback: " + ex.getMessage());
+            }
+            System.err.println("Erreur création stationnement parking: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                System.err.println("Erreur fermeture connexion: " + e.getMessage());
+            }
+        }
     }
     
 }

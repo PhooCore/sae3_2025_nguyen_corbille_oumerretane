@@ -1,49 +1,66 @@
 package ihm;
 
 import javax.swing.*;
-import controleur.PaiementControleur;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import controleur.ControleurPaiement;
 import java.time.LocalDateTime;
-import modele.Usager;
-import modele.dao.UsagerDAO;
 
 public class Page_Paiement extends JFrame {
-    
     private static final long serialVersionUID = 1L;
     
-    private double montant;
-    private String emailUtilisateur;
-    private Usager usager;
-    private String typeVehicule;
-    private String plaqueImmatriculation;
-    private String idZone;
-    private String nomZone;
-    private int dureeHeures;
-    private int dureeMinutes;
-    private Integer idStationnement;
-    private LocalDateTime heureDepart;
-    private PaiementControleur controleur;
+    // Variables accessibles au contrôleur
+    public double montant;
+    public String emailUtilisateur;
+    public String typeVehicule;
+    public String plaqueImmatriculation;
+    public String idZone;
+    public String nomZone;
+    public int dureeHeures;
+    public int dureeMinutes;
+    public Integer idStationnement;
     
-    private JTextField txtNomCarte;
-    private JTextField txtNumeroCarte;
-    private JTextField txtDateExpiration;
-    private JTextField txtCVV;
+    // Champs de formulaire
+    public JTextField txtNomCarte;
+    public JTextField txtNumeroCarte;
+    public JTextField txtDateExpiration;
+    public JTextField txtCVV;
     
+    // Boutons
+    public JButton btnAnnuler; // Rendre public
+    public JButton btnPayer;   // Rendre public
+
+    // **CONSTRUCTEUR POUR VOIRIE** - SANS idStationnement
     public Page_Paiement(double montant, String emailUtilisateur, String typeVehicule, 
                         String plaqueImmatriculation, String idZone, String nomZone, 
                         int dureeHeures, int dureeMinutes) {
-        this(montant, emailUtilisateur, typeVehicule, plaqueImmatriculation, idZone, nomZone,
-             dureeHeures, dureeMinutes, null, null);
+        this.montant = montant;
+        this.emailUtilisateur = emailUtilisateur;
+        this.typeVehicule = typeVehicule;
+        this.plaqueImmatriculation = plaqueImmatriculation;
+        this.idZone = idZone;
+        this.nomZone = nomZone;
+        this.dureeHeures = dureeHeures;
+        this.dureeMinutes = dureeMinutes;
+        this.idStationnement = null; // Pour voirie
+        
+        initialisePage();
+        new ControleurPaiement(this);
+    }
+    
+    // **CONSTRUCTEUR POUR PARKING** - AVEC idStationnement
+    public Page_Paiement(double montant, String emailUtilisateur, String typeVehicule, 
+                        String plaqueImmatriculation, String idZone, String nomZone,
+                        int dureeHeures, int dureeMinutes, Integer idStationnement) {
+        this(montant, emailUtilisateur, typeVehicule, plaqueImmatriculation, 
+             idZone, nomZone, dureeHeures, dureeMinutes, idStationnement, null);
     }
     
     public Page_Paiement(double montant, String emailUtilisateur, String typeVehicule, 
                         String plaqueImmatriculation, String idZone, String nomZone,
-                        int dureeHeures, int dureeMinutes, Integer idStationnement, LocalDateTime heureDepart) {
+                        int dureeHeures, int dureeMinutes, Integer idStationnement, 
+                        LocalDateTime heureDepart) {
         this.montant = montant;
         this.emailUtilisateur = emailUtilisateur;
-        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
         this.typeVehicule = typeVehicule;
         this.plaqueImmatriculation = plaqueImmatriculation;
         this.idZone = idZone;
@@ -51,9 +68,9 @@ public class Page_Paiement extends JFrame {
         this.dureeHeures = dureeHeures;
         this.dureeMinutes = dureeMinutes;
         this.idStationnement = idStationnement;
-        this.heureDepart = heureDepart;
-        this.controleur = new PaiementControleur(emailUtilisateur);
+        
         initialisePage();
+        new ControleurPaiement(this);
     }
     
     private void initialisePage() {
@@ -76,19 +93,23 @@ public class Page_Paiement extends JFrame {
         formPanel.setBackground(Color.WHITE);
         formPanel.setLayout(new GridLayout(0, 1, 10, 10));
         
+        // Montant
         JLabel lblMontant = new JLabel("Montant à payer: " + String.format("%.2f", montant) + " €");
         lblMontant.setFont(new Font("Arial", Font.BOLD, 16));
         formPanel.add(lblMontant);
         
         formPanel.add(new JLabel(" "));
         
+        // Type de stationnement
         String typeStationnement = (idStationnement == null) ? "Voirie" : "Parking";
         JLabel lblType = new JLabel("Type: " + typeStationnement);
         formPanel.add(lblType);
         
+        // Véhicule
         JLabel lblVehicule = new JLabel("Véhicule: " + plaqueImmatriculation);
         formPanel.add(lblVehicule);
         
+        // Zone/Parking
         JLabel lblZone = new JLabel("Zone: " + nomZone);
         formPanel.add(lblZone);
         
@@ -99,18 +120,22 @@ public class Page_Paiement extends JFrame {
         
         formPanel.add(new JLabel(" "));
         
+        // Informations de la carte
         formPanel.add(new JLabel("Informations de la carte:"));
         
+        // Nom sur la carte
         formPanel.add(new JLabel("Nom sur la carte:"));
         txtNomCarte = new JTextField();
         txtNomCarte.setPreferredSize(new Dimension(300, 30));
         formPanel.add(txtNomCarte);
         
+        // Numéro de carte
         formPanel.add(new JLabel("Numéro de carte:"));
         txtNumeroCarte = new JTextField();
         txtNumeroCarte.setPreferredSize(new Dimension(300, 30));
         formPanel.add(txtNumeroCarte);
         
+        // Date et CVV
         JPanel panelDateCVV = new JPanel(new GridLayout(1, 2, 15, 10));
         panelDateCVV.setBackground(Color.WHITE);
         
@@ -135,17 +160,16 @@ public class Page_Paiement extends JFrame {
         
         mainPanel.add(formPanel, BorderLayout.CENTER);
         
+        // Boutons
         JPanel panelBoutons = new JPanel(new FlowLayout());
+        panelBoutons.setBackground(Color.WHITE);
         
-        JButton btnAnnuler = new JButton("Annuler");
-        JButton btnPayer = new JButton("Payer maintenant");
+        btnAnnuler = new JButton("Annuler");
+        btnPayer = new JButton("Payer maintenant");
         
         btnPayer.setBackground(new Color(70, 130, 180));
         btnPayer.setForeground(Color.WHITE);
         btnPayer.setFocusPainted(false);
-        
-        btnAnnuler.addActionListener(e -> annuler());
-        btnPayer.addActionListener(e -> traiterPaiement());
         
         panelBoutons.add(btnAnnuler);
         panelBoutons.add(btnPayer);
@@ -155,72 +179,7 @@ public class Page_Paiement extends JFrame {
         this.setContentPane(mainPanel);
     }
     
-    private void annuler() {
-        int confirmation = JOptionPane.showConfirmDialog(this,
-            "Êtes-vous sûr de vouloir annuler le paiement ?",
-            "Confirmation d'annulation",
-            JOptionPane.YES_NO_OPTION);
-        if (confirmation == JOptionPane.YES_OPTION) {
-            this.dispose();
-        }
-    }
+    // PAS BESOIN de validerFormulaire() - c'est géré par le contrôleur
     
-    private boolean validerFormulaire() {
-        PaiementControleur controleur = new PaiementControleur(emailUtilisateur);
-        
-        return controleur.validerFormulairePaiementComplet(
-            txtNomCarte.getText().trim(),
-            txtNumeroCarte.getText().trim(),
-            txtDateExpiration.getText().trim(),
-            txtCVV.getText().trim(),
-            this
-        );
-    }
-
-    private void traiterPaiement() {
-        if (!validerFormulaire()) {
-            return;
-        }
-        
-        boolean succes = false;
-        
-        if (idStationnement == null) {
-            succes = controleur.traiterPaiementVoirie(
-                txtNomCarte.getText().trim(),
-                txtNumeroCarte.getText().trim(),
-                txtDateExpiration.getText().trim(),
-                txtCVV.getText().trim(),
-                montant,
-                typeVehicule,
-                plaqueImmatriculation,
-                idZone,
-                dureeHeures,
-                dureeMinutes,
-                this
-            );
-        } else {
-            succes = controleur.traiterPaiementParking(
-                txtNomCarte.getText().trim(),
-                txtNumeroCarte.getText().trim(),
-                txtDateExpiration.getText().trim(),
-                txtCVV.getText().trim(),
-                montant,
-                idStationnement,
-                heureDepart,
-                this
-            );
-        }
-    }
-    
-    public static void main(String[] args) {
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    new Page_Bienvenue().setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
+    // PAS BESOIN de getters - les boutons sont publics
 }

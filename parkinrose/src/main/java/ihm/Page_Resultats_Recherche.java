@@ -10,17 +10,22 @@ import java.util.Comparator;
 import modele.Parking;
 import modele.dao.ParkingDAO;
 import modele.dao.TarifParkingDAO;
+import controleur.ControleurResultatsRecherche;
 
 public class Page_Resultats_Recherche extends JFrame {
     
     private static final long serialVersionUID = 1L;
-    private String emailUtilisateur;
-    private String termeRecherche;
-    private List<Parking> parkings;
-    private List<Parking> parkingsFiltres;
+    public String emailUtilisateur;
+    public String termeRecherche;
+    public List<Parking> parkings;
+    public List<Parking> parkingsFiltres;
     private JPanel panelResultats;
-    private JComboBox<String> comboFiltres;
-    private JCheckBox checkGratuit, checkSoiree, checkRelais, checkMoto;
+    
+    // Variables rendues publiques pour le contrôleur
+    public JComboBox<String> comboFiltres;
+    public JCheckBox checkGratuit, checkSoiree, checkRelais, checkMoto;
+    public JLabel lblTitre;
+    private ControleurResultatsRecherche controleur;
 
     public Page_Resultats_Recherche(String email, String termeRecherche) {
         this.emailUtilisateur = email;
@@ -28,6 +33,9 @@ public class Page_Resultats_Recherche extends JFrame {
         this.parkings = ParkingDAO.rechercherParkings(termeRecherche);
         this.parkingsFiltres = new ArrayList<>(parkings);
         initialisePage();
+        
+        // Créer et lier le contrôleur APRÈS l'initialisation
+        controleur = new ControleurResultatsRecherche(this);
     }
     
     private void initialisePage() {
@@ -52,7 +60,8 @@ public class Page_Resultats_Recherche extends JFrame {
         scrollPane.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         
-        afficherResultats();
+        // Afficher les résultats sans configurer les listeners encore
+        afficherResultatsSansConfigurerListeners();
         
         this.setContentPane(mainPanel);
     }
@@ -62,13 +71,11 @@ public class Page_Resultats_Recherche extends JFrame {
         headerPanel.setBackground(Color.WHITE);
         
         JButton btnRetour = new JButton("← Retour");
-        btnRetour.addActionListener(e -> retourAccueil());
-        btnRetour.setBackground(Color.WHITE);
-        btnRetour.setFocusPainted(false);
+        btnRetour.setActionCommand("RETOUR");
         headerPanel.add(btnRetour, BorderLayout.WEST);
         
         String titre = parkingsFiltres.size() + " résultat(s) pour \"" + termeRecherche + "\"";
-        JLabel lblTitre = new JLabel(titre, SwingConstants.CENTER);
+        lblTitre = new JLabel(titre, SwingConstants.CENTER);
         lblTitre.setFont(new Font("Arial", Font.BOLD, 18));
         headerPanel.add(lblTitre, BorderLayout.CENTER);
         
@@ -80,11 +87,6 @@ public class Page_Resultats_Recherche extends JFrame {
         checkSoiree = new JCheckBox("Tarif soirée");
         checkRelais = new JCheckBox("Parkings relais");
         checkMoto = new JCheckBox("Places moto");
-        
-        checkGratuit.addActionListener(e -> appliquerFiltres());
-        checkSoiree.addActionListener(e -> appliquerFiltres());
-        checkRelais.addActionListener(e -> appliquerFiltres());
-        checkMoto.addActionListener(e -> appliquerFiltres());
         
         filtresPanel.add(Box.createRigidArea(new Dimension(20, 0)));
         
@@ -100,7 +102,6 @@ public class Page_Resultats_Recherche extends JFrame {
             "Hauteur (décroissant)",
             "Hauteur (croissant)"
         });
-        comboFiltres.addActionListener(e -> appliquerFiltres());
         
         filtresPanel.add(lblFiltre);
         filtresPanel.add(checkGratuit);
@@ -115,7 +116,7 @@ public class Page_Resultats_Recherche extends JFrame {
         return headerPanel;
     }
     
-    private void appliquerFiltres() {
+    public void appliquerFiltres() {
         String filtreSelectionne = (String) comboFiltres.getSelectedItem();
         parkingsFiltres = new ArrayList<>(parkings);
         
@@ -180,12 +181,13 @@ public class Page_Resultats_Recherche extends JFrame {
         }
         
         String titre = parkingsFiltres.size() + " résultat(s) pour \"" + termeRecherche + "\"";
-        ((JLabel)((JPanel)getContentPane().getComponent(0)).getComponent(1)).setText(titre);
+        lblTitre.setText(titre);
         
         afficherResultats();
     }
     
-    private void afficherResultats() {
+    // Version initiale sans reconfiguration des listeners
+    private void afficherResultatsSansConfigurerListeners() {
         panelResultats.removeAll();
         
         if (parkingsFiltres.isEmpty()) {
@@ -203,14 +205,16 @@ public class Page_Resultats_Recherche extends JFrame {
             panelResultats.add(lblSuggestion);
             
             JButton btnTousParkings = new JButton("Voir tous les parkings");
+            btnTousParkings.setActionCommand("TOUS_PARKINGS");
             btnTousParkings.setAlignmentX(Component.CENTER_ALIGNMENT);
-            btnTousParkings.addActionListener(e -> afficherTousParkings());
             panelResultats.add(Box.createRigidArea(new Dimension(0, 20)));
             panelResultats.add(btnTousParkings);
             
         } else {
-            for (Parking parking : parkingsFiltres) {
-                panelResultats.add(creerCarteParking(parking));
+            for (int i = 0; i < parkingsFiltres.size(); i++) {
+                Parking parking = parkingsFiltres.get(i);
+                JPanel carte = creerCarteParking(parking, i);
+                panelResultats.add(carte);
                 panelResultats.add(Box.createRigidArea(new Dimension(0, 10)));
             }
         }
@@ -219,7 +223,49 @@ public class Page_Resultats_Recherche extends JFrame {
         panelResultats.repaint();
     }
     
-    private JPanel creerCarteParking(Parking parking) {
+    // Version publique avec reconfiguration des listeners
+    public void afficherResultats() {
+        panelResultats.removeAll();
+        
+        if (parkingsFiltres.isEmpty()) {
+            JLabel lblAucunResultat = new JLabel("Aucun parking trouvé pour votre recherche.", SwingConstants.CENTER);
+            lblAucunResultat.setFont(new Font("Arial", Font.PLAIN, 16));
+            lblAucunResultat.setForeground(Color.GRAY);
+            lblAucunResultat.setAlignmentX(Component.CENTER_ALIGNMENT);
+            panelResultats.add(lblAucunResultat);
+            
+            JLabel lblSuggestion = new JLabel("Essayez avec d'autres termes ou consultez tous les parkings.", SwingConstants.CENTER);
+            lblSuggestion.setFont(new Font("Arial", Font.PLAIN, 14));
+            lblSuggestion.setForeground(Color.GRAY);
+            lblSuggestion.setAlignmentX(Component.CENTER_ALIGNMENT);
+            panelResultats.add(Box.createRigidArea(new Dimension(0, 10)));
+            panelResultats.add(lblSuggestion);
+            
+            JButton btnTousParkings = new JButton("Voir tous les parkings");
+            btnTousParkings.setActionCommand("TOUS_PARKINGS");
+            btnTousParkings.setAlignmentX(Component.CENTER_ALIGNMENT);
+            panelResultats.add(Box.createRigidArea(new Dimension(0, 20)));
+            panelResultats.add(btnTousParkings);
+            
+        } else {
+            for (int i = 0; i < parkingsFiltres.size(); i++) {
+                Parking parking = parkingsFiltres.get(i);
+                JPanel carte = creerCarteParking(parking, i);
+                panelResultats.add(carte);
+                panelResultats.add(Box.createRigidArea(new Dimension(0, 10)));
+            }
+        }
+        
+        panelResultats.revalidate();
+        panelResultats.repaint();
+        
+        // Reconfigurer les listeners si le contrôleur existe
+        if (controleur != null) {
+            controleur.configurerListenersApresFiltrage();
+        }
+    }
+    
+    private JPanel creerCarteParking(Parking parking, int index) {
         JPanel carte = new JPanel();
         carte.setLayout(new BorderLayout());
         carte.setBackground(Color.WHITE);
@@ -272,7 +318,6 @@ public class Page_Resultats_Recherche extends JFrame {
             detailsPanel.add(lblSoiree);
         }
         
-        
         detailsPanel.add(lblPlaces);
         detailsPanel.add(lblHauteur);
         
@@ -285,40 +330,11 @@ public class Page_Resultats_Recherche extends JFrame {
         carte.add(infoPanel, BorderLayout.CENTER);
         
         JButton btnSelect = new JButton("Stationner ici");
+        btnSelect.setActionCommand("STATIONNER_" + index);
         btnSelect.setPreferredSize(new Dimension(120, 35));
-        btnSelect.addActionListener(e -> selectionnerParking(parking));
         
         carte.add(btnSelect, BorderLayout.EAST);
         
         return carte;
-    }
-    
-    private void selectionnerParking(Parking parking) {
-        int choix = JOptionPane.showConfirmDialog(this,
-            "Voulez-vous préparer un stationnement pour :\n" +
-            parking.getLibelleParking() + "\n" +
-            parking.getAdresseParking() + "\n\n" +
-            "Places disponibles: " + parking.getPlacesDisponibles() + "/" + parking.getNombrePlaces() + "\n" +
-            "Hauteur maximale: " + parking.getHauteurParking() + "m",
-            "Confirmation",
-            JOptionPane.YES_NO_OPTION);
-            
-        if (choix == JOptionPane.YES_OPTION) {
-            Page_Garer_Parking pageParking = new Page_Garer_Parking(emailUtilisateur, parking);
-            pageParking.setVisible(true);
-            dispose();
-        }
-    }
-    private void afficherTousParkings() {
-        List<Parking> tousParkings = ParkingDAO.getAllParkings();
-        Page_Tous_Parkings pageTousParkings = new Page_Tous_Parkings(emailUtilisateur, tousParkings);
-        pageTousParkings.setVisible(true);
-        dispose();
-    }
-    
-    private void retourAccueil() {
-        Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-        pagePrincipale.setVisible(true);
-        dispose();
     }
 }

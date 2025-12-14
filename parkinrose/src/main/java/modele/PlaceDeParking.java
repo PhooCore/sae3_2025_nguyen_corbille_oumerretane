@@ -13,21 +13,19 @@ public class PlaceDeParking {
         this.estDisponible = estDisponible;
     }
 
-	public int getIdPlace() {
-		return idPlace;
-	}
+    public int getIdPlace() {
+        return idPlace;
+    }
 
-	public String getNumero() {
-		return numero;
-	}
+    public String getNumero() {
+        return numero;
+    }
 
-	public int getIdParking() {
-		return idParking;
-	}
+    public int getIdParking() {
+        return idParking;
+    }
 
-	public boolean isEstDisponible() {
-		return estDisponible;
-	}
-    
-    
+    public boolean isEstDisponible() {
+        return estDisponible;
+    }
 }

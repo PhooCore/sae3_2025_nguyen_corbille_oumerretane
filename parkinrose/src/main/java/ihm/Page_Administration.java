@@ -1,20 +1,16 @@
 package ihm;
 
 import javax.swing.*;
+
+import controleur.ControleurAdministration;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-/**
- * Page d'administration pour gérer les parkings, utilisateurs, etc.
- */
 public class Page_Administration extends JFrame {
-    
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-	private String emailAdmin;
+    private static final long serialVersionUID = 1L;
+    private String emailAdmin;
     private JPanel contentPane;
     private JButton btnGestionParkings;
     private JButton btnGestionUtilisateurs;
@@ -27,6 +23,9 @@ public class Page_Administration extends JFrame {
     public Page_Administration(String emailAdmin) {
         this.emailAdmin = emailAdmin;
         initialize();
+        
+        // Créer et lier le contrôleur
+        new ControleurAdministration(this, emailAdmin);
     }
 
     private void initialize() {
@@ -127,7 +126,7 @@ public class Page_Administration extends JFrame {
             }
         });
         panelSud.add(btnRetour);
-
+        
         appliquerStyleBoutons();
     }
     
