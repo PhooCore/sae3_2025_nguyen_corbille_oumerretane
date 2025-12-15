@@ -158,6 +158,16 @@ public class Page_Utilisateur extends JFrame {
         
         panel.add(Box.createVerticalStrut(30));
         
+        //Ajout carte Tisseo
+        String carteTisseo = UsagerDAO.getCarteTisseoByUsager(usager.getIdUsager());
+        ajouterLigneInfo(panel, "Carte Tisséo:", carteTisseo);
+        
+        
+        
+        
+        
+
+        
         // Boutons d'action
         btnModifierMdp = new JButton("Modifier le mot de passe");
         btnModifierMdp.setAlignmentX(Component.CENTER_ALIGNMENT);

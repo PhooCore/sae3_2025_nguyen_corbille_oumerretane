@@ -6,13 +6,15 @@ public class Usager {
     private String prenomUsager;
     private String mailUsager;
     private String motDePasse;
+    private String numeroCarteTisseo;
     private boolean isAdmin;
 
-    public Usager(String nomUsager, String prenomUsager, String mailUsager, String motDePasse) {
+    public Usager(String nomUsager, String prenomUsager, String mailUsager, String motDePasse, String numeroCarteTisseo) {
         this.nomUsager = nomUsager;
         this.prenomUsager = prenomUsager;
         this.mailUsager = mailUsager;
         this.motDePasse = motDePasse;
+        this.numeroCarteTisseo = numeroCarteTisseo;
     }
 
     public Usager() {}
@@ -56,6 +58,17 @@ public class Usager {
     public void setMotDePasse(String motDePasse) { 
         this.motDePasse = motDePasse; 
     }
+    
+    public String getNumeroCarteTisseo() {
+        return numeroCarteTisseo;
+    }
+
+    public void setNumeroCarteTisseo(String numeroCarteTisseo) {
+        this.numeroCarteTisseo = numeroCarteTisseo;
+    }
+
+    
+    
     
     public boolean isAdmin() {
         return isAdmin;
