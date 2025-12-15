@@ -49,18 +49,39 @@ public class TarifParkingDAO {
             return 0.00;
         }
         
+        // Vérifier si le tarif soirée s'applique
         if (tarifSoireeApplicable(heureArrivee, heureDepart, idParking)) {
+            System.out.println("Tarif soirée appliqué pour " + idParking + ": 5.90€");
             return 5.90;
         }
         
-        // Calcul de la durée en minutes
+        // Calcul normal de la durée
         long dureeMinutes = ChronoUnit.MINUTES.between(heureArrivee, heureDepart);
+        
+        // Minimum de 15 minutes
+        if (dureeMinutes < 15) {
+            dureeMinutes = 15;
+        }
         
         // Tarification au quart d'heure
         double tarifQuartHeure = getTarifQuartHeure(idParking);
         int nombreQuarts = (int) Math.ceil(dureeMinutes / 15.0);
         
-        return nombreQuarts * tarifQuartHeure;
+        double cout = nombreQuarts * tarifQuartHeure;
+        
+        // Forfait 24h maximum (tarif horaire * 24)
+        double tarifHoraire = getTarifHoraire(idParking);
+        double max24h = tarifHoraire * 24;
+        
+        if (cout > max24h && dureeMinutes <= (24 * 60)) {
+            cout = max24h;
+        }
+        
+        System.out.println("Calcul cout parking " + idParking + 
+                         ": durée=" + dureeMinutes + "min, quarts=" + nombreQuarts + 
+                         ", tarif/quart=" + tarifQuartHeure + ", cout=" + cout);
+        
+        return cout;
     }
     
     /**
@@ -95,41 +116,128 @@ public class TarifParkingDAO {
     }
     
     /**
-     * Vérifie si le tarif soirée s'applique
-     * Basé sur le champ tarif_soiree de la table Parking
+     * Vérifie si le tarif soirée s'applique avec des règles précises
+     * NOUVEAU: Arrivée entre 19h30 et MINUIT, départ avant 3h le lendemain
      */
     public static boolean tarifSoireeApplicable(LocalDateTime heureArrivee, LocalDateTime heureDepart, String idParking) {
         // Vérifier si le parking propose le tarif soirée
-        boolean parkingEligible = false;
-        try {
-            // Récupérer l'information depuis la base de données
-            String sql = "SELECT tarif_soiree FROM Parking WHERE id_parking = ?";
-            try (Connection conn = MySQLConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, idParking);
-                ResultSet rs = stmt.executeQuery();
-                if (rs.next()) {
-                    parkingEligible = rs.getBoolean("tarif_soiree");
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Erreur vérification tarif soirée: " + e.getMessage());
+        if (!proposeTarifSoiree(idParking)) {
             return false;
         }
         
-        if (!parkingEligible) return false;
+        // Extraire les composants de temps
+        int heureArriveeH = heureArrivee.getHour();
+        int minuteArrivee = heureArrivee.getMinute();
+        int heureDepartH = heureDepart.getHour();
+        int minuteDepart = heureDepart.getMinute();
         
-        // Vérifier les horaires soirée (19h30-22h arrivée, départ avant 3h)
-        boolean arriveeSoiree = (heureArrivee.getHour() == 19 && heureArrivee.getMinute() >= 30) ||
-                               (heureArrivee.getHour() >= 20 && heureArrivee.getHour() < 22) ||
-                               (heureArrivee.getHour() == 22 && heureArrivee.getMinute() == 0);
+        // NOUVEAU: Vérifier si l'arrivée est entre 19h30 et MINUIT (24h00)
+        boolean arriveeValide = false;
         
-        boolean departAvant3h = heureDepart.getHour() < 3 ||
-                               (heureDepart.getHour() == 3 && heureDepart.getMinute() == 0);
+        // Cas 1: Arrivée entre 19h30 et 19h59
+        if (heureArriveeH == 19 && minuteArrivee >= 30) {
+            arriveeValide = true;
+        }
+        // Cas 2: Arrivée entre 20h et 23h
+        else if (heureArriveeH >= 20 && heureArriveeH <= 23) {
+            arriveeValide = true;
+        }
+        // Cas 3: Arrivée à minuit pile (peu probable mais possible)
+        else if (heureArriveeH == 0 && minuteArrivee == 0) {
+            // Vérifier que c'est bien le soir (date correspondante)
+            // Si arrivée à minuit, on considère que c'est encore le tarif soirée
+            arriveeValide = true;
+        }
         
-        return arriveeSoiree && departAvant3h;
+        // Vérifier si le départ est avant 3h00 du matin suivant
+        boolean departValide = false;
+        
+        // Calculer la différence en heures
+        long dureeHeures = ChronoUnit.HOURS.between(heureArrivee, heureDepart);
+        long dureeMinutesTotal = ChronoUnit.MINUTES.between(heureArrivee, heureDepart);
+        
+        // Pour le tarif soirée, la durée totale doit être inférieure à 8h
+        // (de minuit à 3h max = 3h, mais on laisse une marge)
+        boolean dureeValide = dureeMinutesTotal <= (8 * 60); // 8 heures maximum
+        
+        // Conditions de départ:
+        // 1. Si arrivée et départ même jour (cas rare pour tarif soirée)
+        if (heureArrivee.toLocalDate().equals(heureDepart.toLocalDate())) {
+            departValide = heureDepartH < 3;
+        }
+        // 2. Départ le lendemain (cas normal)
+        else {
+            LocalDateTime lendemain = heureArrivee.plusDays(1);
+            if (heureDepart.toLocalDate().equals(lendemain.toLocalDate())) {
+                departValide = heureDepartH < 3 || (heureDepartH == 3 && minuteDepart == 0);
+            }
+        }
+        
+        System.out.println("Vérification tarif soirée - " + idParking + 
+                         ": Arrivée " + heureArriveeH + "h" + minuteArrivee + 
+                         " (" + arriveeValide + "), Départ " + heureDepartH + "h" + minuteDepart + 
+                         " (" + departValide + "), Durée totale: " + dureeMinutesTotal + "min (" + dureeValide + ")");
+        
+        return arriveeValide && departValide && dureeValide;
     }
-    
+    /**
+     * Vérifie si une heure donnée est dans la plage du tarif soirée (pour affichage)
+     */
+    public static boolean estDansPlageTarifSoiree(java.time.LocalDateTime heure) {
+        if (heure == null) return false;
+        
+        int heureH = heure.getHour();
+        int minute = heure.getMinute();
+        
+        // Entre 19h30 et minuit
+        if (heureH == 19 && minute >= 30) {
+            return true;
+        } else if (heureH >= 20 && heureH <= 23) {
+            return true;
+        } else if (heureH == 0 && minute == 0) {
+            return true; // Minuit pile
+        }
+        
+        return false;
+    }
+    /**
+     * Formate l'affichage des tarifs pour l'interface utilisateur
+     */
+    public static String formaterAffichageTarifs(String idParking) {
+        StringBuilder sb = new StringBuilder();
+        
+        if (estParkingGratuit(idParking)) {
+            sb.append("Parking gratuit");
+            return sb.toString();
+        }
+        
+        double tarifHoraire = getTarifHoraire(idParking);
+        sb.append(String.format("Tarif: %.2f€/h (%.2f€/15min)", tarifHoraire, tarifHoraire/4));
+        
+        if (proposeTarifSoiree(idParking)) {
+            sb.append("\n");
+            sb.append("Tarif soirée disponible: 5.90€");
+            sb.append("\n(Arrivée 19h30-minuit, départ avant 3h)");
+        }
+        
+        if (estParkingRelais(idParking)) {
+            sb.append("\n");
+            sb.append("Parking relais: Gratuit avec titre de transport");
+            sb.append("\nSans titre: ").append(String.format("%.2f€/h", tarifHoraire));
+        }
+        
+        return sb.toString();
+    }
+    /**
+     * Donne la description textuelle du tarif soirée
+     */
+    public static String getDescriptionTarifSoiree() {
+        return "Tarif Soirée: 5.90€\n" +
+               "Conditions:\n" +
+               "- Arrivée entre 19h30 et minuit\n" +
+               "- Départ avant 3h le lendemain\n" +
+               "- Durée maximale: 8 heures";
+    }
     /**
      * Vérifie si le parking propose le tarif soirée
      */

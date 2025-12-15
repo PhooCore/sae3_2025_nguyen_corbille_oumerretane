@@ -16,6 +16,7 @@ public class Page_Garer_Parking extends JFrame {
     
     // Composants UI
     private JLabel lblPlacesDispo;
+    private JLabel lblTarifSoiree; // Déclaration manquante
     private JButton btnAnnuler;
     private JButton btnReserver;
     private JButton btnModifierPlaque;
@@ -113,7 +114,7 @@ public class Page_Garer_Parking extends JFrame {
         
         // Parking
         JPanel panelParking = new JPanel();
-        panelParking.setLayout(new GridLayout(4, 2, 10, 10));
+        panelParking.setLayout(new GridLayout(5, 2, 10, 10)); // Changé de 4 à 5 lignes
         panelParking.setBorder(BorderFactory.createTitledBorder("Parking"));
         
         panelParking.add(new JLabel("Parking:"));
@@ -129,6 +130,12 @@ public class Page_Garer_Parking extends JFrame {
         JLabel lblTarifHoraire = new JLabel("-");
         lblTarifHoraire.setFont(new Font("Arial", Font.BOLD, 14));
         panelParking.add(lblTarifHoraire);
+        
+        // Ajout de la ligne tarif soirée
+        panelParking.add(new JLabel("Tarif soirée:"));
+        lblTarifSoiree = new JLabel("-"); // Initialisation
+        lblTarifSoiree.setFont(new Font("Arial", Font.BOLD, 14));
+        panelParking.add(lblTarifSoiree);
         
         panelParking.add(new JLabel("Heure d'arrivée:"));
         JLabel lblHeureArrivee = new JLabel(
@@ -162,6 +169,12 @@ public class Page_Garer_Parking extends JFrame {
         for (int i = 0; i < listeParkings.size(); i++) {
             modele.Parking parking = listeParkings.get(i);
             String texte = parking.getLibelleParking() + " - " + parking.getAdresseParking();
+            
+            // Ajouter une icône ou indication pour les parkings avec tarif soirée
+            if (modele.dao.TarifParkingDAO.proposeTarifSoiree(parking.getIdParking())) {
+                texte += " [Tarif soirée]";
+            }
+            
             model.addElement(texte);
             
             if (parkingPreSelectionne != null && 
@@ -183,6 +196,8 @@ public class Page_Garer_Parking extends JFrame {
     public void mettreAJourInfosParking(int index) {
         if (index >= 0 && index < listeParkings.size()) {
             modele.Parking parking = listeParkings.get(index);
+            
+            // Places disponibles
             lblPlacesDispo.setText(parking.getPlacesDisponibles() + " / " + parking.getNombrePlaces());
             
             if (parking.getPlacesDisponibles() <= 5) {
@@ -191,6 +206,26 @@ public class Page_Garer_Parking extends JFrame {
                 lblPlacesDispo.setForeground(Color.ORANGE);
             } else {
                 lblPlacesDispo.setForeground(Color.BLACK);
+            }
+            
+            // Tarif horaire
+            double tarifHoraire = modele.dao.TarifParkingDAO.getTarifHoraire(parking.getIdParking());
+            // Note: vous devriez avoir un JLabel pour afficher le tarif horaire
+            
+            // Tarif soirée
+            if (modele.dao.TarifParkingDAO.proposeTarifSoiree(parking.getIdParking())) {
+                lblTarifSoiree.setText("5.90€ (19h30-minuit)");
+                lblTarifSoiree.setForeground(Color.BLUE);
+                
+                // Vérifier si l'heure actuelle est dans la plage tarif soirée
+                java.time.LocalDateTime maintenant = java.time.LocalDateTime.now();
+                if (modele.dao.TarifParkingDAO.estDansPlageTarifSoiree(maintenant)) {
+                    lblTarifSoiree.setForeground(Color.GREEN);
+                    lblTarifSoiree.setText("5.90€ ✓ Actif (19h30-minuit)");
+                }
+            } else {
+                lblTarifSoiree.setText("Non disponible");
+                lblTarifSoiree.setForeground(Color.GRAY);
             }
         }
     }
@@ -206,6 +241,7 @@ public class Page_Garer_Parking extends JFrame {
     public JButton getBtnReserver() { return btnReserver; }
     public JButton getBtnModifierPlaque() { return btnModifierPlaque; }
     public JLabel getLblPlacesDispo() { return lblPlacesDispo; }
+    public JLabel getLblTarifSoiree() { return lblTarifSoiree; } // Ajout du getter
     
     // Méthode pour identifier les actions
     public static String getActionBouton(JButton b) {
