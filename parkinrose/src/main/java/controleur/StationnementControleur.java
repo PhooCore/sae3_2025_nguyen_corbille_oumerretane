@@ -3,6 +3,7 @@ package controleur;
 import modele.Stationnement;
 import modele.Usager;
 import modele.Zone;
+import modele.dao.PaiementDAO;
 import modele.dao.ParkingDAO;
 import modele.dao.StationnementDAO;
 import modele.dao.UsagerDAO;
@@ -222,5 +223,110 @@ public class StationnementControleur {
             return StationnementDAO.getHistoriqueStationnements(usager.getIdUsager());
         }
         return java.util.Collections.emptyList();
+    }
+
+    public boolean creerStationnementVoirieGratuit(String typeVehicule, String plaque, 
+            String idZone, int heures, int minutes) {
+    	System.out.println("=== CRÉATION STATIONNEMENT VOIRIE GRATUIT ===");
+    	System.out.println("Type véhicule: " + typeVehicule);
+    	System.out.println("Plaque: " + plaque);
+    	System.out.println("Zone: " + idZone);
+    	System.out.println("Durée: " + heures + "h" + minutes + "min");
+
+    	try {
+    		// 1. L'usager est déjà disponible dans this.usager
+    		if (this.usager == null) {
+    			System.err.println("❌ Utilisateur non trouvé");
+    			return false;
+    		}
+
+    		// 2. Récupérer la zone pour avoir son nom
+    		Zone zone = ZoneDAO.getZoneById(idZone);
+    		if (zone == null) {
+    			System.err.println("❌ Zone non trouvée: " + idZone);
+    			return false;
+    		}
+
+    		// 3. Générer l'ID du paiement
+    		String idPaiement = "PAY_GRATUIT_" + System.currentTimeMillis();
+    		System.out.println("ID Paiement généré: " + idPaiement);
+
+    		// 4. IMPORTANT : Créer le paiement AVANT le stationnement (contrainte de clé étrangère)
+    		boolean paiementCree = creerPaiementGratuit(this.usager.getIdUsager(), idPaiement);
+    		if (!paiementCree) {
+    			System.err.println("❌ Échec de la création du paiement gratuit");
+    			return false;
+    		}
+
+    		// 5. Créer l'objet Stationnement
+    		Stationnement stationnement = new Stationnement();
+    		stationnement.setIdUsager(this.usager.getIdUsager());
+    		stationnement.setTypeVehicule(typeVehicule);
+    		stationnement.setPlaqueImmatriculation(plaque);
+    		stationnement.setIdTarification(idZone); // ID de la zone
+    		stationnement.setZone(zone.getLibelleZone()); // Nom de la zone pour affichage
+    		stationnement.setDureeHeures(heures);
+    		stationnement.setDureeMinutes(minutes);
+    		stationnement.setCout(0.00); // Gratuit
+    		stationnement.setStatut("ACTIF");
+    		stationnement.setTypeStationnement("VOIRIE");
+    		stationnement.setStatutPaiement("PAYE"); // Considéré comme payé car gratuit
+    		stationnement.setIdPaiement(idPaiement);
+
+    		System.out.println("Création du stationnement pour l'usager: " + this.usager.getIdUsager());
+    		System.out.println("Zone: " + zone.getLibelleZone());
+
+    		// 6. Enregistrer le stationnement via le DAO
+    		boolean succes = StationnementDAO.creerStationnementVoirie(stationnement);
+
+    		if (succes) {
+    			System.out.println("✅ Stationnement gratuit créé avec succès !");
+    			return true;
+    		} else {
+    			System.err.println("❌ Échec de la création du stationnement");
+    			// Optionnel : supprimer le paiement créé si le stationnement échoue
+    			return false;
+    		}
+
+    	} catch (Exception e) {
+    		System.err.println("❌ Erreur lors de la création du stationnement gratuit: " + e.getMessage());
+    		e.printStackTrace();
+    		return false;
+    	}
+    }
+
+    /**
+     * Crée un paiement de 0€ pour tracer le stationnement gratuit
+     * @return true si le paiement a été créé avec succès
+     */
+    private boolean creerPaiementGratuit(int idUsager, String idPaiement) {
+    	try {
+    		System.out.println("Création du paiement gratuit: " + idPaiement);
+
+    		modele.Paiement paiement = new modele.Paiement();
+    		paiement.setIdPaiement(idPaiement);
+    		paiement.setNomCarte("GRATUIT");
+    		paiement.setNumeroCarte("0000000000000000");
+    		paiement.setCodeSecretCarte("000");
+    		paiement.setMontant(0.00);
+    		paiement.setIdUsager(idUsager);
+    		paiement.setDatePaiement(LocalDateTime.now());
+    		paiement.setMethodePaiement("GRATUIT");
+    		paiement.setStatut("REUSSI");
+    		paiement.setIdAbonnement(null);
+
+    		boolean paiementCree = PaiementDAO.enregistrerPaiement(paiement);
+    		if (paiementCree) {
+    			System.out.println("✅ Paiement gratuit enregistré avec succès");
+    			return true;
+    		} else {
+    			System.err.println("❌ Échec de l'enregistrement du paiement gratuit");
+    			return false;
+    		}
+    	} catch (Exception e) {
+    		System.err.println("❌ Erreur lors de la création du paiement gratuit: " + e.getMessage());
+    		e.printStackTrace();
+    		return false;
+    	}
     }
 }

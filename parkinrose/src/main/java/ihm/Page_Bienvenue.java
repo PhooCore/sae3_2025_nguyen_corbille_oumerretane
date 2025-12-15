@@ -100,7 +100,6 @@ public class Page_Bienvenue extends JFrame {
 
         contentPanel.add(Box.createVerticalGlue());
 
-        getBtnEntrer().addActionListener(new BtnEntrerActionListener());
         new ControleurBienvenue(this);
     }
 

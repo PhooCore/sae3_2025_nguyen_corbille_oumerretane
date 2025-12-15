@@ -169,21 +169,72 @@ public class ControleurGarerVoirie implements ActionListener {
         int dureeTotaleMinutes = (heures * 60) + minutes;
         double cout = vue.zones.get(indexZone).calculerCout(dureeTotaleMinutes);
         
+        // Vérifier si c'est une zone bleue avec stationnement gratuit
+        boolean estZoneBleueGratuite = idZone.equals("ZONE_BLEUE") && cout == 0.00;
+        
         // Demander confirmation
-        int confirmation = JOptionPane.showConfirmDialog(vue,
-            "Confirmez-vous le stationnement ?\n\n" +
+        String messageConfirmation = "Confirmez-vous le stationnement ?\n\n" +
             "Type de véhicule: " + typeVehicule + "\n" +
             "Plaque: " + plaque + "\n" +
             "Zone: " + nomZone + "\n" +
             "Durée: " + heures + "h" + minutes + "min\n" +
-            "Coût: " + String.format("%.2f", cout) + " €",
+            "Coût: " + String.format("%.2f", cout) + " €";
+        
+        if (estZoneBleueGratuite) {
+            messageConfirmation += "\n\n✅ Ce stationnement est GRATUIT !";
+        }
+        
+        int confirmation = JOptionPane.showConfirmDialog(vue,
+            messageConfirmation,
             "Confirmation de stationnement",
             JOptionPane.YES_NO_OPTION);
         
         if (confirmation == JOptionPane.YES_OPTION) {
             etat = EtatVoirie.PREPARATION;
-            preparerStationnement(typeVehicule, plaque, idZone, nomZone, heures, minutes, cout);
+            
+            // Si zone bleue gratuite, enregistrer directement sans paiement
+            if (estZoneBleueGratuite) {
+                enregistrerStationnementGratuit(typeVehicule, plaque, idZone, nomZone, heures, minutes);
+            } else {
+                preparerStationnement(typeVehicule, plaque, idZone, nomZone, heures, minutes, cout);
+            }
         } else {
+            etat = EtatVoirie.SAISIE;
+        }
+    }
+    
+    /**
+     * Enregistre directement un stationnement gratuit sans passer par la page de paiement
+     */
+    private void enregistrerStationnementGratuit(String typeVehicule, String plaque, 
+                                                 String idZone, String nomZone, 
+                                                 int heures, int minutes) {
+        System.out.println("=== ENREGISTREMENT STATIONNEMENT GRATUIT ZONE BLEUE ===");
+        
+        // Créer le stationnement directement via le DAO
+        boolean succes = controleurStationnement.creerStationnementVoirieGratuit(
+            typeVehicule,
+            plaque,
+            idZone,
+            heures,
+            minutes
+        );
+        
+        if (succes) {
+            JOptionPane.showMessageDialog(vue,
+                "✅ Stationnement gratuit activé avec succès !\n\n" +
+                "Votre stationnement en Zone Bleue est maintenant actif.\n" +
+                "Durée: " + heures + "h" + minutes + "min",
+                "Stationnement activé",
+                JOptionPane.INFORMATION_MESSAGE);
+            
+            etat = EtatVoirie.REDIRECTION;
+            retourPagePrincipale();
+        } else {
+            JOptionPane.showMessageDialog(vue,
+                "❌ Une erreur est survenue lors de l'activation du stationnement.",
+                "Erreur",
+                JOptionPane.ERROR_MESSAGE);
             etat = EtatVoirie.SAISIE;
         }
     }
@@ -237,10 +288,19 @@ public class ControleurGarerVoirie implements ActionListener {
             int index = vue.comboZone.getSelectedIndex();
             if (index >= 0 && index < vue.zones.size()) {
                 double cout = vue.zones.get(index).calculerCout(dureeTotaleMinutes);
-                vue.lblCout.setText(String.format("%.2f €", cout));
+                
+                // Afficher "GRATUIT" si le coût est 0
+                if (cout == 0.00) {
+                    vue.lblCout.setText("GRATUIT");
+                    vue.lblCout.setForeground(new java.awt.Color(0, 150, 0));
+                } else {
+                    vue.lblCout.setText(String.format("%.2f €", cout));
+                    vue.lblCout.setForeground(java.awt.Color.BLACK);
+                }
             }
         } catch (Exception e) {
             vue.lblCout.setText("0.00 €");
+            vue.lblCout.setForeground(java.awt.Color.BLACK);
         }
     }
     
@@ -252,6 +312,10 @@ public class ControleurGarerVoirie implements ActionListener {
     
     private void annuler() {
         etat = EtatVoirie.REDIRECTION;
+        retourPagePrincipale();
+    }
+    
+    private void retourPagePrincipale() {
         ihm.Page_Principale pagePrincipale = new ihm.Page_Principale(vue.emailUtilisateur);
         pagePrincipale.setVisible(true);
         vue.dispose();
