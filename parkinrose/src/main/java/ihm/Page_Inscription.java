@@ -10,6 +10,9 @@ public class Page_Inscription extends JFrame {
     // Déclaration des composants
     private JTextField textFieldNom;
     private JTextField textFieldPrenom;
+    private JTextField textFieldAdresse;
+    private JTextField textFieldCodePostal;
+    private JTextField textFieldVille;
     private JTextField textFieldEmail;
     private JPasswordField passwordField;
     private JPasswordField passwordFieldConfirm;
@@ -19,7 +22,7 @@ public class Page_Inscription extends JFrame {
     public Page_Inscription() {
         setTitle("Création de compte");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(800, 600);
+        setSize(800, 700);
         setLocationRelativeTo(null);
         
         initialisePage();
