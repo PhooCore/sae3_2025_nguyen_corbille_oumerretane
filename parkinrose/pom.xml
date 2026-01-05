@@ -3,41 +3,46 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    
+
     <modelVersion>4.0.0</modelVersion>
-    
+
     <!-- Informations de base du projet -->
     <groupId>com.monentreprise</groupId>
     <artifactId>parkinrose</artifactId>
     <version>1.0.0</version>
-    
+
     <name>ParkinRose</name>
     <description>Projet ParkinRose avec MySQL</description>
-    
-    
+
+
     <dependencies>
-		<dependency>
-		          <groupId>com.mysql</groupId>
-		          <artifactId>mysql-connector-j</artifactId>
-		          <version>9.0.0</version>
-		    </dependency>
-		
-		    <dependency>
-		          <groupId>com.oracle.database.jdbc</groupId>
-		          <artifactId>ojdbc11</artifactId>
-		          <version>21.11.0.0</version>
-		    </dependency>
-		    <dependency>
-			    <groupId>org.openjfx</groupId>
-			    <artifactId>javafx-controls</artifactId>
-			    <version>17.0.2</version>
-			</dependency>
-			<dependency>
-			    <groupId>org.openjfx</groupId>
-			    <artifactId>javafx-web</artifactId>
-			    <version>17.0.2</version>
-			</dependency>
+        <dependency>
+                  <groupId>com.mysql</groupId>
+                  <artifactId>mysql-connector-j</artifactId>
+                  <version>9.0.0</version>
+            </dependency>
+
+            <dependency>
+                  <groupId>com.oracle.database.jdbc</groupId>
+                  <artifactId>ojdbc11</artifactId>
+                  <version>21.11.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-controls</artifactId>
+                <version>17.0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-web</artifactId>
+                <version>17.0.2</version>
+            </dependency>
+            <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-swing</artifactId>
+            <version>17.0.2</version>
+        </dependency>
     </dependencies>
-    
+
 
 </project>
