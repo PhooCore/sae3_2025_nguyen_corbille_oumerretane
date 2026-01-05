@@ -1,442 +1,431 @@
 package controleur;
 
+import ihm.Page_Paiement;
+import ihm.Page_Principale;
 import modele.Paiement;
 import modele.Stationnement;
 import modele.Usager;
 import modele.dao.PaiementDAO;
 import modele.dao.StationnementDAO;
 import modele.dao.UsagerDAO;
-import ihm.Page_Paiement_Voirie;
-import ihm.Page_Principale;
-import javax.swing.JOptionPane;
-import javax.swing.JButton;
+import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 
 public class ControleurPaiement implements ActionListener {
     
-    // État pour le pattern State
-    private enum EtatPaiement {
+    // États du contrôleur
+    private enum Etat {
         INITIAL,
-        SAISIE,
-        VALIDATION_EN_COURS,
-        VALIDATION_OK,
-        VALIDATION_ERREUR,
-        TRAITEMENT_EN_COURS,
-        TRAITEMENT_REUSSI,
-        TRAITEMENT_ERREUR,
-        CONFIRMATION,
-        REDIRECTION_EN_COURS,
-        ANNULATION_EN_COURS
+        SAISIE_INFORMATIONS,
+        VALIDATION_FORMULAIRE,
+        TRAITEMENT_PAIEMENT,
+        PAIEMENT_REUSSI,
+        PAIEMENT_GRATUIT,
+        ANNULATION_DEMANDEE,
+        REDIRECTION,
+        ERREUR
     }
     
-    private Page_Paiement_Voirie vue;
-    private EtatPaiement etat;
+    // Références
+    private Page_Paiement vue;
+    private Etat etat;
+    
+    // Données
     private String emailUtilisateur;
     private Usager usager;
-    private Paiement paiementEnCours;
+    private Paiement paiement;
     
-    /**
-     * Constructeur du contrôleur de paiement
-     */
-    public ControleurPaiement(Page_Paiement_Voirie vue) {
+    // Constantes
+    private static final int LONGUEUR_NUMERO_CARTE = 16;
+    private static final int LONGUEUR_CVV = 3;
+    
+    public ControleurPaiement(Page_Paiement vue) {
         this.vue = vue;
-        this.emailUtilisateur = vue.emailUtilisateur;
-        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
-        this.etat = EtatPaiement.INITIAL;
+        this.emailUtilisateur = vue.getEmailUtilisateur();
+        this.etat = Etat.INITIAL;
         
-        configurerListeners();
-        etat = EtatPaiement.SAISIE;
-
+        initialiserControleur();
+    }
+    
+    private void initialiserControleur() {
+        try {
+            chargerUtilisateur();
+            configurerListeners();
+            etat = Etat.SAISIE_INFORMATIONS;
+        } catch (Exception e) {
+            gererErreurInitialisation(e.getMessage());
+        }
+    }
+    
+    private void chargerUtilisateur() throws Exception {
+        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+        if (usager == null) {
+            throw new Exception("Utilisateur non trouvé");
+        }
     }
     
     private void configurerListeners() {
-        // Configurer directement avec les boutons publics de la vue
-        if (vue.btnAnnuler != null) {
-            vue.btnAnnuler.addActionListener(this);
-        }
-        
-        if (vue.btnPayer != null) {
-            vue.btnPayer.addActionListener(this);
-        }
+        vue.getBtnAnnuler().addActionListener(this);
+        vue.getBtnPayer().addActionListener(this);
     }
     
     @Override
     public void actionPerformed(ActionEvent e) {
         Object source = e.getSource();
-        String action = "INCONNU";
         
-        // Identifier l'action par comparaison directe des sources
-        if (source == vue.btnAnnuler) {
-            action = "ANNULER";
-        } else if (source == vue.btnPayer) {
-            action = "PAYER";
+        switch (etat) {
+            case SAISIE_INFORMATIONS:
+                if (source == vue.getBtnAnnuler()) {
+                    annulerPaiement();
+                } else if (source == vue.getBtnPayer()) {
+                    validerEtPayer();
+                }
+                break;
+                
+            case VALIDATION_FORMULAIRE:
+            case TRAITEMENT_PAIEMENT:
+                // En cours de traitement
+                break;
+                
+            case PAIEMENT_REUSSI:
+            case PAIEMENT_GRATUIT:
+                // Le succès est géré dans les méthodes spécifiques
+                break;
+                
+            case ERREUR:
+                // En état d'erreur
+                if (source == vue.getBtnAnnuler()) {
+                    retourPagePrincipale();
+                }
+                break;
         }
+    }
+    
+    private void validerEtPayer() {
+        etat = Etat.VALIDATION_FORMULAIRE;
         
-        
-        // Vérifier si l'action est valide dans l'état courant
-        if (!estActionValide(etat, action)) {
+        if (!validerFormulaire()) {
+            etat = Etat.SAISIE_INFORMATIONS;
             return;
         }
         
-        switch (action) {
-            case "ANNULER":
-                etat = EtatPaiement.ANNULATION_EN_COURS;
-                annulerPaiement();
-                break;
-            case "PAYER":
-                etat = EtatPaiement.VALIDATION_EN_COURS;
-                validerEtTraiterPaiement();
-                break;
-        }
+        etat = Etat.TRAITEMENT_PAIEMENT;
+        effectuerPaiement();
     }
     
-    private boolean estActionValide(EtatPaiement etatActuel, String action) {
-        switch (etatActuel) {
-            case SAISIE:
-            case VALIDATION_ERREUR:
-            case TRAITEMENT_ERREUR:
-                return action.equals("ANNULER") || action.equals("PAYER");
-                
-            case ANNULATION_EN_COURS:
-            case VALIDATION_EN_COURS:
-            case TRAITEMENT_EN_COURS:
-            case REDIRECTION_EN_COURS:
-                return false; // Actions non valides pendant les transitions
-                
-            default:
-                return false;
-        }
+    private boolean validerFormulaire() {
+        return validerTitulaireCarte() 
+            && validerNumeroCarte() 
+            && validerDateExpiration() 
+            && validerCVV();
     }
     
-    private void validerEtTraiterPaiement() {
-
+    private boolean validerTitulaireCarte() {
+        String nomCarte = vue.getTxtNomCarte().getText().trim();
         
-        // 1. Validation du formulaire
-        if (validerFormulairePaiement()) {
-            etat = EtatPaiement.VALIDATION_OK;
-            etat = EtatPaiement.TRAITEMENT_EN_COURS;
-            traiterPaiementSelonType();
-        } else {
-            etat = EtatPaiement.VALIDATION_ERREUR;
-            etat = EtatPaiement.SAISIE;
-        }
-    }
-    
-    private boolean validerFormulairePaiement() {
-        
-        // Récupérer les valeurs des champs
-        String nomCarte = vue.txtNomCarte.getText().trim();
-        String numeroCarte = vue.txtNumeroCarte.getText().trim();
-        String dateExpiration = vue.txtDateExpiration.getText().trim();
-        String cvv = vue.txtCVV.getText().trim();
-        
-        // Validation des champs obligatoires
         if (nomCarte.isEmpty()) {
-            JOptionPane.showMessageDialog(vue,
-                "Veuillez saisir le nom sur la carte",
-                "Champ manquant",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        String numeroCarteNettoye = numeroCarte.replaceAll("\\s+", "");
-        if (numeroCarteNettoye.isEmpty() || !numeroCarteNettoye.matches("\\d{16}")) {
-            JOptionPane.showMessageDialog(vue,
-                "Numéro de carte invalide (16 chiffres requis)",
-                "Numéro de carte incorrect",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        if (dateExpiration.isEmpty()) {
-            JOptionPane.showMessageDialog(vue,
-                "Veuillez saisir la date d'expiration",
-                "Champ manquant",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        String cvvNettoye = cvv.trim();
-        if (cvvNettoye.isEmpty() || !cvvNettoye.matches("\\d{3,4}")) {
-            JOptionPane.showMessageDialog(vue,
-                "CVV invalide (3 ou 4 chiffres requis)",
-                "CVV incorrect",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        // Validation de la date d'expiration
-        if (!validerFormatDateExpiration(dateExpiration)) {
-            JOptionPane.showMessageDialog(vue,
-                "Format de date invalide. Utilisez MM/AA (ex: 12/25)",
-                "Date invalide",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        if (!estCarteNonExpiree(dateExpiration)) {
-            JOptionPane.showMessageDialog(vue,
-                "La carte est expirée",
-                "Carte expirée",
-                JOptionPane.ERROR_MESSAGE);
+            afficherMessageErreur("Veuillez saisir le nom du titulaire de la carte", "Champ manquant");
             return false;
         }
         
         return true;
     }
     
-    private boolean validerFormatDateExpiration(String dateExpiration) {
-        if (!dateExpiration.matches("\\d{2}/\\d{2,4}")) {
+    private boolean validerNumeroCarte() {
+        String numeroCarte = vue.getTxtNumeroCarte().getText().trim().replaceAll("\\s+", "");
+        
+        if (numeroCarte.isEmpty()) {
+            afficherMessageErreur("Veuillez saisir le numéro de carte", "Champ manquant");
             return false;
         }
         
-        try {
-            String[] parties = dateExpiration.split("/");
-            int mois = Integer.parseInt(parties[0]);
-            int annee = Integer.parseInt(parties[1]);
-            
-            return mois >= 1 && mois <= 12 && annee >= 0;
-            
-        } catch (NumberFormatException e) {
+        if (!numeroCarte.matches("\\d{" + LONGUEUR_NUMERO_CARTE + "}")) {
+            afficherMessageErreur(
+                String.format("Numéro de carte invalide\n%d chiffres requis", LONGUEUR_NUMERO_CARTE),
+                "Numéro de carte incorrect"
+            );
             return false;
         }
+        
+        return true;
     }
     
-    private boolean estCarteNonExpiree(String dateExpiration) {
+    private boolean validerDateExpiration() {
+        String dateExpiration = vue.getTxtDateExpiration().getText().trim();
+        
+        if (dateExpiration.isEmpty()) {
+            afficherMessageErreur("Veuillez saisir la date d'expiration", "Champ manquant");
+            return false;
+        }
+        
+        if (!dateExpiration.matches("\\d{2}/\\d{2}")) {
+            afficherMessageErreur("Format de date invalide\nUtilisez MM/AA (ex: 12/25)", "Date invalide");
+            return false;
+        }
+        
+        if (!estCarteValide(dateExpiration)) {
+            afficherMessageErreur("La carte est expirée", "Carte expirée");
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private boolean validerCVV() {
+        String cvv = vue.getTxtCVV().getText().trim();
+        
+        if (cvv.isEmpty()) {
+            afficherMessageErreur("Veuillez saisir le CVV", "Champ manquant");
+            return false;
+        }
+        
+        if (!cvv.matches("\\d{" + LONGUEUR_CVV + "}")) {
+            afficherMessageErreur(
+                String.format("CVV invalide\n%d chiffres requis", LONGUEUR_CVV),
+                "CVV incorrect"
+            );
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private boolean estCarteValide(String dateExpiration) {
         try {
             String[] parties = dateExpiration.split("/");
             int mois = Integer.parseInt(parties[0]);
-            int annee = Integer.parseInt(parties[1]);
-            
-            // Si l'année est sur 2 chiffres, ajouter 2000
-            if (annee < 100) {
-                annee += 2000;
-            }
+            int annee = Integer.parseInt(parties[1]) + 2000;
             
             YearMonth expiration = YearMonth.of(annee, mois);
             YearMonth maintenant = YearMonth.now();
             
             return !expiration.isBefore(maintenant);
-            
         } catch (Exception e) {
             return false;
         }
     }
     
-    private void traiterPaiementSelonType() {
-        
+    private void effectuerPaiement() {
         try {
-            // Créer l'objet Paiement
-            paiementEnCours = new Paiement(
-                vue.txtNomCarte.getText().trim(),
-                nettoyerNumeroCarte(vue.txtNumeroCarte.getText().trim()),
-                vue.txtCVV.getText().trim(),
-                vue.montant,
+            // Vérifier si c'est un paiement pour parking gratuit
+            if (vue.getIdStationnement() != null && vue.getMontant() == 0.0) {
+                etat = Etat.PAIEMENT_GRATUIT;
+                traiterParkingGratuit();
+                return;
+            }
+            
+            // Créer l'objet paiement
+            this.paiement = new Paiement(
+                vue.getTxtNomCarte().getText().trim(),
+                nettoyerNumeroCarte(vue.getTxtNumeroCarte().getText().trim()),
+                vue.getTxtCVV().getText().trim(),
+                vue.getMontant(),
                 usager.getIdUsager()
             );
             
-            boolean succes = false;
-            
-            if (vue.idStationnement == null) {
-                // Paiement voirie
+            // Traiter selon le type
+            boolean succes;
+            if (vue.getIdStationnement() == null) {
                 succes = traiterPaiementVoirie();
             } else {
-                // Paiement parking
                 succes = traiterPaiementParking();
             }
             
             if (succes) {
-                etat = EtatPaiement.TRAITEMENT_REUSSI;
-                etat = EtatPaiement.CONFIRMATION;
-                afficherConfirmation();
-                etat = EtatPaiement.REDIRECTION_EN_COURS;
-                retourAccueil();
+                etat = Etat.PAIEMENT_REUSSI;
+                afficherConfirmationPaiement();
+                retourPagePrincipale();
             } else {
-                etat = EtatPaiement.TRAITEMENT_ERREUR;
-                etat = EtatPaiement.SAISIE;
+                gererErreur("Erreur lors du traitement du paiement");
             }
             
         } catch (Exception e) {
-            System.err.println("Erreur lors du traitement du paiement:");
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(vue,
-                "Erreur lors du traitement du paiement: " + e.getMessage(),
-                "Erreur système",
-                JOptionPane.ERROR_MESSAGE);
-            etat = EtatPaiement.TRAITEMENT_ERREUR;
-            etat = EtatPaiement.SAISIE;
+            gererErreur("Erreur paiement: " + e.getMessage());
         }
     }
     
     private boolean traiterPaiementVoirie() {
-        
-        // 1. Enregistrer le paiement
-        boolean paiementEnregistre = PaiementDAO.enregistrerPaiement(paiementEnCours);
-        if (!paiementEnregistre) {
-            JOptionPane.showMessageDialog(vue,
-                "Erreur lors de l'enregistrement du paiement",
-                "Erreur système",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
+        try {
+            // Enregistrer le paiement
+            PaiementDAO paiementDAO = PaiementDAO.getInstance();
+            paiementDAO.create(paiement);
 
-        
-        // 2. Créer le stationnement en voirie
-        Stationnement stationnement = new Stationnement(
-            usager.getIdUsager(),
-            vue.typeVehicule,
-            vue.plaqueImmatriculation,
-            vue.idZone,
-            vue.nomZone, // Utilisation correcte du nom de la zone
-            vue.dureeHeures,
-            vue.dureeMinutes,
-            vue.montant,
-            paiementEnCours.getIdPaiement()
-        );
-        
-        boolean stationnementCree = StationnementDAO.creerStationnementVoirie(stationnement);
-        
-        if (!stationnementCree) {
-            JOptionPane.showMessageDialog(vue,
-                "Erreur lors de la création du stationnement",
-                "Erreur système",
-                JOptionPane.ERROR_MESSAGE);
+            // Créer le stationnement en voirie
+            Stationnement stationnement = new Stationnement(
+                usager.getIdUsager(),
+                vue.getTypeVehicule(),
+                vue.getPlaqueImmatriculation(),
+                vue.getIdZone(),
+                vue.getNomZone(),
+                vue.getDureeHeures(),
+                vue.getDureeMinutes(),
+                vue.getMontant(),
+                paiement.getIdPaiement()
+            );
+            
+            stationnement.setTypeStationnement("VOIRIE");
+            stationnement.setStatutPaiement("PAYE");
+            
+            StationnementDAO stationnementDAO = StationnementDAO.getInstance();
+            stationnementDAO.creerStationnementVoirie(stationnement);
+            
+            return true;
+        } catch (SQLException e) {
+            afficherMessageErreur("Erreur création stationnement: " + e.getMessage(), "Erreur système");
             return false;
         }
-        
-        return true;
     }
     
     private boolean traiterPaiementParking() {
-        
-        // Vérifier si c'est un stationnement gratuit
-        Stationnement stationnement = StationnementDAO.getStationnementById(vue.idStationnement);
-        if (stationnement != null && "GRATUIT".equals(stationnement.getStatutPaiement())) {
-            // Si gratuit, pas besoin de paiement
-            boolean stationnementTermine = StationnementDAO.terminerStationnementParking(
-                vue.idStationnement,
+        try {
+            // Enregistrer le paiement
+            PaiementDAO paiementDAO = PaiementDAO.getInstance();
+            paiementDAO.create(paiement);
+
+            // Terminer le stationnement parking
+            StationnementDAO stationnementDAO = StationnementDAO.getInstance();
+            boolean stationnementTermine = stationnementDAO.terminerStationnementParking(
+                vue.getIdStationnement(),
                 LocalDateTime.now(),
-                0.0,
-                null
+                vue.getMontant(),
+                paiement.getIdPaiement()
             );
             
-            if (stationnementTermine) {
-                afficherConfirmationParkingGratuit();
-                return true;
-            }
+            return stationnementTermine;
+            
+        } catch (SQLException e) {
+            afficherMessageErreur("Erreur traitement paiement parking: " + e.getMessage(), "Erreur système");
             return false;
         }
-        
-        // Paiement normal pour parking
-        // 1. Enregistrer le paiement
-        boolean paiementEnregistre = PaiementDAO.enregistrerPaiement(paiementEnCours);
-        if (!paiementEnregistre) {
-            JOptionPane.showMessageDialog(vue,
-                "Erreur lors de l'enregistrement du paiement",
-                "Erreur système",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-
-        
-        // 2. Terminer le stationnement parking
-        LocalDateTime heureDepart = LocalDateTime.now();
-        
-        boolean stationnementTermine = StationnementDAO.terminerStationnementParking(
-            vue.idStationnement,
-            heureDepart,
-            vue.montant,
-            paiementEnCours.getIdPaiement()
-        );
-        
-        if (!stationnementTermine) {
-            JOptionPane.showMessageDialog(vue,
-                "Erreur lors de la mise à jour du stationnement",
-                "Erreur système",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        return true;
     }
     
-    private void afficherConfirmation() {
+    private void traiterParkingGratuit() throws SQLException {
+        StationnementDAO stationnementDAO = StationnementDAO.getInstance();
+		boolean stationnementTermine = stationnementDAO.terminerStationnementParking(
+		    vue.getIdStationnement(),
+		    LocalDateTime.now(),
+		    0.0,
+		    null
+		);
+		
+		if (stationnementTermine) {
+		    afficherConfirmationParkingGratuit();
+		    retourPagePrincipale();
+		} else {
+		    gererErreur("Erreur lors du traitement du stationnement gratuit");
+		}
+    }
+    
+    private void afficherConfirmationPaiement() {
         String message;
         
-        if (vue.idStationnement == null) {
-            message = "<html><div style='text-align: center;'>"
-                    + "<h2 style='color: green;'>Paiement effectué avec succès !</h2>"
-                    + "<p>Votre stationnement en voirie est maintenant actif.</p>"
-                    + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left; margin: 15px;'>"
-                    + "<p><b>Zone:</b> " + vue.nomZone + "</p>"
-                    + "<p><b>Véhicule:</b> " + vue.typeVehicule + " - " + vue.plaqueImmatriculation + "</p>"
-                    + "<p><b>Durée:</b> " + vue.dureeHeures + "h" + vue.dureeMinutes + "min</p>"
-                    + "<p><b>Montant:</b> " + String.format("%.2f", vue.montant) + " €</p>"
-                    + "</div>"
-                    + "<p style='color: #666;'>N'oubliez pas de valider la fin de votre stationnement.</p>"
-                    + "</div></html>";
+        if (vue.getIdStationnement() == null) {
+            // Paiement voirie
+            message = String.format(
+                "<html><div style='text-align: center;'>"
+                + "<h2 style='color: green;'>Paiement effectué !</h2>"
+                + "<p>Votre stationnement en voirie est maintenant actif.</p>"
+                + "<br>"
+                + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
+                + "<p><b>Zone:</b> %s</p>"
+                + "<p><b>Véhicule:</b> %s - %s</p>"
+                + "<p><b>Durée:</b> %dh%02dmin</p>"
+                + "<p><b>Montant:</b> %.2f €</p>"
+                + "</div>"
+                + "<p style='color: #666;'>N'oubliez pas de valider la fin de votre stationnement.</p>"
+                + "</div></html>",
+                vue.getNomZone(),
+                vue.getTypeVehicule(),
+                vue.getPlaqueImmatriculation(),
+                vue.getDureeHeures(),
+                vue.getDureeMinutes(),
+                vue.getMontant()
+            );
         } else {
-            message = "<html><div style='text-align: center;'>"
-                    + "<h2 style='color: green;'>Paiement effectué avec succès !</h2>"
-                    + "<p>Votre stationnement en parking est maintenant terminé.</p>"
-                    + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left; margin: 15px;'>"
-                    + "<p><b>Parking:</b> " + vue.nomZone + "</p>"
-                    + "<p><b>Véhicule:</b> " + vue.typeVehicule + " - " + vue.plaqueImmatriculation + "</p>"
-                    + "<p><b>Montant:</b> " + String.format("%.2f", vue.montant) + " €</p>"
-                    + "</div>"
-                    + "<p style='color: #666;'>Vous pouvez maintenant quitter le parking.</p>"
-                    + "</div></html>";
+            // Paiement parking
+            message = String.format(
+                "<html><div style='text-align: center;'>"
+                + "<h2 style='color: green;'>Paiement effectué !</h2>"
+                + "<p>Votre stationnement en parking est maintenant terminé.</p>"
+                + "<br>"
+                + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
+                + "<p><b>Parking:</b> %s</p>"
+                + "<p><b>Véhicule:</b> %s - %s</p>"
+                + "<p><b>Montant:</b> %.2f €</p>"
+                + "</div>"
+                + "<p style='color: #666;'>Vous pouvez maintenant quitter le parking.</p>"
+                + "</div></html>",
+                vue.getNomZone(),
+                vue.getTypeVehicule(),
+                vue.getPlaqueImmatriculation(),
+                vue.getMontant()
+            );
         }
         
-        JOptionPane.showMessageDialog(vue,
+        JOptionPane.showMessageDialog(
+            vue,
             message,
             "Paiement réussi",
-            JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.INFORMATION_MESSAGE
+        );
     }
     
     private void afficherConfirmationParkingGratuit() {
-        String message = "<html><div style='text-align: center;'>"
-                + "<h2 style='color: green;'>Stationnement terminé !</h2>"
-                + "<p>Votre stationnement en parking est maintenant terminé.</p>"
-                + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left; margin: 15px;'>"
-                + "<p><b>Parking:</b> " + vue.nomZone + "</p>"
-                + "<p><b>Véhicule:</b> " + vue.typeVehicule + " - " + vue.plaqueImmatriculation + "</p>"
-                + "<p><b>Montant:</b> GRATUIT (15 premières minutes)</p>"
-                + "</div>"
-                + "<p style='color: #666;'>Vous pouvez maintenant quitter le parking.</p>"
-                + "</div></html>";
+        String message = String.format(
+            "<html><div style='text-align: center;'>"
+            + "<h2 style='color: green;'>Stationnement terminé !</h2>"
+            + "<p>Votre stationnement en parking est maintenant terminé.</p>"
+            + "<br>"
+            + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
+            + "<p><b>Parking:</b> %s</p>"
+            + "<p><b>Véhicule:</b> %s - %s</p>"
+            + "<p><b>Montant:</b> GRATUIT (15 premières minutes)</p>"
+            + "</div>"
+            + "<p style='color: #666;'>Vous pouvez maintenant quitter le parking.</p>"
+            + "</div></html>",
+            vue.getNomZone(),
+            vue.getTypeVehicule(),
+            vue.getPlaqueImmatriculation()
+        );
         
-        JOptionPane.showMessageDialog(vue,
+        JOptionPane.showMessageDialog(
+            vue,
             message,
             "Stationnement terminé",
-            JOptionPane.INFORMATION_MESSAGE);
-    }
-    
-    private void retourAccueil() {
-
-        Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-        pagePrincipale.setVisible(true);
-        vue.dispose();
+            JOptionPane.INFORMATION_MESSAGE
+        );
     }
     
     private void annulerPaiement() {
-        int confirmation = JOptionPane.showConfirmDialog(vue,
-            "<html><div style='text-align: center;'>"
-            + "<p>Êtes-vous sûr de vouloir annuler le paiement ?</p>"
-            + "<p>Le stationnement ne sera pas créé.</p>"
-            + "</div></html>",
+        etat = Etat.ANNULATION_DEMANDEE;
+        
+        int confirmation = JOptionPane.showConfirmDialog(
+            vue,
+            "Êtes-vous sûr de vouloir annuler le paiement ?\nLe stationnement ne sera pas créé.",
             "Confirmation d'annulation",
             JOptionPane.YES_NO_OPTION,
-            JOptionPane.QUESTION_MESSAGE);
-            
+            JOptionPane.QUESTION_MESSAGE
+        );
+        
         if (confirmation == JOptionPane.YES_OPTION) {
-            etat = EtatPaiement.REDIRECTION_EN_COURS;
-            retourAccueil();
+            retourPagePrincipale();
         } else {
-            etat = EtatPaiement.SAISIE;
+            etat = Etat.SAISIE_INFORMATIONS;
+        }
+    }
+    
+    private void retourPagePrincipale() {
+        try {
+            etat = Etat.REDIRECTION;
+            Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
+            pagePrincipale.setVisible(true);
+            vue.dispose();
+        } catch (Exception e) {
+            gererErreur("Erreur redirection: " + e.getMessage());
         }
     }
     
@@ -444,12 +433,24 @@ public class ControleurPaiement implements ActionListener {
         return numeroCarte.replaceAll("\\s+", "");
     }
     
-    // Méthodes utilitaires
-    public EtatPaiement getEtat() {
-        return etat;
+    private void afficherMessageErreur(String message, String titre) {
+        JOptionPane.showMessageDialog(vue, message, titre, JOptionPane.ERROR_MESSAGE);
     }
     
-    public String getEtatString() {
-        return etat.toString();
+    private void gererErreur(String message) {
+        System.err.println(message);
+        afficherMessageErreur(message, "Erreur");
+        etat = Etat.ERREUR;
+    }
+    
+    private void gererErreurInitialisation(String message) {
+        System.err.println("Erreur initialisation: " + message);
+        afficherMessageErreur("Erreur d'initialisation: " + message, "Erreur");
+        vue.dispose();
+    }
+    
+    // Getters pour débogage
+    public Etat getEtat() {
+        return etat;
     }
 }

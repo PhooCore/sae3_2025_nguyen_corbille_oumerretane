@@ -31,17 +31,10 @@ public class Page_Utilisateur extends JFrame {
     private JButton btnDeconnexion;
     private JButton btnRetour;
     private JButton btnGestionVehicules;
-    private JLabel lblInfoVehicules;
-    private JButton btnModifierAdresse;
-
     
     public Page_Utilisateur(String email, boolean rafraichir) {
         this.emailUtilisateur = email;
-        if (rafraichir) {
-            this.usager = UsagerDAO.getUsagerByEmail(email);
-        } else {
-            this.usager = UsagerDAO.getUsagerByEmail(email);
-        }
+        this.usager = UsagerDAO.getUsagerByEmail(email);
         initialisePage();
         new ControleurUtilisateur(this);
     }
@@ -53,7 +46,7 @@ public class Page_Utilisateur extends JFrame {
     private void initialisePage() {
         this.setTitle("Mon Compte");
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.setSize(800, 700); // Augmenté la hauteur pour plus d'espace
+        this.setSize(800, 700);
         this.setLocationRelativeTo(null);
         
         JPanel mainPanel = new JPanel();
@@ -86,8 +79,6 @@ public class Page_Utilisateur extends JFrame {
         JPanel panelVehicules = creerOngletVehicules();
         onglets.addTab("Mes véhicules", panelVehicules);
         
-        
-        
         mainPanel.add(onglets, BorderLayout.CENTER);
         
         // Bouton retour
@@ -113,132 +104,137 @@ public class Page_Utilisateur extends JFrame {
         
         panel.add(Box.createVerticalStrut(20));
         
-        JPanel ligneAdresse = new JPanel(new BorderLayout());
-        ligneAdresse.setBackground(Color.WHITE);
-        ligneAdresse.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-        
-        JLabel lblLibelleAdresse = new JLabel("Adresse:");
-        lblLibelleAdresse.setFont(new Font("Arial", Font.BOLD, 14));
-        lblLibelleAdresse.setPreferredSize(new Dimension(120, 25));
-        
-        String adresseComplete = UsagerDAO.getAdresseComplete(usager.getIdUsager());
-        JLabel lblAdresse = new JLabel(adresseComplete);
-        lblAdresse.setFont(new Font("Arial", Font.PLAIN, 14));
-        
-        btnModifierAdresse = new JButton("Modifier");
-        btnModifierAdresse.addActionListener(e -> {
-            new Page_Modifier_Adresse(emailUtilisateur).setVisible(true);
-            dispose();
-        });
-        
-        
-        ligneAdresse.add(lblLibelleAdresse, BorderLayout.WEST);
-        ligneAdresse.add(lblAdresse, BorderLayout.CENTER);
-        ligneAdresse.add(btnModifierAdresse, BorderLayout.EAST);
-        panel.add(ligneAdresse);
-        
-        panel.add(Box.createVerticalStrut(20));
-        
-        Abonnement abonnement = AbonnementDAO.getAbonnementByUsager(usager.getIdUsager());
-        
-        if (abonnement != null && abonnement.getIdAbonnement() != null) {
-            ajouterLigneInfo(panel, "Abonnement:", abonnement.getLibelleAbonnement());
-            ajouterLigneInfo(panel, "Tarif:", String.format("%.2f €", abonnement.getTarifAbonnement()));
+        // Abonnement
+        try {
+            List<Abonnement> abonnements = AbonnementDAO.getInstance().getAbonnementsByUsager(usager.getIdUsager());
             
-            java.sql.Date dateDebut = AbonnementDAO.getDateDebutAbonnement(usager.getIdUsager());
-            if (dateDebut != null) {
-                ajouterLigneInfo(panel, "Depuis le:", dateDebut.toString());
+            if (!abonnements.isEmpty()) {
+                Abonnement abonnementActif = abonnements.get(0);
+                ajouterLigneInfo(panel, "Abonnement:", abonnementActif.getLibelleAbonnement());
+                
+                panel.add(Box.createVerticalStrut(10));
+                
+                JPanel panelBoutonsAbo = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                panelBoutonsAbo.setBackground(Color.WHITE);
+                
+                JButton btnChanger = new JButton("Changer d'abonnement");
+                btnChanger.addActionListener(e -> changerAbonnement(abonnementActif));
+                
+                JButton btnResilier = new JButton("Résilier");
+                btnResilier.setBackground(new Color(220, 80, 80));
+                btnResilier.setForeground(Color.WHITE);
+                btnResilier.addActionListener(e -> resilierAbonnement(abonnementActif));
+                
+                panelBoutonsAbo.add(btnChanger);
+                panelBoutonsAbo.add(btnResilier);
+                panel.add(panelBoutonsAbo);
+                
+            } else {
+                JPanel ligneAbonnement = new JPanel(new BorderLayout());
+                ligneAbonnement.setBackground(Color.WHITE);
+                ligneAbonnement.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+                
+                JLabel lblLibelle = new JLabel("Abonnement:");
+                lblLibelle.setFont(new Font("Arial", Font.BOLD, 14));
+                lblLibelle.setPreferredSize(new Dimension(120, 25));
+                
+                JLabel lblValeur = new JLabel("Aucun abonnement actif");
+                lblValeur.setFont(new Font("Arial", Font.PLAIN, 14));
+                lblValeur.setForeground(Color.RED);
+                
+                JButton btnSouscrire = new JButton("Souscrire");
+                btnSouscrire.setFont(new Font("Arial", Font.PLAIN, 12));
+                btnSouscrire.setBackground(new Color(0, 120, 215));
+                btnSouscrire.setForeground(Color.WHITE);
+                btnSouscrire.setFocusPainted(false);
+                btnSouscrire.addActionListener(e -> {
+                    new Page_Abonnements(emailUtilisateur).setVisible(true);
+                    dispose();
+                });
+                
+                ligneAbonnement.add(lblLibelle, BorderLayout.WEST);
+                ligneAbonnement.add(lblValeur, BorderLayout.CENTER);
+                ligneAbonnement.add(btnSouscrire, BorderLayout.EAST);
+                panel.add(ligneAbonnement);
             }
-            
-            if (abonnement.estActif()) {
-                JLabel lblActif = new JLabel("✓ Actif");
-                lblActif.setForeground(Color.GREEN);
-                lblActif.setFont(new Font("Arial", Font.BOLD, 12));
-                panel.add(lblActif);
-                panel.add(Box.createVerticalStrut(5));
-            }
-            
-            panel.add(Box.createVerticalStrut(10));
-            
-            JPanel panelBoutonsAbo = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            panelBoutonsAbo.setBackground(Color.WHITE);
-            
-            JButton btnChanger = new JButton("Changer d'abonnement");
-            btnChanger.addActionListener(e -> changerAbonnement(abonnement));
-            
-            JButton btnResilier = new JButton("Résilier");
-            btnResilier.setBackground(new Color(220, 80, 80));
-            btnResilier.setForeground(Color.WHITE);
-            btnResilier.addActionListener(e -> resilierAbonnement(abonnement));
-            
-            panelBoutonsAbo.add(btnChanger);
-            panelBoutonsAbo.add(btnResilier);
-            panel.add(panelBoutonsAbo);
-            
-        } else {
-            // Pas d'abonnement
-            JPanel ligneAbonnement = new JPanel(new BorderLayout());
-            ligneAbonnement.setBackground(Color.WHITE);
-            ligneAbonnement.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-            
-            JLabel lblLibelle = new JLabel("Abonnement:");
-            lblLibelle.setFont(new Font("Arial", Font.BOLD, 14));
-            lblLibelle.setPreferredSize(new Dimension(120, 25));
-            
-            JLabel lblValeur = new JLabel("Aucun abonnement actif");
-            lblValeur.setFont(new Font("Arial", Font.PLAIN, 14));
-            lblValeur.setForeground(Color.RED);
-            
-            JButton btnSouscrire = new JButton("Souscrire");
-            btnSouscrire.setFont(new Font("Arial", Font.PLAIN, 12));
-            btnSouscrire.setBackground(new Color(0, 120, 215));
-            btnSouscrire.setForeground(Color.WHITE);
-            btnSouscrire.setFocusPainted(false);
-            btnSouscrire.addActionListener(e -> {
-                new Page_Abonnements(emailUtilisateur).setVisible(true);
-                dispose();
-            });
-            
-            ligneAbonnement.add(lblLibelle, BorderLayout.WEST);
-            ligneAbonnement.add(lblValeur, BorderLayout.CENTER);
-            ligneAbonnement.add(btnSouscrire, BorderLayout.EAST);
-            panel.add(ligneAbonnement);
+        } catch (Exception e) {
+            System.err.println("Erreur récupération abonnements: " + e.getMessage());
+            ajouterLigneInfo(panel, "Abonnement:", "Erreur de chargement");
         }
         
         panel.add(Box.createVerticalStrut(20));
         
-        // Ajout carte Tisseo
-        String carteTisseo = UsagerDAO.getCarteTisseoByUsager(usager.getIdUsager());
+        // Section Carte Tisséo
+        try {
+            String carteTisseo = UsagerDAO.getInstance().getCarteTisseoByUsager(usager.getIdUsager());
 
-        if (carteTisseo == null) {
-            JPanel ligneCarte = new JPanel(new BorderLayout());
-            ligneCarte.setBackground(Color.WHITE);
-            ligneCarte.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+            if (carteTisseo == null || carteTisseo.isEmpty()) {
+                // Aucune carte enregistrée - afficher le bouton pour ajouter
+                JPanel ligneCarte = new JPanel(new BorderLayout());
+                ligneCarte.setBackground(Color.WHITE);
+                ligneCarte.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
 
-            JLabel lblLibelle = new JLabel("Carte Tisséo:");
-            lblLibelle.setFont(new Font("Arial", Font.BOLD, 14));
-            lblLibelle.setPreferredSize(new Dimension(120, 25));
+                JLabel lblLibelle = new JLabel("Carte Tisséo:");
+                lblLibelle.setFont(new Font("Arial", Font.BOLD, 14));
+                lblLibelle.setPreferredSize(new Dimension(120, 25));
 
-            JLabel lblValeur = new JLabel("Aucune carte Tisséo renseignée");
-            lblValeur.setFont(new Font("Arial", Font.PLAIN, 14));
-            lblValeur.setForeground(Color.RED);
+                JLabel lblValeur = new JLabel("Aucune carte Tisséo renseignée");
+                lblValeur.setFont(new Font("Arial", Font.PLAIN, 14));
+                lblValeur.setForeground(Color.RED);
 
-            JButton btnAjouter = new JButton("Ajouter une carte");
-            btnAjouter.addActionListener(e -> ouvrirPopupAjoutCarteTisseo());
+                JButton btnAjouter = new JButton("Ajouter une carte");
+                btnAjouter.addActionListener(e -> ouvrirPopupAjoutCarteTisseo());
 
-            ligneCarte.add(lblLibelle, BorderLayout.WEST);
-            ligneCarte.add(lblValeur, BorderLayout.CENTER);
-            ligneCarte.add(btnAjouter, BorderLayout.EAST);
+                ligneCarte.add(lblLibelle, BorderLayout.WEST);
+                ligneCarte.add(lblValeur, BorderLayout.CENTER);
+                ligneCarte.add(btnAjouter, BorderLayout.EAST);
 
-            panel.add(ligneCarte);
+                panel.add(ligneCarte);
 
-        } else {
-            ajouterLigneInfo(panel, "Carte Tisséo:", carteTisseo);
+            } else {
+                // Carte déjà enregistrée - afficher avec options de modification
+                JPanel ligneCarte = new JPanel(new BorderLayout());
+                ligneCarte.setBackground(Color.WHITE);
+                ligneCarte.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+
+                JLabel lblLibelle = new JLabel("Carte Tisséo:");
+                lblLibelle.setFont(new Font("Arial", Font.BOLD, 14));
+                lblLibelle.setPreferredSize(new Dimension(120, 25));
+
+                JLabel lblValeur = new JLabel(carteTisseo);
+                lblValeur.setFont(new Font("Arial", Font.PLAIN, 14));
+                lblValeur.setForeground(new Color(0, 100, 0));
+
+                JPanel panelBoutonsCarte = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+                panelBoutonsCarte.setBackground(Color.WHITE);
+                
+                JButton btnChangerCarte = new JButton("Changer");
+                btnChangerCarte.setFont(new Font("Arial", Font.PLAIN, 12));
+                btnChangerCarte.addActionListener(e -> ouvrirPopupModifCarteTisseo(carteTisseo));
+                
+                JButton btnSupprimerCarte = new JButton("Supprimer");
+                btnSupprimerCarte.setFont(new Font("Arial", Font.PLAIN, 12));
+                btnSupprimerCarte.setBackground(new Color(220, 80, 80));
+                btnSupprimerCarte.setForeground(Color.WHITE);
+                btnSupprimerCarte.addActionListener(e -> supprimerCarteTisseo());
+
+                panelBoutonsCarte.add(btnChangerCarte);
+                panelBoutonsCarte.add(btnSupprimerCarte);
+
+                ligneCarte.add(lblLibelle, BorderLayout.WEST);
+                ligneCarte.add(lblValeur, BorderLayout.CENTER);
+                ligneCarte.add(panelBoutonsCarte, BorderLayout.EAST);
+
+                panel.add(ligneCarte);
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur récupération carte Tisséo: " + e.getMessage());
+            ajouterLigneInfo(panel, "Carte Tisséo:", "Erreur de chargement");
         }
         
         panel.add(Box.createVerticalStrut(30));
         
-        // Section Véhicules (simplifiée)
+        // Section Véhicules
         JPanel panelVehiculesInfo = new JPanel(new BorderLayout());
         panelVehiculesInfo.setBackground(Color.WHITE);
         panelVehiculesInfo.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
@@ -247,10 +243,10 @@ public class Page_Utilisateur extends JFrame {
         lblTitreVehicules.setFont(new Font("Arial", Font.BOLD, 14));
         
         // Compter le nombre de véhicules
-        List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
-        int nbVehicules = vehicules.size();
+        List<VehiculeUsager> vehiculesList = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
+        int nbVehicules = vehiculesList.size();
         int nbVehiculesPrincipaux = 0;
-        for (VehiculeUsager v : vehicules) {
+        for (VehiculeUsager v : vehiculesList) {
             if (v.isEstPrincipal()) {
                 nbVehiculesPrincipaux++;
             }
@@ -277,13 +273,11 @@ public class Page_Utilisateur extends JFrame {
         
         btnModifierMdp = new JButton("Modifier le mot de passe");
         btnModifierMdp.setAlignmentX(Component.CENTER_ALIGNMENT);
-        // Le contrôleur gérera cet ActionListener
-
+        
         btnDeconnexion = new JButton("Déconnexion");
         btnDeconnexion.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnDeconnexion.setBackground(new Color(220, 80, 80));
         btnDeconnexion.setForeground(Color.WHITE);
-        // Le contrôleur gérera cet ActionListener
         
         panel.add(btnModifierMdp);
         panel.add(Box.createVerticalStrut(10));
@@ -313,11 +307,9 @@ public class Page_Utilisateur extends JFrame {
         panel.add(scrollPane, BorderLayout.CENTER);
         
         // Charger les véhicules
-        if (usager != null) {
-            List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
-            for (VehiculeUsager v : vehicules) {
-                listModel.addElement(v);
-            }
+        List<VehiculeUsager> vehiculesList = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
+        for (VehiculeUsager v : vehiculesList) {
+            listModel.addElement(v);
         }
         
         // Panel boutons
@@ -338,8 +330,8 @@ public class Page_Utilisateur extends JFrame {
                 public void windowClosed(java.awt.event.WindowEvent e) {
                     // Rafraîchir la liste
                     listModel.clear();
-                    List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
-                    for (VehiculeUsager v : vehicules) {
+                    List<VehiculeUsager> nouvellesVehicules = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
+                    for (VehiculeUsager v : nouvellesVehicules) {
                         listModel.addElement(v);
                     }
                 }
@@ -375,7 +367,7 @@ public class Page_Utilisateur extends JFrame {
                     JOptionPane.WARNING_MESSAGE);
                 
                 if (choix == JOptionPane.YES_OPTION) {
-                    if (VehiculeUsagerDAO.supprimerVehicule(vehicule.getIdVehiculeUsager())) {
+                    if (VehiculeUsagerDAO.supprimerVehiculeStatic(vehicule.getIdVehiculeUsager())) {
                         listModel.removeElement(vehicule);
                         JOptionPane.showMessageDialog(this,
                             "Véhicule supprimé avec succès",
@@ -411,13 +403,13 @@ public class Page_Utilisateur extends JFrame {
                     JOptionPane.QUESTION_MESSAGE);
                 
                 if (choix == JOptionPane.YES_OPTION) {
-                    if (VehiculeUsagerDAO.definirVehiculePrincipal(
+                    if (VehiculeUsagerDAO.definirVehiculePrincipalStatic(
                         vehicule.getIdVehiculeUsager(), usager.getIdUsager())) {
                         
                         // Rafraîchir la liste
                         listModel.clear();
-                        List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
-                        for (VehiculeUsager v : vehicules) {
+                        List<VehiculeUsager> nouvellesVehicules = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
+                        for (VehiculeUsager v : nouvellesVehicules) {
                             listModel.addElement(v);
                         }
                         
@@ -450,7 +442,13 @@ public class Page_Utilisateur extends JFrame {
         panel.setBackground(Color.WHITE);
         
         // Récupération des paiements
-        List<Paiement> paiements = PaiementDAO.getPaiementsByUsager(usager.getIdUsager());
+        List<Paiement> paiements;
+        try {
+            paiements = PaiementDAO.getInstance().getPaiementsByUsager(usager.getIdUsager());
+        } catch (Exception e) {
+            System.err.println("Erreur récupération paiements: " + e.getMessage());
+            paiements = new java.util.ArrayList<>();
+        }
         
         // En-têtes des colonnes
         String[] colonnes = {"Date", "Montant", "Type", "Détails", "Statut"};
@@ -470,8 +468,12 @@ public class Page_Utilisateur extends JFrame {
             // Détails spécifiques
             String details = "-";
             if ("ABONNEMENT".equals(p.getTypePaiement()) && p.getIdAbonnement() != null) {
-                Abonnement abonnement = AbonnementDAO.getAbonnementById(p.getIdAbonnement());
-                details = (abonnement != null) ? abonnement.getLibelleAbonnement() : p.getIdAbonnement();
+                try {
+                    Abonnement abonnement = AbonnementDAO.getInstance().findById(p.getIdAbonnement());
+                    details = (abonnement != null) ? abonnement.getLibelleAbonnement() : p.getIdAbonnement();
+                } catch (Exception e) {
+                    details = p.getIdAbonnement();
+                }
                 totalAbonnements += p.getMontant();
             } else if ("STATIONNEMENT".equals(p.getTypePaiement())) {
                 totalStationnements += p.getMontant();
@@ -522,7 +524,7 @@ public class Page_Utilisateur extends JFrame {
         panel.setBackground(Color.WHITE);
         
         // Récupération des stationnements
-        List<Stationnement> stationnements = StationnementDAO.getHistoriqueStationnements(usager.getIdUsager());
+        List<Stationnement> stationnements = StationnementDAO.getHistoriqueStationnementsStatic(usager.getIdUsager());
         
         String[] colonnes = {"Date", "Type", "Véhicule", "Zone/Parking", "Durée", "Coût", "Statut"};
         Object[][] donnees = new Object[stationnements.size()][7];
@@ -541,11 +543,19 @@ public class Page_Utilisateur extends JFrame {
                 donnees[i][3] = "Non spécifié";
             } else {
                 if ("PARKING".equals(s.getTypeStationnement())) {
-                    Parking parking = ParkingDAO.getParkingById(zoneId);
-                    donnees[i][3] = (parking != null) ? parking.getLibelleParking() : zoneId;
+                    try {
+                        Parking parking = ParkingDAO.getInstance().findById(zoneId);
+                        donnees[i][3] = (parking != null) ? parking.getLibelleParking() : zoneId;
+                    } catch (Exception e) {
+                        donnees[i][3] = zoneId;
+                    }
                 } else {
-                    Zone zone = ZoneDAO.getZoneById(zoneId);
-                    donnees[i][3] = (zone != null) ? zone.getLibelleZone() : zoneId;
+                    try {
+                        Zone zone = ZoneDAO.getInstance().findById(zoneId);
+                        donnees[i][3] = (zone != null) ? zone.getLibelleZone() : zoneId;
+                    } catch (Exception e) {
+                        donnees[i][3] = zoneId;
+                    }
                 }
             }
             
@@ -595,8 +605,6 @@ public class Page_Utilisateur extends JFrame {
         return panel;
     }
     
-    
-    
     private void ajouterLigneInfo(JPanel panel, String libelle, String valeur) {
         JPanel ligne = new JPanel(new BorderLayout());
         ligne.setBackground(Color.WHITE);
@@ -634,6 +642,9 @@ public class Page_Utilisateur extends JFrame {
         panel.add(statPanel);
     }
     
+    /**
+     * Ouvre le popup pour ajouter une carte Tisséo
+     */
     private void ouvrirPopupAjoutCarteTisseo() {
         String numeroCarte = JOptionPane.showInputDialog(
             this,
@@ -654,23 +665,31 @@ public class Page_Utilisateur extends JFrame {
             }
             
             try {
-                UsagerDAO.enregistrerCarteTisseo(usager.getIdUsager(), numeroCarte.trim());
+                boolean succes = UsagerDAO.enregistrerCarteTisseo(usager.getIdUsager(), numeroCarte.trim());
                 
-                JOptionPane.showMessageDialog(this,
-                    "✅ Carte Tisséo enregistrée avec succès\n\n" +
-                    "Numéro : " + numeroCarte + "\n" +
-                    "Vous pouvez maintenant utiliser les parkings relais gratuitement.",
-                    "Succès",
-                    JOptionPane.INFORMATION_MESSAGE
-                );
+                if (succes) {
+                    JOptionPane.showMessageDialog(this,
+                        "✅ Carte Tisséo enregistrée avec succès\n\n" +
+                        "Numéro : " + numeroCarte + "\n" +
+                        "Vous pouvez maintenant utiliser les parkings relais gratuitement.",
+                        "Succès",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
 
-                // Rafraîchir la page
-                new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
-                dispose();
-                
+                    // Rafraîchir la page
+                    new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
+                    dispose();
+                    
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                        "Erreur lors de l'enregistrement de la carte.",
+                        "Erreur",
+                        JOptionPane.ERROR_MESSAGE
+                    );
+                }
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this,
-                    "Erreur lors de l'enregistrement de la carte : " + e.getMessage(),
+                    "Erreur : " + e.getMessage(),
                     "Erreur",
                     JOptionPane.ERROR_MESSAGE
                 );
@@ -678,9 +697,95 @@ public class Page_Utilisateur extends JFrame {
         }
     }
     
-    private void retourAccueil() {
-        // Retour à la page principale
-        dispose();
+    /**
+     * Ouvre le popup pour modifier une carte Tisséo existante
+     */
+    private void ouvrirPopupModifCarteTisseo(String carteActuelle) {
+        String numeroCarte = JOptionPane.showInputDialog(
+            this,
+            "Votre carte Tisséo actuelle : " + carteActuelle + "\n\n" +
+            "Entrez le nouveau numéro de carte Tisséo (Pastel) :\n" +
+            "Format : 10 chiffres (ex: 1234567890)\n\n" +
+            "Laissez vide pour conserver la carte actuelle.",
+            "Modifier carte Tisséo",
+            JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (numeroCarte != null) {
+            if (numeroCarte.trim().isEmpty()) {
+                return; // L'utilisateur a annulé
+            }
+            
+            if (!numeroCarte.matches("\\d{10}")) {
+                JOptionPane.showMessageDialog(this,
+                    "Le format est incorrect.\n" +
+                    "Veuillez entrer 10 chiffres (ex: 1234567890).",
+                    "Numéro invalide", 
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            try {
+                boolean succes = UsagerDAO.enregistrerCarteTisseo(usager.getIdUsager(), numeroCarte.trim());
+                
+                if (succes) {
+                    JOptionPane.showMessageDialog(this,
+                        "✅ Carte Tisséo modifiée avec succès\n\n" +
+                        "Nouveau numéro : " + numeroCarte,
+                        "Succès",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+
+                    // Rafraîchir la page
+                    new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
+                    dispose();
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                    "Erreur : " + e.getMessage(),
+                    "Erreur",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            }
+        }
+    }
+    
+    /**
+     * Supprime la carte Tisséo
+     */
+    private void supprimerCarteTisseo() {
+        int confirmation = JOptionPane.showConfirmDialog(
+            this,
+            "Êtes-vous sûr de vouloir supprimer votre carte Tisséo ?\n\n" +
+            "Vous ne pourrez plus bénéficier des parkings relais gratuits.",
+            "Confirmation de suppression",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+        );
+        
+        if (confirmation == JOptionPane.YES_OPTION) {
+            try {
+                boolean succes = UsagerDAO.enregistrerCarteTisseo(usager.getIdUsager(), null); // null pour supprimer
+                
+                if (succes) {
+                    JOptionPane.showMessageDialog(this,
+                        "✅ Carte Tisséo supprimée avec succès",
+                        "Succès",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+
+                    // Rafraîchir la page
+                    new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
+                    dispose();
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                    "Erreur : " + e.getMessage(),
+                    "Erreur",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            }
+        }
     }
     
     private void changerAbonnement(Abonnement abonnementActuel) {
@@ -698,9 +803,10 @@ public class Page_Utilisateur extends JFrame {
         );
         
         if (choix == JOptionPane.YES_OPTION) {
-            boolean supprime = AbonnementDAO.supprimerAbonnementUtilisateur(usager.getIdUsager());
-            
-            if (supprime) {
+            try {
+                // Correction ici : getInstance().supprimerAbonnementsUtilisateur() renvoie void, pas boolean
+                AbonnementDAO.getInstance().supprimerAbonnementsUtilisateur(usager.getIdUsager());
+                
                 JOptionPane.showMessageDialog(
                     this,
                     "Votre ancien abonnement a été résilié.\nVous allez être redirigé vers la page des abonnements.",
@@ -710,10 +816,11 @@ public class Page_Utilisateur extends JFrame {
                 
                 new Page_Abonnements(emailUtilisateur).setVisible(true);
                 dispose();
-            } else {
+                
+            } catch (Exception e) {
                 JOptionPane.showMessageDialog(
                     this,
-                    "Erreur lors de la résiliation de l'abonnement.\nVeuillez réessayer ou contacter le support.",
+                    "Erreur lors de la résiliation de l'abonnement : " + e.getMessage(),
                     "Erreur",
                     JOptionPane.ERROR_MESSAGE
                 );
@@ -752,9 +859,10 @@ public class Page_Utilisateur extends JFrame {
             );
             
             if (confirmation2 == JOptionPane.YES_OPTION) {
-                boolean supprime = AbonnementDAO.supprimerAbonnementUtilisateur(usager.getIdUsager());
-                
-                if (supprime) {
+                try {
+                    // Correction ici aussi
+                    AbonnementDAO.getInstance().supprimerAbonnementsUtilisateur(usager.getIdUsager());
+                    
                     JOptionPane.showMessageDialog(
                         this,
                         "Votre abonnement a été résilié avec succès.\n\n" +
@@ -765,10 +873,10 @@ public class Page_Utilisateur extends JFrame {
                     
                     new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
                     dispose();
-                } else {
+                } catch (Exception e) {
                     JOptionPane.showMessageDialog(
                         this,
-                        "Erreur lors de la résiliation.\nVeuillez contacter le support.",
+                        "Erreur lors de la résiliation : " + e.getMessage(),
                         "Erreur",
                         JOptionPane.ERROR_MESSAGE
                     );
@@ -800,14 +908,6 @@ public class Page_Utilisateur extends JFrame {
     
     public JButton getBtnGestionVehicules() {
         return btnGestionVehicules;
-    }
-    
-    public JLabel getLblInfoVehicules() {
-        return lblInfoVehicules;
-    }
-    
-    public JButton getBtnModifierAdresse() {
-        return btnModifierAdresse;
     }
     
     // Renderer pour la liste des véhicules

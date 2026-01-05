@@ -99,17 +99,19 @@ public class Page_Modifier_Adresse extends JFrame {
     
     private void chargerAdresseExistante() {
         if (usager != null) {
-            String adresseComplete = UsagerDAO.getAdresseComplete(usager.getIdUsager());
-            if (!"Non renseignée".equals(adresseComplete)) {
-                // Vous devrez peut-être parser l'adresse si stockée séparément
-                // Pour simplifier, on laisse l'utilisateur resaisir
+           
+            String adresseComplete = usager.getNumeroCarteTisseo();
+            
+            if (adresseComplete != null && !adresseComplete.isEmpty() && !adresseComplete.contains("CARTE")) {
+
+                String[] parties = adresseComplete.split("\\|");
+                if (parties.length >= 3) {
+                    txtAdresse.setText(parties[0]);
+                    txtCodePostal.setText(parties[1]);
+                    txtVille.setText(parties[2]);
+                }
             }
             
-            // Afficher la zone résidentielle actuelle
-            String zone = UsagerDAO.getZoneResidentielle(usager.getIdUsager());
-            if (zone != null) {
-                lblZoneAttribuee.setText(getNomZone(zone));
-            }
         }
     }
     

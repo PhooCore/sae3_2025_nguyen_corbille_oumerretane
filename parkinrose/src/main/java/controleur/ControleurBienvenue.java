@@ -25,7 +25,6 @@ public class ControleurBienvenue implements ActionListener {
     }
     
     private void configurerListeners() {
-        // Ajouter ActionListener au bouton Entrer
         vue.getBtnEntrer().addActionListener(this);
     }
     
@@ -42,7 +41,6 @@ public class ControleurBienvenue implements ActionListener {
                 break;
                 
             case REDIRECTION:
-                // Ne rien faire
                 break;
         }
     }

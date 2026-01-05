@@ -6,23 +6,18 @@ public class Abonnement {
     private String idAbonnement;
     private int idUsager;  
     private String libelleAbonnement;
-    private String typeAbonnement; 
+    private String typeAbonnement;  
     private double tarifAbonnement;  
-    private LocalDateTime dateDebut; 
-    private LocalDateTime dateFin;    
-    private String statut;  // Ajouté: "ACTIF", "INACTIF", "EXPIRE"
+    private LocalDateTime dateDebut;  
+    private LocalDateTime dateFin; 
+    private String statut;           
     
     public Abonnement() {}
     
-    public Abonnement(String idAbonnement, 
-    					int idUsager, 
-    					String libelleAbonnement, 
-    					String typeAbonnement, 
-    					double tarifAbonnement, 
-    					LocalDateTime dateDebut, 
-    					LocalDateTime dateFin, 
-    					String statut) {
-    	
+    // Constructeur complet
+    public Abonnement(String idAbonnement, int idUsager, String libelleAbonnement, 
+                     String typeAbonnement, double tarifAbonnement, 
+                     LocalDateTime dateDebut, LocalDateTime dateFin, String statut) {
         this.idAbonnement = idAbonnement;
         this.idUsager = idUsager;
         this.libelleAbonnement = libelleAbonnement;
@@ -101,19 +96,27 @@ public class Abonnement {
     public boolean estActif() {
         LocalDateTime maintenant = LocalDateTime.now();
         
+        // Vérifier le statut
         if (!"ACTIF".equals(statut)) {
             return false;
         }
         
+        // Vérifier les dates
         if (dateDebut != null && dateDebut.isAfter(maintenant)) {
-            return false; 
+            return false; // Pas encore commencé
         }
         
         if (dateFin != null && dateFin.isBefore(maintenant)) {
-            return false;
+            return false; // Expiré
         }
         
         return true;
+    }
+    
+    // Méthode pour vérifier si c'est un abonnement zone bleue
+    public boolean estZoneBleue() {
+        return "ZONE_BLEUE".equals(typeAbonnement) || 
+               (libelleAbonnement != null && libelleAbonnement.toLowerCase().contains("bleue"));
     }
     
     // Méthode pour vérifier si l'abonnement est gratuit
@@ -126,8 +129,6 @@ public class Abonnement {
         LocalDateTime maintenant = LocalDateTime.now();
         return dateFin != null && dateFin.isBefore(maintenant);
     }
-    
-    // Méthode 
     
     @Override
     public String toString() {

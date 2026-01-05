@@ -2,259 +2,525 @@ package ihm;
 
 import javax.swing.*;
 import java.awt.*;
-import controleur.ControleurGarerParking;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
+import controleur.ControleurGarerParking;
+import modele.Parking;
+
+import java.util.ArrayList;
+import java.util.List;
 public class Page_Garer_Parking extends JFrame {
     private static final long serialVersionUID = 1L;
     
-    // Variables accessibles au contrôleur
-    public String emailUtilisateur;
-    public java.util.List<modele.Parking> listeParkings;
-    public JComboBox<String> comboParking;
-    public JLabel lblPlaque;
-    public JRadioButton radioVoiture, radioMoto, radioCamion;
-    
-    // Composants UI
+    // Composants UI (privés)
+    private String emailUtilisateur;
+    private JComboBox<String> comboParking;
+    private JLabel lblPlaque;
     private JLabel lblPlacesDispo;
-    private JLabel lblTarifSoiree; // Déclaration manquante
+    private JLabel lblTarifHoraire;
+    private JLabel lblTarifSoiree;
+    private JLabel lblHeureArrivee;
+    private JRadioButton radioVoiture;
+    private JRadioButton radioMoto;
+    private JRadioButton radioCamion;
     private JButton btnAnnuler;
     private JButton btnReserver;
     private JButton btnModifierPlaque;
-
-    public Page_Garer_Parking(String email, modele.Parking parkingPreSelectionne) {
+    
+    // Labels pour les informations utilisateur
+    private JLabel lblNom;
+    private JLabel lblPrenom;
+    private JLabel lblEmail;
+    private JLabel lblPlacesMoto;
+    private JLabel lblTypeParking; // Nouveau label
+    
+    public Page_Garer_Parking(String email, Parking parkingPreSelectionne) {
         this.emailUtilisateur = email;
-        initialisePage();
+        initialiseUI();
         
-        // Créer et lier le contrôleur
-        new ControleurGarerParking(this);
+        // Créer le contrôleur
+        new ControleurGarerParking(this, parkingPreSelectionne);
         
-        // Initialiser les données
-        initialiserDonnees(parkingPreSelectionne);
+        setVisible(true);
     }
     
-    private void initialisePage() {
-        this.setTitle("Stationnement en Parking");
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setSize(800, 600);
-        this.setLocationRelativeTo(null);
-        this.setResizable(false);
+    private void initialiseUI() {
+        setTitle("Stationnement en Parking");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(850, 650);
+        setLocationRelativeTo(null);
+        setResizable(false);
         
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BorderLayout());
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        this.setContentPane(contentPanel);
+        setContentPane(contentPanel);
         
+        // Titre
         JLabel lblTitre = new JLabel("Stationnement en Parking Intérieur", SwingConstants.CENTER);
-        lblTitre.setFont(new Font("Arial", Font.BOLD, 18));
+        lblTitre.setFont(new Font("Arial", Font.BOLD, 20));
+        lblTitre.setForeground(new Color(0, 51, 102));
         contentPanel.add(lblTitre, BorderLayout.NORTH);
         
+        // Panneau principal
         JPanel panelPrincipal = new JPanel();
         panelPrincipal.setLayout(new BoxLayout(panelPrincipal, BoxLayout.Y_AXIS));
+        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
         
-        // Informations utilisateur
-        JPanel panelInfos = new JPanel();
-        panelInfos.setLayout(new GridLayout(3, 2, 10, 10));
-        panelInfos.setBorder(BorderFactory.createTitledBorder("Vos informations"));
-        
-        modele.Usager usager = modele.dao.UsagerDAO.getUsagerByEmail(emailUtilisateur);
-        
-        panelInfos.add(new JLabel("Nom:"));
-        JLabel lblNom = new JLabel(usager != null ? usager.getNomUsager() : "Non connecté");
-        lblNom.setFont(new Font("Arial", Font.BOLD, 14));
-        panelInfos.add(lblNom);
-        
-        panelInfos.add(new JLabel("Prénom:"));
-        JLabel lblPrenom = new JLabel(usager != null ? usager.getPrenomUsager() : "Non connecté");
-        lblPrenom.setFont(new Font("Arial", Font.BOLD, 14));
-        panelInfos.add(lblPrenom);
-        
-        panelInfos.add(new JLabel("Email:"));
-        JLabel lblEmail = new JLabel(usager != null ? usager.getMailUsager() : "Non connecté");
-        lblEmail.setFont(new Font("Arial", Font.BOLD, 14));
-        panelInfos.add(lblEmail);
-        
-        panelPrincipal.add(panelInfos);
+        // 1. Informations utilisateur
+        panelPrincipal.add(creerPanelInfosUtilisateur());
         panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
         
-        // Véhicule
-        JPanel panelVehicule = new JPanel();
-        panelVehicule.setLayout(new BorderLayout());
-        panelVehicule.setBorder(BorderFactory.createTitledBorder("Véhicule"));
+        // 2. Véhicule
+        panelPrincipal.add(creerPanelVehicule());
+        panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
         
+        // 3. Parking
+        panelPrincipal.add(creerPanelParking());
+        
+        contentPanel.add(new JScrollPane(panelPrincipal), BorderLayout.CENTER);
+        
+        // 4. Boutons
+        contentPanel.add(creerPanelBoutons(), BorderLayout.SOUTH);
+    }
+    
+    private JPanel creerPanelInfosUtilisateur() {
+        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+        panel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(0, 102, 204), 2),
+            "Vos informations"));
+        
+        panel.add(new JLabel("Nom:"));
+        lblNom = new JLabel("Chargement...");
+        lblNom.setFont(new Font("Arial", Font.BOLD, 14));
+        panel.add(lblNom);
+        
+        panel.add(new JLabel("Prénom:"));
+        lblPrenom = new JLabel("Chargement...");
+        lblPrenom.setFont(new Font("Arial", Font.BOLD, 14));
+        panel.add(lblPrenom);
+        
+        panel.add(new JLabel("Email:"));
+        lblEmail = new JLabel(emailUtilisateur);
+        lblEmail.setFont(new Font("Arial", Font.BOLD, 14));
+        panel.add(lblEmail);
+        
+        return panel;
+    }
+    
+    private JPanel creerPanelVehicule() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(0, 153, 76), 2),
+            "Véhicule"));
+        
+        // Type de véhicule
         JPanel panelType = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        ButtonGroup groupeTypeVehicule = new ButtonGroup();
+        ButtonGroup groupeType = new ButtonGroup();
         
         radioVoiture = new JRadioButton("Voiture", true);
         radioMoto = new JRadioButton("Moto");
         radioCamion = new JRadioButton("Camion");
         
-        groupeTypeVehicule.add(radioVoiture);
-        groupeTypeVehicule.add(radioMoto);
-        groupeTypeVehicule.add(radioCamion);
+        // Style des boutons radio
+        Font radioFont = new Font("Arial", Font.PLAIN, 13);
+        radioVoiture.setFont(radioFont);
+        radioMoto.setFont(radioFont);
+        radioCamion.setFont(radioFont);
+        
+        groupeType.add(radioVoiture);
+        groupeType.add(radioMoto);
+        groupeType.add(radioCamion);
         
         panelType.add(radioVoiture);
         panelType.add(radioMoto);
         panelType.add(radioCamion);
         
-        panelVehicule.add(panelType, BorderLayout.NORTH);
+        panel.add(panelType, BorderLayout.NORTH);
         
-        JPanel panelPlaque = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // Plaque
+        JPanel panelPlaque = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panelPlaque.add(new JLabel("Plaque d'immatriculation:"));
-        lblPlaque = new JLabel("Non définie");
-        lblPlaque.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        lblPlaque = new JLabel("Chargement...");
+        lblPlaque.setFont(new Font("Arial", Font.BOLD, 14));
+        lblPlaque.setForeground(Color.BLUE);
+        lblPlaque.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1));
+        lblPlaque.setOpaque(true);
+        lblPlaque.setBackground(new Color(240, 240, 240));
+        lblPlaque.setPreferredSize(new Dimension(150, 25));
+        lblPlaque.setHorizontalAlignment(SwingConstants.CENTER);
         panelPlaque.add(lblPlaque);
         
         btnModifierPlaque = new JButton("Modifier");
+        btnModifierPlaque.setFont(new Font("Arial", Font.PLAIN, 12));
+        btnModifierPlaque.setPreferredSize(new Dimension(80, 25));
         panelPlaque.add(btnModifierPlaque);
         
-        panelVehicule.add(panelPlaque, BorderLayout.SOUTH);
+        panel.add(panelPlaque, BorderLayout.CENTER);
         
-        panelPrincipal.add(panelVehicule);
-        panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
+        return panel;
+    }
+    
+    private JPanel creerPanelParking() {
+        JPanel panel = new JPanel(new GridLayout(7, 2, 10, 10));
+        panel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(153, 76, 0), 2),
+            "Parking"));
         
         // Parking
-        JPanel panelParking = new JPanel();
-        panelParking.setLayout(new GridLayout(5, 2, 10, 10)); // Changé de 4 à 5 lignes
-        panelParking.setBorder(BorderFactory.createTitledBorder("Parking"));
-        
-        panelParking.add(new JLabel("Parking:"));
+        panel.add(new JLabel("Parking:"));
         comboParking = new JComboBox<>();
-        panelParking.add(comboParking);
+        comboParking.setFont(new Font("Arial", Font.PLAIN, 12));
+        comboParking.setPreferredSize(new Dimension(300, 25));
+        panel.add(comboParking);
         
-        panelParking.add(new JLabel("Places disponibles:"));
+        // Places disponibles (voiture/camion)
+        panel.add(new JLabel("Places disponibles (voiture/camion):"));
         lblPlacesDispo = new JLabel("-");
         lblPlacesDispo.setFont(new Font("Arial", Font.BOLD, 14));
-        panelParking.add(lblPlacesDispo);
+        panel.add(lblPlacesDispo);
         
-        panelParking.add(new JLabel("Tarif horaire:"));
-        JLabel lblTarifHoraire = new JLabel("-");
+        // Places moto
+        panel.add(new JLabel("Places moto disponibles:"));
+        lblPlacesMoto = new JLabel("-");
+        lblPlacesMoto.setFont(new Font("Arial", Font.BOLD, 14));
+        panel.add(lblPlacesMoto);
+        
+        // Tarif horaire
+        panel.add(new JLabel("Tarif horaire:"));
+        lblTarifHoraire = new JLabel("- €/h");
         lblTarifHoraire.setFont(new Font("Arial", Font.BOLD, 14));
-        panelParking.add(lblTarifHoraire);
+        panel.add(lblTarifHoraire);
         
-        // Ajout de la ligne tarif soirée
-        panelParking.add(new JLabel("Tarif soirée:"));
-        lblTarifSoiree = new JLabel("-"); // Initialisation
+        // Tarif soirée
+        panel.add(new JLabel("Tarif soirée (19h30-3h):"));
+        lblTarifSoiree = new JLabel("-");
         lblTarifSoiree.setFont(new Font("Arial", Font.BOLD, 14));
-        panelParking.add(lblTarifSoiree);
+        panel.add(lblTarifSoiree);
         
-        panelParking.add(new JLabel("Heure d'arrivée:"));
-        JLabel lblHeureArrivee = new JLabel(
+        // Heure d'arrivée
+        panel.add(new JLabel("Heure d'arrivée:"));
+        lblHeureArrivee = new JLabel(
             java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
         );
         lblHeureArrivee.setFont(new Font("Arial", Font.BOLD, 14));
-        panelParking.add(lblHeureArrivee);
+        panel.add(lblHeureArrivee);
         
-        panelPrincipal.add(panelParking);
-        contentPanel.add(panelPrincipal, BorderLayout.CENTER);
+        // Type de parking
+        panel.add(new JLabel("Type de parking:"));
+        lblTypeParking = new JLabel("-");
+        lblTypeParking.setFont(new Font("Arial", Font.ITALIC, 12));
+        panel.add(lblTypeParking);
         
-        // Boutons
-        JPanel panelBoutons = new JPanel(new FlowLayout());
-        panelBoutons.setBackground(Color.WHITE);
+        return panel;
+    }
+    
+    private JPanel creerPanelBoutons() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 10));
+        panel.setBackground(new Color(240, 240, 240));
+        panel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Color.GRAY));
         
         btnAnnuler = new JButton("Annuler");
+        btnAnnuler.setFont(new Font("Arial", Font.BOLD, 14));
+        btnAnnuler.setPreferredSize(new Dimension(120, 35));
+        btnAnnuler.setBackground(new Color(220, 220, 220));
+       
         btnReserver = new JButton("Réserver");
+        btnReserver.setFont(new Font("Arial", Font.BOLD, 14));
+        btnReserver.setPreferredSize(new Dimension(120, 35));
+        btnReserver.setBackground(new Color(0, 153, 0));
+        btnReserver.setForeground(Color.WHITE);
         
-        panelBoutons.add(btnAnnuler);
-        panelBoutons.add(btnReserver);
+        panel.add(btnAnnuler);
+        panel.add(btnReserver);
         
-        contentPanel.add(panelBoutons, BorderLayout.SOUTH);
+        return panel;
     }
     
-    private void initialiserDonnees(modele.Parking parkingPreSelectionne) {
-        listeParkings = modele.dao.ParkingDAO.getAllParkings();
-        
-        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
-        int indexSelectionne = -1;
-        
-        for (int i = 0; i < listeParkings.size(); i++) {
-            modele.Parking parking = listeParkings.get(i);
-            String texte = parking.getLibelleParking() + " - " + parking.getAdresseParking();
-            
-            // Ajouter une icône ou indication pour les parkings avec tarif soirée
-            if (modele.dao.TarifParkingDAO.proposeTarifSoiree(parking.getIdParking())) {
-                texte += " [Tarif soirée]";
-            }
-            
-            model.addElement(texte);
-            
-            if (parkingPreSelectionne != null && 
-                parkingPreSelectionne.getIdParking().equals(parking.getIdParking())) {
-                indexSelectionne = i;
-            }
-        }
-        
-        comboParking.setModel(model);
-        
-        if (indexSelectionne != -1) {
-            comboParking.setSelectedIndex(indexSelectionne);
-            mettreAJourInfosParking(indexSelectionne);
-        } else if (!listeParkings.isEmpty()) {
-            mettreAJourInfosParking(0);
-        }
-    }
+    // ============================================
+    // Getters pour le contrôleur
+    // ============================================
     
-    public void mettreAJourInfosParking(int index) {
-        if (index >= 0 && index < listeParkings.size()) {
-            modele.Parking parking = listeParkings.get(index);
-            
-            // Places disponibles
-            lblPlacesDispo.setText(parking.getPlacesDisponibles() + " / " + parking.getNombrePlaces());
-            
-            if (parking.getPlacesDisponibles() <= 5) {
-                lblPlacesDispo.setForeground(Color.RED);
-            } else if (parking.getPlacesDisponibles() <= 10) {
-                lblPlacesDispo.setForeground(Color.ORANGE);
-            } else {
-                lblPlacesDispo.setForeground(Color.BLACK);
-            }
-            
-            // Tarif horaire
-            double tarifHoraire = modele.dao.TarifParkingDAO.getTarifHoraire(parking.getIdParking());
-            // Note: vous devriez avoir un JLabel pour afficher le tarif horaire
-            
-            // Tarif soirée
-            if (modele.dao.TarifParkingDAO.proposeTarifSoiree(parking.getIdParking())) {
-                lblTarifSoiree.setText("5.90€ (19h30-minuit)");
-                lblTarifSoiree.setForeground(Color.BLUE);
-                
-                // Vérifier si l'heure actuelle est dans la plage tarif soirée
-                java.time.LocalDateTime maintenant = java.time.LocalDateTime.now();
-                if (modele.dao.TarifParkingDAO.estDansPlageTarifSoiree(maintenant)) {
-                    lblTarifSoiree.setForeground(Color.GREEN);
-                    lblTarifSoiree.setText("5.90€ ✓ Actif (19h30-minuit)");
-                }
-            } else {
-                lblTarifSoiree.setText("Non disponible");
-                lblTarifSoiree.setForeground(Color.GRAY);
-            }
-        }
+    public String getEmailUtilisateur() {
+        return emailUtilisateur;
+    }
+
+    public JComboBox<String> getComboParking() {
+        return comboParking;
+    }
+
+    public JButton getBtnAnnuler() {
+        return btnAnnuler;
+    }
+
+    public JButton getBtnReserver() {
+        return btnReserver;
+    }
+
+    public JButton getBtnModifierPlaque() {
+        return btnModifierPlaque;
     }
     
     public String getTypeVehicule() {
         if (radioVoiture.isSelected()) return "Voiture";
         if (radioMoto.isSelected()) return "Moto";
-        return "Camion";
+        if (radioCamion.isSelected()) return "Camion";
+        return null;
     }
     
-    // Getters pour le contrôleur
-    public JButton getBtnAnnuler() { return btnAnnuler; }
-    public JButton getBtnReserver() { return btnReserver; }
-    public JButton getBtnModifierPlaque() { return btnModifierPlaque; }
-    public JLabel getLblPlacesDispo() { return lblPlacesDispo; }
-    public JLabel getLblTarifSoiree() { return lblTarifSoiree; } // Ajout du getter
+    public String getPlaque() {
+        return lblPlaque.getText();
+    }
     
-    // Méthode pour identifier les actions
-    public static String getActionBouton(JButton b) {
-        String texte = b.getText();
-        if (texte != null) {
-            if (texte.contains("Annuler")) {
-                return "ANNULER";
-            } else if (texte.contains("Réserver") || texte.contains("Stationner")) {
-                return "RESERVER";
-            } else if (texte.contains("Modifier")) {
-                return "MODIFIER_PLAQUE";
+    // ============================================
+    // Setters pour le contrôleur
+    // ============================================
+    
+    public void setNomUsager(String nom) {
+        lblNom.setText(nom);
+    }
+    
+    public void setPrenomUsager(String prenom) {
+        lblPrenom.setText(prenom);
+    }
+    
+    public void setEmailUsager(String email) {
+        lblEmail.setText(email);
+    }
+    
+    public void setPlaque(String plaque) {
+        lblPlaque.setText(plaque);
+    }
+    
+    public void setTypeVehicule(String type) {
+        if ("Voiture".equals(type)) {
+            radioVoiture.setSelected(true);
+        } else if ("Moto".equals(type)) {
+            radioMoto.setSelected(true);
+        } else if ("Camion".equals(type)) {
+            radioCamion.setSelected(true);
+        }
+    }
+    
+    public void setPlacesDisponibles(int disponibles, int total) {
+        if (disponibles <= 0) {
+            lblPlacesDispo.setText("COMPLET");
+            lblPlacesDispo.setForeground(Color.RED);
+            lblPlacesDispo.setFont(new Font("Arial", Font.BOLD, 14));
+        } else {
+            lblPlacesDispo.setText(disponibles + " / " + total);
+            lblPlacesDispo.setFont(new Font("Arial", Font.BOLD, 14));
+            
+            if (disponibles <= 5) {
+                lblPlacesDispo.setForeground(Color.RED);
+            } else if (disponibles <= 10) {
+                lblPlacesDispo.setForeground(Color.ORANGE);
+            } else {
+                lblPlacesDispo.setForeground(new Color(0, 153, 0)); // Vert
             }
         }
-        return "INCONNU";
     }
+    
+    public void setPlacesMotoDisponibles(int disponibles, int total) {
+        if (total > 0) {
+            if (disponibles <= 0) {
+                lblPlacesMoto.setText("COMPLET");
+                lblPlacesMoto.setForeground(Color.RED);
+                lblPlacesMoto.setFont(new Font("Arial", Font.BOLD, 14));
+            } else {
+                lblPlacesMoto.setText(disponibles + " / " + total);
+                lblPlacesMoto.setFont(new Font("Arial", Font.BOLD, 14));
+                
+                if (disponibles <= 2) {
+                    lblPlacesMoto.setForeground(Color.RED);
+                } else if (disponibles <= 5) {
+                    lblPlacesMoto.setForeground(Color.ORANGE);
+                } else {
+                    lblPlacesMoto.setForeground(new Color(0, 153, 0)); // Vert
+                }
+            }
+        } else {
+            lblPlacesMoto.setText("Non disponible");
+            lblPlacesMoto.setForeground(Color.GRAY);
+        }
+    }
+    
+    public void setTarifHoraire(String texte) {
+        lblTarifHoraire.setText(texte);
+    }
+    
+    public void setTarifSoiree(String texte) {
+        lblTarifSoiree.setText(texte);
+    }
+    
+    public void setTarifSoireeCouleur(Color couleur) {
+        lblTarifSoiree.setForeground(couleur);
+    }
+    
+    public void setTypeParking(String type) {
+        lblTypeParking.setText(type);
+        if ("Gratuit".equals(type)) {
+            lblTypeParking.setForeground(new Color(0, 128, 0)); // Vert
+        } else if ("Relais Tisséo".equals(type)) {
+            lblTypeParking.setForeground(new Color(0, 102, 204)); // Bleu
+        } else {
+            lblTypeParking.setForeground(Color.BLACK);
+        }
+    }
+    
+    public void setTexteBoutonReserver(String texte, Color couleurFond) {
+        btnReserver.setText(texte);
+        btnReserver.setBackground(couleurFond);
+    }
+
+    public void setTexteBoutonReserver(String texte) {
+        btnReserver.setText(texte);
+    }
+
+    public String getTexteBoutonReserver() {
+        return btnReserver.getText();
+    }
+    // ============================================
+    // Méthodes utilitaires
+    // ============================================
+    
+    public void afficherMessageErreur(String titre, String message) {
+        JOptionPane.showMessageDialog(this, message, titre, JOptionPane.ERROR_MESSAGE);
+    }
+    
+    public void afficherMessageInformation(String titre, String message) {
+        JOptionPane.showMessageDialog(this, message, titre, JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    public int demanderConfirmation(String titre, String message) {
+        return JOptionPane.showConfirmDialog(this, message, titre, 
+            JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+    }
+
+    /**
+     * Affiche une fenêtre simple pour choisir un parking alternatif
+     */
+    public int afficherParkingsAlternatifs(List<Parking> parkingsAlternatifs, Parking parkingComplet, String typeVehicule) {
+        // Créer une fenêtre modale
+        JDialog dialog = new JDialog(this, "Alternatives disponibles", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.setSize(600, 500);
+        dialog.setLocationRelativeTo(this);
+        
+        // Variable pour stocker le choix
+        final int[] choix = {-1};
+        
+        // === EN-TÊTE ===
+        JPanel panelHeader = new JPanel(new BorderLayout());
+        panelHeader.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        panelHeader.setBackground(new Color(30, 70, 130));
+        
+        JLabel lblTitre = new JLabel(
+            "<html><div style='color: white;'>"
+            + "<h3 style='margin: 0 0 5px 0;'>Parking complet</h3>"
+            + "<p style='margin: 0; font-size: 13px;'>"
+            + parkingComplet.getLibelleParking()
+            + "</p></div></html>"
+        );
+        lblTitre.setFont(new Font("Arial", Font.PLAIN, 14));
+        panelHeader.add(lblTitre, BorderLayout.WEST);
+        
+        // Icône
+        JLabel lblIcone = new JLabel("🔄");
+        lblIcone.setFont(new Font("Arial", Font.PLAIN, 24));
+        panelHeader.add(lblIcone, BorderLayout.EAST);
+        
+        dialog.add(panelHeader, BorderLayout.NORTH);
+        
+        // === MESSAGE ===
+        JPanel panelMessage = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelMessage.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
+        panelMessage.setBackground(Color.WHITE);
+        
+        JLabel lblMessage = new JLabel(
+            "<html><div style='width: 500px;'>"
+            + "Ce parking n'a plus de places disponibles. "
+            + "Voici d'autres parkings à proximité :"
+            + "</div></html>"
+        );
+        lblMessage.setFont(new Font("Arial", Font.PLAIN, 13));
+        panelMessage.add(lblMessage);
+        
+        dialog.add(panelMessage, BorderLayout.CENTER);
+        
+        // === LISTE DES PARKINGS ===
+        JPanel panelParkings = new JPanel();
+        panelParkings.setLayout(new BoxLayout(panelParkings, BoxLayout.Y_AXIS));
+        panelParkings.setBorder(BorderFactory.createEmptyBorder(0, 20, 10, 20));
+        panelParkings.setBackground(Color.WHITE);
+        
+        final List<JRadioButton> boutons = new ArrayList<>();
+        
+        for (int i = 0; i < parkingsAlternatifs.size(); i++) {
+            Parking p = parkingsAlternatifs.get(i);
+            
+            // Créer un bouton radio pour chaque parking
+            JRadioButton radio = new JRadioButton();
+            radio.setFont(new Font("Arial", Font.PLAIN, 13));
+            radio.setBackground(Color.WHITE);
+            
+            boutons.add(radio);
+            panelParkings.add(radio);
+            panelParkings.add(Box.createRigidArea(new Dimension(0, 8)));
+        }
+        
+        // Grouper les boutons
+        ButtonGroup groupe = new ButtonGroup();
+        for (JRadioButton radio : boutons) {
+            groupe.add(radio);
+        }
+        
+        // Sélectionner le premier par défaut
+        if (!boutons.isEmpty()) {
+            boutons.get(0).setSelected(true);
+        }
+        
+        JScrollPane scrollPane = new JScrollPane(panelParkings);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220)));
+        dialog.add(scrollPane, BorderLayout.CENTER);
+        
+        // === BOUTONS ===
+        JPanel panelBoutons = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
+        panelBoutons.setBorder(BorderFactory.createEmptyBorder(10, 0, 15, 0));
+        panelBoutons.setBackground(new Color(245, 245, 245));
+        
+        JButton btnAnnuler = new JButton("Annuler");
+        btnAnnuler.setFont(new Font("Arial", Font.PLAIN, 13));
+        btnAnnuler.setPreferredSize(new Dimension(100, 35));
+        btnAnnuler.addActionListener(e -> dialog.dispose());
+        
+        JButton btnChoisir = new JButton("Choisir");
+        btnChoisir.setFont(new Font("Arial", Font.BOLD, 13));
+        btnChoisir.setPreferredSize(new Dimension(100, 35));
+        btnChoisir.setBackground(new Color(30, 70, 130));
+        btnChoisir.setForeground(Color.WHITE);
+        
+        btnChoisir.addActionListener(e -> {
+            for (int i = 0; i < boutons.size(); i++) {
+                if (boutons.get(i).isSelected()) {
+                    choix[0] = i;
+                    break;
+                }
+            }
+            dialog.dispose();
+        });
+        
+        panelBoutons.add(btnAnnuler);
+        panelBoutons.add(btnChoisir);
+        dialog.add(panelBoutons, BorderLayout.SOUTH);
+        
+        dialog.setVisible(true);
+        return choix[0];
+    }
+
+
+
 }

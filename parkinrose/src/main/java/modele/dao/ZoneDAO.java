@@ -1,86 +1,101 @@
 package modele.dao;
 
 import modele.Zone;
+import modele.dao.requetes.RequeteSelectAllZones;
+import modele.dao.requetes.RequeteSelectZoneById;
+import modele.dao.requetes.RequeteSelectZonesRecherche;
 
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.List;
 
-public class ZoneDAO {
-    
-    /**
-     * Récupère toutes les zones
-     */
-	public static List<Zone> getAllZones() {
-	    List<Zone> zones = new ArrayList<>();
-	    
-	    String sql = "SELECT id_zone, libelle_zone, couleur_zone, tarif_par_heure, duree_max FROM zone " +
-	                "WHERE id_zone IN ('ZONE_BLEUE', 'ZONE_VERTE', 'ZONE_JAUNE', 'ZONE_ORANGE', 'ZONE_ROUGE') " +
-	                "ORDER BY libelle_zone";
-	    
-	    try (Connection conn = MySQLConnection.getConnection();
-	         PreparedStatement stmt = conn.prepareStatement(sql);
-	         ResultSet rs = stmt.executeQuery()) {
-	        
-	        while (rs.next()) {
-	            String idZone = rs.getString("id_zone");
-	            String libelleZone = rs.getString("libelle_zone");
-	            String couleurZone = rs.getString("couleur_zone");
-	            double tarifParHeure = rs.getDouble("tarif_par_heure");
-	            
-	            String dureeMaxStr = rs.getString("duree_max");
-	            LocalTime dureeMax = parseDureeMax(dureeMaxStr);
-	            
-	            Zone zone = new Zone(idZone, libelleZone, couleurZone, tarifParHeure, dureeMax);
-	            zones.add(zone);
-	        }
-	        
-	    } catch (SQLException e) {
-	        System.err.println("Erreur lors de la récupération des zones: " + e.getMessage());
-	        e.printStackTrace();
-	    }
-	    
-	    return zones;
-	}
-    
-    /**
-     * Récupère une zone par son ID
-     */
-    public static Zone getZoneById(String idZone) {
-        String sql = "SELECT id_zone, libelle_zone, couleur_zone, tarif_par_heure, duree_max FROM zone WHERE id_zone = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, idZone);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    String libelleZone = rs.getString("libelle_zone");
-                    String couleurZone = rs.getString("couleur_zone");
-                    double tarifParHeure = rs.getDouble("tarif_par_heure");
+public class ZoneDAO extends DaoModele<Zone> implements Dao<Zone> {
 
-                    String dureeMaxStr = rs.getString("duree_max");
-                    LocalTime dureeMax = parseDureeMax(dureeMaxStr);
-                    
-                    return new Zone(idZone, libelleZone, couleurZone, tarifParHeure, dureeMax);
-                }
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération de la zone: " + e.getMessage());
-            e.printStackTrace();
+    private static ZoneDAO instance;
+    private static Iterateur<Zone> iterateur = null;
+
+    // Constructeur privé pour le singleton
+    private ZoneDAO() {}
+
+    // Méthode pour obtenir l'instance unique (Singleton)
+    public static ZoneDAO getInstance() {
+        if (instance == null) {
+            instance = new ZoneDAO();
         }
-        
-        return null;
+        return instance;
     }
-    
+
+    // Méthode statique pour compatibilité (celle qui manque)
+    public static List<Zone> getAllZones() {
+        try {
+            return getInstance().findAll();
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération zones: " + e.getMessage());
+            return java.util.Collections.emptyList();
+        }
+    }
+
+    @Override
+    public List<Zone> findAll() throws SQLException {
+        RequeteSelectAllZones req = new RequeteSelectAllZones();
+        return find(req);
+    }
+
+    @Override
+    public Zone findById(String... id) throws SQLException {
+        RequeteSelectZoneById req = new RequeteSelectZoneById();
+        return findById(req, id);
+    }
+
+    @Override
+    public void create(Zone zone) throws SQLException {
+        throw new UnsupportedOperationException("Create non implémenté pour Zone");
+    }
+
+    @Override
+    public void update(Zone zone) throws SQLException {
+        throw new UnsupportedOperationException("Update non implémenté pour Zone");
+    }
+
+    @Override
+    public void delete(Zone zone) throws SQLException {
+        throw new UnsupportedOperationException("Delete non implémenté pour Zone");
+    }
+
+    /**
+     * Récupère une zone par son ID (méthode spécifique)
+     */
+    public Zone getZoneById(String idZone) throws SQLException {
+        return findById(idZone);
+    }
+
+    /**
+     * Recherche des zones par terme
+     */
+    public List<Zone> rechercherZones(String terme) throws SQLException {
+        RequeteSelectZonesRecherche req = new RequeteSelectZonesRecherche();
+        return find(req, "%" + terme + "%", "%" + terme + "%");
+    }
+
+    @Override
+    protected Zone creerInstance(ResultSet curseur) throws SQLException {
+        String idZone = curseur.getString("id_zone");
+        String libelleZone = curseur.getString("libelle_zone");
+        String couleurZone = curseur.getString("couleur_zone");
+        double tarifParHeure = curseur.getDouble("tarif_par_heure");
+        
+        String dureeMaxStr = curseur.getString("duree_max");
+        LocalTime dureeMax = parseDureeMax(dureeMaxStr);
+        
+        return new Zone(idZone, libelleZone, couleurZone, tarifParHeure, dureeMax);
+    }
+
     /**
      * Parse la durée maximale depuis un string MySQL
      * Gère le cas spécial "24:00:00" qui n'est pas un Time valide pour JDBC
      */
-    private static LocalTime parseDureeMax(String dureeMaxStr) {
+    private LocalTime parseDureeMax(String dureeMaxStr) {
         if (dureeMaxStr == null || dureeMaxStr.trim().isEmpty()) {
             return LocalTime.of(0, 0); // Valeur par défaut
         }
@@ -104,41 +119,26 @@ public class ZoneDAO {
     }
     
     /**
-     * Recherche des zones par terme
+     * Récupère l'itérateur statique
      */
-    public static List<Zone> rechercherZones(String terme) {
-        List<Zone> zones = new ArrayList<>();
-        String sql = "SELECT id_zone, libelle_zone, couleur_zone, tarif_par_heure, duree_max FROM zone " +
-                    "WHERE libelle_zone LIKE ? OR id_zone LIKE ? " +
-                    "ORDER BY libelle_zone";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            String termeRecherche = "%" + terme + "%";
-            stmt.setString(1, termeRecherche);
-            stmt.setString(2, termeRecherche);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String idZone = rs.getString("id_zone");
-                    String libelleZone = rs.getString("libelle_zone");
-                    String couleurZone = rs.getString("couleur_zone");
-                    double tarifParHeure = rs.getDouble("tarif_par_heure");
-                    
-                    String dureeMaxStr = rs.getString("duree_max");
-                    LocalTime dureeMax = parseDureeMax(dureeMaxStr);
-                    
-                    Zone zone = new Zone(idZone, libelleZone, couleurZone, tarifParHeure, dureeMax);
-                    zones.add(zone);
-                }
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur lors de la recherche des zones: " + e.getMessage());
-            e.printStackTrace();
+    public static Iterateur<Zone> getIterateur() {
+        return iterateur;
+    }
+
+    /**
+     * Définit l'itérateur statique
+     */
+    public static void setIterateur(Iterateur<Zone> iterateur) {
+        ZoneDAO.iterateur = iterateur;
+    }
+
+    /**
+     * Méthode utilitaire pour fermer l'itérateur
+     */
+    public static void fermerIterateur() throws SQLException {
+        if (iterateur != null) {
+            iterateur.close();
+            iterateur = null;
         }
-        
-        return zones;
     }
 }

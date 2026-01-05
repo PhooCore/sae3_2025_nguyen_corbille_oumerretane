@@ -17,282 +17,333 @@ import java.util.UUID;
 
 public class ControleurPaiementAbonnement implements ActionListener {
     
-    private enum EtatPaiementAbonnement {
+    // États du contrôleur
+    private enum Etat {
         INITIAL,
-        SAISIE,
-        VALIDATION_EN_COURS,
-        VALIDATION_OK,
-        VALIDATION_ERREUR,
-        TRAITEMENT_EN_COURS,
-        TRAITEMENT_REUSSI,
-        TRAITEMENT_ERREUR,
-        CONFIRMATION,
-        REDIRECTION_EN_COURS,
-        ANNULATION_EN_COURS
+        SAISIE_INFORMATIONS,
+        VALIDATION_FORMULAIRE,
+        TRAITEMENT_PAIEMENT,
+        ACTIVATION_ABONNEMENT,
+        CONFIRMATION_SUCCES,
+        ANNULATION_DEMANDEE,
+        REDIRECTION,
+        ERREUR
     }
     
+    // Références
     private Page_Paiement_Abonnement vue;
-    private EtatPaiementAbonnement etat;
+    private Etat etat;
+    
+    // Données
     private String emailUtilisateur;
     private Usager usager;
     private Abonnement abonnement;
+    private Paiement paiement;
+    
+    // Constantes
+    private static final int LONGUEUR_NUMERO_CARTE = 16;
+    private static final int LONGUEUR_CVV = 3;
     
     public ControleurPaiementAbonnement(Page_Paiement_Abonnement vue) {
         this.vue = vue;
         this.emailUtilisateur = vue.getEmailUtilisateur();
-        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
-        this.abonnement = vue.getAbonnement();
-        this.etat = EtatPaiementAbonnement.INITIAL;
+        this.etat = Etat.INITIAL;
         
-        configurerListeners();
-        etat = EtatPaiementAbonnement.SAISIE;
+        initialiserControleur();
+    }
+    
+    private void initialiserControleur() {
+        try {
+            chargerUtilisateur();
+            chargerAbonnement();
+            configurerListeners();
+            etat = Etat.SAISIE_INFORMATIONS;
+        } catch (Exception e) {
+            gererErreurInitialisation(e.getMessage());
+        }
+    }
+    
+    private void chargerUtilisateur() throws Exception {
+        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+        if (usager == null) {
+            throw new Exception("Utilisateur non trouvé");
+        }
+    }
+    
+    private void chargerAbonnement() throws Exception {
+        this.abonnement = vue.getAbonnement();
+        if (abonnement == null) {
+            throw new Exception("Abonnement non trouvé");
+        }
     }
     
     private void configurerListeners() {
-        if (vue.getBtnAnnuler() != null) {
-            vue.getBtnAnnuler().addActionListener(this);
-        }
-        
-        if (vue.getBtnPayer() != null) {
-            vue.getBtnPayer().addActionListener(this);
-        }
+        vue.getBtnAnnuler().addActionListener(this);
+        vue.getBtnPayer().addActionListener(this);
     }
     
     @Override
     public void actionPerformed(ActionEvent e) {
         Object source = e.getSource();
-        String action = "INCONNU";
         
-        if (source instanceof JButton) {
-            JButton btn = (JButton) source;
-            String actionCommand = btn.getActionCommand();
-            
-            if (actionCommand != null) {
-                if (actionCommand.equals("ANNULER")) {
-                    action = "ANNULER";
-                } else if (actionCommand.equals("PAYER")) {
-                    action = "PAYER";
+        switch (etat) {
+            case SAISIE_INFORMATIONS:
+                if (source == vue.getBtnAnnuler()) {
+                    annulerPaiement();
+                } else if (source == vue.getBtnPayer()) {
+                    validerEtPayer();
                 }
-            }
+                break;
+                
+            case VALIDATION_FORMULAIRE:
+            case TRAITEMENT_PAIEMENT:
+            case ACTIVATION_ABONNEMENT:
+                // En cours de traitement
+                break;
+                
+            case CONFIRMATION_SUCCES:
+                // Le succès est géré dans afficherConfirmationPaiement()
+                break;
+                
+            case ERREUR:
+                // En état d'erreur
+                if (source == vue.getBtnAnnuler()) {
+                    retourPageAbonnements();
+                }
+                break;
         }
-
+    }
+    
+    private void validerEtPayer() {
+        etat = Etat.VALIDATION_FORMULAIRE;
         
-        if (!estActionValide(etat, action)) {
+        if (!validerFormulaire()) {
+            etat = Etat.ERREUR;
             return;
         }
         
-        switch (action) {
-            case "ANNULER":
-                etat = EtatPaiementAbonnement.ANNULATION_EN_COURS;
-                annulerPaiement();
-                break;
-            case "PAYER":
-                etat = EtatPaiementAbonnement.VALIDATION_EN_COURS;
-                validerEtTraiterPaiement();
-                break;
-        }
-    }
-    
-    private boolean estActionValide(EtatPaiementAbonnement etatActuel, String action) {
-        switch (etatActuel) {
-            case SAISIE:
-            case VALIDATION_ERREUR:
-            case TRAITEMENT_ERREUR:
-                return action.equals("ANNULER") || action.equals("PAYER");
-                
-            case ANNULATION_EN_COURS:
-            case VALIDATION_EN_COURS:
-            case TRAITEMENT_EN_COURS:
-            case REDIRECTION_EN_COURS:
-                return false;
-                
-            default:
-                return false;
-        }
-    }
-    
-    private void validerEtTraiterPaiement() {
-        
-        if (validerFormulaire()) {
-            etat = EtatPaiementAbonnement.VALIDATION_OK;
-            etat = EtatPaiementAbonnement.TRAITEMENT_EN_COURS;
-            traiterPaiementAbonnement();
-        } else {
-            etat = EtatPaiementAbonnement.VALIDATION_ERREUR;
-            etat = EtatPaiementAbonnement.SAISIE;
-        }
+        etat = Etat.TRAITEMENT_PAIEMENT;
+        effectuerPaiement();
     }
     
     private boolean validerFormulaire() {
-        
+        return validerTitulaireCarte() 
+            && validerNumeroCarte() 
+            && validerDateExpiration() 
+            && validerCVV();
+    }
+    
+    private boolean validerTitulaireCarte() {
         String nomCarte = vue.getTxtTitulaire().getText().trim();
-        String numeroCarte = vue.getTxtNumeroCarte().getText().trim();
-        String dateExpiration = vue.getTxtExpiration().getText().trim();
-        String cvv = vue.getTxtCrypto().getText().trim();
         
         if (nomCarte.isEmpty()) {
-            JOptionPane.showMessageDialog(vue,
-                "Veuillez saisir le nom du titulaire de la carte",
-                "Champ manquant",
-                JOptionPane.ERROR_MESSAGE);
+            afficherMessageErreur("Veuillez saisir le nom du titulaire de la carte", "Champ manquant");
             return false;
         }
         
-        String numeroCarteNettoye = numeroCarte.replaceAll("\\s+", "");
-        if (numeroCarteNettoye.isEmpty() || !numeroCarteNettoye.matches("\\d{16}")) {
-            JOptionPane.showMessageDialog(vue,
-                "Numéro de carte invalide\n16 chiffres requis",
-                "Numéro de carte incorrect",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        if (dateExpiration.isEmpty()) {
-            JOptionPane.showMessageDialog(vue,
-                "Veuillez saisir la date d'expiration",
-                "Champ manquant",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        String cvvNettoye = cvv.trim();
-        if (cvvNettoye.isEmpty() || !cvvNettoye.matches("\\d{3}")) {
-            JOptionPane.showMessageDialog(vue,
-                "CVV invalide\n3 chiffres requis",
-                "CVV incorrect",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        if (!validerFormatDateExpiration(dateExpiration)) {
-            JOptionPane.showMessageDialog(vue,
-                "Format de date invalide\nUtilisez MM/AA (ex: 12/25)",
-                "Date invalide",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        
-        if (!estCarteNonExpiree(dateExpiration)) {
-            JOptionPane.showMessageDialog(vue,
-                "La carte est expirée",
-                "Carte expirée",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-
         return true;
     }
     
-    private boolean validerFormatDateExpiration(String dateExpiration) {
-        return dateExpiration.matches("\\d{2}/\\d{2}");
+    private boolean validerNumeroCarte() {
+        String numeroCarte = vue.getTxtNumeroCarte().getText().trim().replaceAll("\\s+", "");
+        
+        if (numeroCarte.isEmpty()) {
+            afficherMessageErreur("Veuillez saisir le numéro de carte", "Champ manquant");
+            return false;
+        }
+        
+        if (!numeroCarte.matches("\\d{" + LONGUEUR_NUMERO_CARTE + "}")) {
+            afficherMessageErreur(
+                String.format("Numéro de carte invalide\n%d chiffres requis", LONGUEUR_NUMERO_CARTE),
+                "Numéro de carte incorrect"
+            );
+            return false;
+        }
+        
+        return true;
     }
     
-    private boolean estCarteNonExpiree(String dateExpiration) {
+    private boolean validerDateExpiration() {
+        String dateExpiration = vue.getTxtExpiration().getText().trim();
+        
+        if (dateExpiration.isEmpty()) {
+            afficherMessageErreur("Veuillez saisir la date d'expiration", "Champ manquant");
+            return false;
+        }
+        
+        if (!dateExpiration.matches("\\d{2}/\\d{2}")) {
+            afficherMessageErreur("Format de date invalide\nUtilisez MM/AA (ex: 12/25)", "Date invalide");
+            return false;
+        }
+        
+        if (!estCarteValide(dateExpiration)) {
+            afficherMessageErreur("La carte est expirée", "Carte expirée");
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private boolean validerCVV() {
+        String cvv = vue.getTxtCrypto().getText().trim();
+        
+        if (cvv.isEmpty()) {
+            afficherMessageErreur("Veuillez saisir le CVV", "Champ manquant");
+            return false;
+        }
+        
+        if (!cvv.matches("\\d{" + LONGUEUR_CVV + "}")) {
+            afficherMessageErreur(
+                String.format("CVV invalide\n%d chiffres requis", LONGUEUR_CVV),
+                "CVV incorrect"
+            );
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private boolean estCarteValide(String dateExpiration) {
         try {
             String[] parties = dateExpiration.split("/");
             int mois = Integer.parseInt(parties[0]);
-            int annee = Integer.parseInt(parties[1]);
-            
-            if (annee < 100) {
-                annee += 2000;
-            }
+            int annee = Integer.parseInt(parties[1]) + 2000;
             
             YearMonth expiration = YearMonth.of(annee, mois);
             YearMonth maintenant = YearMonth.now();
             
             return !expiration.isBefore(maintenant);
-            
         } catch (Exception e) {
             return false;
         }
     }
     
-    private void traiterPaiementAbonnement() {
-
-        
+    private void effectuerPaiement() {
         try {
-            String nomCarte = vue.getTxtTitulaire().getText().trim();
-            String numeroCarte = vue.getTxtNumeroCarte().getText().trim();
-            String dateExpiration = vue.getTxtExpiration().getText().trim();
-            String cvv = vue.getTxtCrypto().getText().trim();
-            double montant = abonnement.getTarifAbonnement();
+            // Créer le paiement
+            this.paiement = creerPaiement();
             
-            // Créer l'objet paiement
-            Paiement paiement = new Paiement();
-            paiement.setIdPaiement("PAY_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            paiement.setNomCarte(nomCarte);
-            paiement.setNumeroCarte(numeroCarte.replaceAll("\\s+", ""));
-            paiement.setCodeSecretCarte(cvv);
-            paiement.setMontant(montant);
-            paiement.setIdUsager(usager.getIdUsager());
-            paiement.setIdAbonnement(abonnement.getIdAbonnement());
-            paiement.setTypePaiement("ABONNEMENT");
-            paiement.setStatut("REUSSI");
+            // Enregistrer le paiement
+            boolean paiementReussi = PaiementDAO.getInstance().enregistrerPaiement(paiement);
             
-            boolean paiementEnregistre = PaiementDAO.enregistrerPaiement(paiement);
-            
-            if (paiementEnregistre) {
-                
-                // Ajouter l'abonnement à l'utilisateur
-                boolean abonnementAjoute = AbonnementDAO.ajouterAbonnementUtilisateur(
-                    usager.getIdUsager(), 
-                    abonnement.getIdAbonnement()
-                );
-                
-                if (abonnementAjoute) {
-                    etat = EtatPaiementAbonnement.TRAITEMENT_REUSSI;
-                    etat = EtatPaiementAbonnement.CONFIRMATION;
-                    afficherConfirmation();
-                    etat = EtatPaiementAbonnement.REDIRECTION_EN_COURS;
-                    redirigerVersUtilisateur();
-                } else {
-                    JOptionPane.showMessageDialog(vue,
-                        "Paiement effectué mais erreur lors de l'activation de l'abonnement.",
-                        "Erreur d'activation",
-                        JOptionPane.ERROR_MESSAGE);
-                    etat = EtatPaiementAbonnement.TRAITEMENT_ERREUR;
-                    etat = EtatPaiementAbonnement.SAISIE;
-                }
-            } else {
-                JOptionPane.showMessageDialog(vue,
-                    "Erreur lors de l'enregistrement du paiement",
-                    "Erreur système",
-                    JOptionPane.ERROR_MESSAGE);
-                etat = EtatPaiementAbonnement.TRAITEMENT_ERREUR;
-                etat = EtatPaiementAbonnement.SAISIE;
+            if (!paiementReussi) {
+                gererErreur("Erreur lors de l'enregistrement du paiement");
+                return;
             }
             
+            etat = Etat.ACTIVATION_ABONNEMENT;
+            activerAbonnement();
+            
         } catch (Exception e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(vue,
-                "Erreur lors du traitement: " + e.getMessage(),
-                "Erreur système",
-                JOptionPane.ERROR_MESSAGE);
-            etat = EtatPaiementAbonnement.TRAITEMENT_ERREUR;
-            etat = EtatPaiementAbonnement.SAISIE;
+            gererErreur("Erreur paiement: " + e.getMessage());
         }
     }
     
-    private void afficherConfirmation() {
-        String message = "<html><div style='text-align: center;'>"
-                + "<h2 style='color: green;'>Abonnement activé !</h2>"
-                + "<p>Votre abonnement <b>" + abonnement.getLibelleAbonnement() + "</b> a été activé avec succès.</p>"
-                + "<br>"
-                + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
-                + "<p><b>Date d'activation :</b> " + java.time.LocalDate.now() + "</p>"
-                + "<p><b>Prix :</b> " + String.format("%.2f €", abonnement.getTarifAbonnement()) + "</p>"
-                + "</div>"
-                + "</div></html>";
+    private Paiement creerPaiement() {
+        Paiement paiement = new Paiement();
         
-        JOptionPane.showMessageDialog(vue,
-            message,
-            "Confirmation d'abonnement",
-            JOptionPane.INFORMATION_MESSAGE);
+        paiement.setIdPaiement(genererIdPaiement());
+        paiement.setNomCarte(vue.getTxtTitulaire().getText().trim());
+        paiement.setNumeroCarte(vue.getTxtNumeroCarte().getText().trim().replaceAll("\\s+", ""));
+        paiement.setCodeSecretCarte(vue.getTxtCrypto().getText().trim());
+        paiement.setMontant(abonnement.getTarifAbonnement());
+        paiement.setIdUsager(usager.getIdUsager());
+        paiement.setIdAbonnement(abonnement.getIdAbonnement());
+        paiement.setTypePaiement("ABONNEMENT");
+        paiement.setStatut("REUSSI");
+        
+        return paiement;
     }
     
-    private void redirigerVersUtilisateur() {
-        Page_Utilisateur pageUtilisateur = new Page_Utilisateur(emailUtilisateur, true);
-        pageUtilisateur.setVisible(true);
+    private String genererIdPaiement() {
+        return "PAY_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    private void activerAbonnement() {
+        try {
+            boolean abonnementActive = AbonnementDAO.getInstance().ajouterAbonnementUtilisateur(
+                usager.getIdUsager(), 
+                abonnement.getIdAbonnement()
+            );
+            
+            if (abonnementActive) {
+                etat = Etat.CONFIRMATION_SUCCES;
+                afficherConfirmationPaiement();
+                retourPageUtilisateur();
+            } else {
+                gererErreur("Paiement effectué mais erreur lors de l'activation de l'abonnement");
+            }
+            
+        } catch (Exception e) {
+            gererErreur("Erreur activation abonnement: " + e.getMessage());
+        }
+    }
+    
+    private void afficherConfirmationPaiement() {
+        String message = String.format(
+            "<html><div style='text-align: center;'>"
+            + "<h2 style='color: green;'>Abonnement activé !</h2>"
+            + "<p>Votre abonnement <b>%s</b> a été activé avec succès.</p>"
+            + "<br>"
+            + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
+            + "<p><b>Date d'activation :</b> %s</p>"
+            + "<p><b>Prix :</b> %.2f €</p>"
+            + "</div>"
+            + "</div></html>",
+            abonnement.getLibelleAbonnement(),
+            java.time.LocalDate.now(),
+            abonnement.getTarifAbonnement()
+        );
+        
+        JOptionPane.showMessageDialog(
+            vue,
+            message,
+            "Confirmation d'abonnement",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+    
+    private void annulerPaiement() {
+        etat = Etat.ANNULATION_DEMANDEE;
+        
+        int confirmation = JOptionPane.showConfirmDialog(
+            vue,
+            "Êtes-vous sûr de vouloir annuler ?\nVotre abonnement ne sera pas activé.",
+            "Confirmation d'annulation",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        );
+        
+        if (confirmation == JOptionPane.YES_OPTION) {
+            retourPageAbonnements();
+        } else {
+            etat = Etat.SAISIE_INFORMATIONS;
+        }
+    }
+    
+    private void retourPageUtilisateur() {
+        try {
+            etat = Etat.REDIRECTION;
+            Page_Utilisateur pageUtilisateur = new Page_Utilisateur(emailUtilisateur, true);
+            pageUtilisateur.setVisible(true);
+            fermerVues();
+        } catch (Exception e) {
+            gererErreur("Erreur redirection: " + e.getMessage());
+        }
+    }
+    
+    private void retourPageAbonnements() {
+        try {
+            etat = Etat.REDIRECTION;
+            Page_Abonnements pageAbonnements = new Page_Abonnements(emailUtilisateur);
+            pageAbonnements.setVisible(true);
+            vue.dispose();
+        } catch (Exception e) {
+            gererErreur("Erreur redirection: " + e.getMessage());
+        }
+    }
+    
+    private void fermerVues() {
         vue.dispose();
         
         if (vue.getParentFrame() != null) {
@@ -300,35 +351,24 @@ public class ControleurPaiementAbonnement implements ActionListener {
         }
     }
     
-    private void annulerPaiement() {
-        int confirmation = JOptionPane.showConfirmDialog(vue,
-            "<html><div style='text-align: center;'>"
-            + "<p>Êtes-vous sûr de vouloir annuler ?</p>"
-            + "<p>Votre abonnement ne sera pas activé.</p>"
-            + "</div></html>",
-            "Confirmation d'annulation",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.QUESTION_MESSAGE);
-        
-        if (confirmation == JOptionPane.YES_OPTION) {
-            etat = EtatPaiementAbonnement.REDIRECTION_EN_COURS;
-            redirigerVersAbonnements();
-        } else {
-            etat = EtatPaiementAbonnement.SAISIE;
-        }
+    private void afficherMessageErreur(String message, String titre) {
+        JOptionPane.showMessageDialog(vue, message, titre, JOptionPane.ERROR_MESSAGE);
     }
     
-    private void redirigerVersAbonnements() {
-        Page_Abonnements pageAbonnements = new Page_Abonnements(emailUtilisateur);
-        pageAbonnements.setVisible(true);
+    private void gererErreur(String message) {
+        System.err.println(message);
+        afficherMessageErreur(message, "Erreur");
+        etat = Etat.ERREUR;
+    }
+    
+    private void gererErreurInitialisation(String message) {
+        System.err.println("Erreur initialisation: " + message);
+        afficherMessageErreur("Erreur d'initialisation: " + message, "Erreur");
         vue.dispose();
     }
     
-    public EtatPaiementAbonnement getEtat() {
+    // Getters pour débogage
+    public Etat getEtat() {
         return etat;
-    }
-    
-    public String getEtatString() {
-        return etat.toString();
     }
 }

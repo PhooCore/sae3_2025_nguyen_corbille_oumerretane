@@ -5,6 +5,10 @@ import controleur.ControleurPrincipale;
 import controleur.StationnementControleur;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,6 +16,7 @@ import java.util.Map;
 import modele.Stationnement;
 import modele.Parking;
 import modele.Usager;
+import modele.dao.MySQLConnection;
 import modele.dao.ParkingDAO;
 import modele.dao.StationnementDAO;
 import modele.dao.UsagerDAO;
@@ -32,7 +37,7 @@ public class Page_Principale extends JFrame {
     private CartePanel cartePanel;
     private Map<String, JButton> boutonsZones = new HashMap<>();
     private JButton btnAdmin;
-    
+    private CarteOSMPanel carteOSM;
     public Page_Principale(String email) {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
@@ -364,8 +369,6 @@ public class Page_Principale extends JFrame {
         // PANEL DROIT : Icônes utilisateur
         JPanel panelDroit = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         panelDroit.setBackground(new Color(240, 240, 240));
-        
-        //Bouton Messagerie
         btnMessagerie = new JButton();
         btnMessagerie.setLayout(new BorderLayout());
         btnMessagerie.setBackground(new Color(240, 240, 240));
@@ -381,7 +384,7 @@ public class Page_Principale extends JFrame {
         
         btnMessagerie.add(lblIconeMess, BorderLayout.CENTER);
         btnMessagerie.add(lblTextMess, BorderLayout.SOUTH); 
-        
+
         // Bouton Stationnement
         btnStationnement = new JButton();
         btnStationnement.setLayout(new BorderLayout());
@@ -389,7 +392,6 @@ public class Page_Principale extends JFrame {
         btnStationnement.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
         btnStationnement.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnStationnement.setPreferredSize(new Dimension(140, 70));
-        
         
         // Icône stationnement
         JLabel lblIconePark = chargerIconeLabel("/images/parking.png", 40, 40, "P");
@@ -416,7 +418,6 @@ public class Page_Principale extends JFrame {
         
         btnUtilisateur.add(lblIconeUser, BorderLayout.CENTER);
         btnUtilisateur.add(lblTextUser, BorderLayout.SOUTH);
-        
         panelDroit.add(btnMessagerie);
         panelDroit.add(btnStationnement);
         panelDroit.add(btnUtilisateur);
@@ -444,60 +445,18 @@ public class Page_Principale extends JFrame {
         centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
         try {
-            // Charger l'image de la carte
-            java.net.URL imageUrl = getClass().getResource("/images/Map_Toulouse.jpg");
-            if (imageUrl == null) {
-                throw new Exception("Image Map_Toulouse.jpg non trouvée");
-            }
+            // Créer la carte OSM
+            carteOSM = new CarteOSMPanel(emailUtilisateur);
             
-            // Créer le panneau de carte
-            cartePanel = new CartePanel(imageUrl, emailUtilisateur);
-            
-            // Ajouter la carte
-            centerPanel.add(cartePanel, BorderLayout.CENTER);
-            
-            // Panel de contrôle simplifié en haut de la carte
-            JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-            controlPanel.setBackground(new Color(255, 255, 255, 180));
-            controlPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-            
-            // Boutons de contrôle
-            JButton btnZoomIn = new JButton("+");
-            JButton btnZoomOut = new JButton("-");
-            JButton btnResetZoom = new JButton("Reset");
-
-   
-            for (JButton btn : new JButton[]{btnZoomIn, btnZoomOut, btnResetZoom}) {
-                btn.setFont(new Font("Arial", Font.BOLD, 12));
-                btn.setBackground(new Color(70, 130, 180));
-                btn.setForeground(Color.WHITE);
-                btn.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-                btn.setFocusPainted(false);
-                if (btn == btnResetZoom) {
-                    btn.setPreferredSize(new Dimension(60, 30));
-                } else {
-                    btn.setPreferredSize(new Dimension(40, 30));
-                }
-            }
-            
-            btnZoomIn.addActionListener(e -> cartePanel.zoomIn());
-            btnZoomOut.addActionListener(e -> cartePanel.zoomOut());
-            btnResetZoom.addActionListener(e -> cartePanel.resetZoom());
-            
-            controlPanel.add(btnZoomIn);
-            controlPanel.add(btnZoomOut);
-            controlPanel.add(btnResetZoom);
-            
-            // Positionner le contrôle en haut de la carte
-            cartePanel.setLayout(new BorderLayout());
-            cartePanel.add(controlPanel, BorderLayout.NORTH);
+            // Ajouter la carte OSM
+            centerPanel.add(carteOSM, BorderLayout.CENTER);
             
         } catch (Exception e) {
-            System.err.println("Erreur lors du chargement de la carte: " + e.getMessage());
+            System.err.println("Erreur lors du chargement de la carte OSM: " + e.getMessage());
             e.printStackTrace();
             
             // Afficher un message d'erreur
-            JLabel lblErreur = new JLabel("<html><center>Impossible de charger la carte<br>Erreur: " + 
+            JLabel lblErreur = new JLabel("<html><center>Impossible de charger la carte OpenStreetMap<br>Erreur: " + 
                                           e.getMessage() + "</center></html>", SwingConstants.CENTER);
             lblErreur.setFont(new Font("Arial", Font.BOLD, 16));
             lblErreur.setForeground(Color.RED);
@@ -507,12 +466,18 @@ public class Page_Principale extends JFrame {
         return centerPanel;
     }
     
+    // Méthode pour recharger la carte
+    public void rechargerCarte() {
+        if (carteOSM != null) {
+            carteOSM.recharger();
+        }
+    }
     private JPanel creerBottomPanel() {
         JPanel bottomPanel = new JPanel();
         bottomPanel.setBackground(Color.WHITE);
         bottomPanel.setBorder(BorderFactory.createEmptyBorder(5, 20, 10, 20));
         
-        btnPreparerStationnement = new JButton("Préparer un stationnement");
+        btnPreparerStationnement = new JButton("Faire un stationnement en voirie");
         btnPreparerStationnement.setFont(new Font("Arial", Font.BOLD, 13));
         btnPreparerStationnement.setBackground(new Color(70, 130, 180));
         btnPreparerStationnement.setForeground(Color.WHITE);
@@ -615,12 +580,16 @@ public class Page_Principale extends JFrame {
     
     @Override
     public void dispose() {
+        // Nettoyer les ressources JavaFX
+        if (carteOSM != null) {
+            carteOSM.nettoyer();
+        }
+        
         if (timer != null) {
             timer.stop();
         }
         super.dispose();
     }
-    
     public static void main(String[] args) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {

@@ -3,7 +3,7 @@ package modele;
 public class Vehicule {
     private String idVehicule;
     private String plaqueImmatriculation;
-    private String typeVehicule; // "Voiture" ou "Moto"
+    private String typeVehicule;
     
     public Vehicule() {
         // Constructeur par défaut

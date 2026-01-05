@@ -7,12 +7,7 @@ public class Usager {
     private String mailUsager;
     private String motDePasse;
     private String numeroCarteTisseo;
-    private String adresse;
-    private String codePostal;
-    private String ville;
-    private String idZoneResidentielle;
     private boolean isAdmin;
-  
 
     public Usager(String nomUsager, String prenomUsager, String mailUsager, String motDePasse) {
         this.nomUsager = nomUsager;
@@ -72,34 +67,8 @@ public class Usager {
         this.numeroCarteTisseo = numeroCarteTisseo;
     }
 
-    public String getAdresse() { return adresse; }
-    public void setAdresse(String adresse) { this.adresse = adresse; }
     
-    public String getCodePostal() { return codePostal; }
-    public void setCodePostal(String codePostal) { this.codePostal = codePostal; }
     
-    public String getVille() { return ville; }
-    public void setVille(String ville) { this.ville = ville; }
-    
-    public String getIdZoneResidentielle() { return idZoneResidentielle; }
-    public void setIdZoneResidentielle(String idZoneResidentielle) { 
-        this.idZoneResidentielle = idZoneResidentielle; 
-    }
-    
-    // Méthode pour obtenir l'adresse complète
-    public String getAdresseComplete() {
-        if (adresse == null || adresse.trim().isEmpty()) {
-            return "Non renseignée";
-        }
-        StringBuilder sb = new StringBuilder(adresse);
-        if (codePostal != null && !codePostal.trim().isEmpty()) {
-            sb.append(", ").append(codePostal);
-        }
-        if (ville != null && !ville.trim().isEmpty()) {
-            sb.append(" ").append(ville);
-        }
-        return sb.toString();
-    }
     
     public boolean isAdmin() {
         return isAdmin;

@@ -26,7 +26,6 @@ public class Page_Stationnement_En_Cours extends JFrame {
         this.emailUtilisateur = email;
         initialisePage();
         
-        // Instancier le contrôleur APRÈS avoir initialisé l'interface
         new ControleurStationnementEnCours(this);
     }
     
@@ -261,26 +260,69 @@ public class Page_Stationnement_En_Cours extends JFrame {
             
             String nomParking = getLibelleParkingFromId(stationnementActif.getIdTarification());
             
-            double cout = TarifParkingDAO.calculerCoutParking(
-                stationnementActif.getHeureArrivee(), 
-                heureDepart, 
-                stationnementActif.getIdTarification()
-            );
+            // VÉRIFICATION : Si le coût est de 0€, on termine directement sans passer par le paiement
+            double cout = 0;
+            try {
+                cout = TarifParkingDAO.calculerCoutParking(
+                    stationnementActif.getHeureArrivee(), 
+                    heureDepart, 
+                    stationnementActif.getIdTarification()
+                );
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                    "Erreur lors du calcul du coût: " + e.getMessage(),
+                    "Erreur",
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
             
-            Page_Paiement_Voirie pagePaiement = new Page_Paiement_Voirie(
-                cout,
-                emailUtilisateur,
-                stationnementActif.getTypeVehicule(),
-                stationnementActif.getPlaqueImmatriculation(),
-                stationnementActif.getIdTarification(),
-                nomParking != null ? nomParking : "Parking",
-                0, 
-                0,
-                stationnementActif.getIdStationnement(),
-                heureDepart
-            );
-            pagePaiement.setVisible(true);
-            dispose();
+            if (Math.abs(cout) < 0.01) { // Utilisation de 0.01 pour éviter les problèmes d'arrondi
+                // Terminer le stationnement directement (parking gratuit)
+                terminerStationnementParkingGratuit(heureDepart, cout, nomParking);
+            } else {
+                // Ouvrir la page de paiement seulement si le coût > 0
+                Page_Paiement pagePaiement = new Page_Paiement(
+                    cout,
+                    emailUtilisateur,
+                    stationnementActif.getTypeVehicule(),
+                    stationnementActif.getPlaqueImmatriculation(),
+                    stationnementActif.getIdTarification(),
+                    nomParking != null ? nomParking : "Parking",
+                    0, 
+                    0,
+                    stationnementActif.getIdStationnement(),
+                    heureDepart
+                );
+                pagePaiement.setVisible(true);
+                dispose();
+            }
+        }
+    }
+    
+    private void terminerStationnementParkingGratuit(LocalDateTime heureDepart, double cout, String nomParking) {
+        // Appeler la méthode DAO pour terminer le stationnement
+        boolean succes = StationnementDAO.terminerStationnementParking(
+            stationnementActif.getIdStationnement(),
+            heureDepart,
+            cout,  // Doit être 0.0 pour les parkings gratuits
+            null   // Pas besoin d'ID de paiement
+        );
+        
+        if (succes) {
+            String message = "Stationnement terminé !\nParking gratuit ✓";
+            
+            JOptionPane.showMessageDialog(this,
+                message,
+                "Stationnement terminé",
+                JOptionPane.INFORMATION_MESSAGE);
+            
+            // Retour à l'accueil
+            retourAccueil();
+        } else {
+            JOptionPane.showMessageDialog(this,
+                "Erreur lors de la fin du stationnement",
+                "Erreur",
+                JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -311,6 +353,12 @@ public class Page_Stationnement_En_Cours extends JFrame {
         Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
         pagePrincipale.setVisible(true);
         dispose();
+    }
+    
+    // Méthode pour rafraîchir l'affichage
+    public void rafraichirAffichage() {
+        chargerStationnementActif();
+        afficherInformationsStationnement();
     }
     
     @Override

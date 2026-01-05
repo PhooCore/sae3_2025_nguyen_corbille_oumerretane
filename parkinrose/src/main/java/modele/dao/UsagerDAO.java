@@ -1,12 +1,192 @@
 package modele.dao;
-import modele.Usager;
 
-import java.sql.*;
-import java.util.ArrayList;
+import modele.Usager;
+import modele.dao.requetes.RequeteSelectUsager;
+import modele.dao.requetes.RequeteSelectUsagerByEmail;
+import modele.dao.requetes.RequeteInsertUsager;
+import modele.dao.requetes.RequeteUpdateUsager;
+import modele.dao.requetes.RequeteUpdateMotDePasse;
+import modele.dao.requetes.RequeteUpdateCarteTisseo;
+import modele.dao.requetes.RequeteSelectCarteTisseo;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 
-public class UsagerDAO {
-    
+public class UsagerDAO extends DaoModele<Usager> implements Dao<Usager> {
+
+    private static UsagerDAO instance;
+
+    // Singleton
+    public static UsagerDAO getInstance() {
+        if (instance == null) {
+            instance = new UsagerDAO();
+        }
+        return instance;
+    }
+
+    // Constructeur privé pour singleton
+    private UsagerDAO() {}
+
+    @Override
+    public List<Usager> findAll() throws SQLException {
+        RequeteSelectUsager req = new RequeteSelectUsager();
+        return find(req);
+    }
+
+    @Override
+    public Usager findById(String... id) throws SQLException {
+        RequeteSelectUsagerByEmail req = new RequeteSelectUsagerByEmail();
+        return findById(req, id);
+    }
+
+    @Override
+    public void create(Usager usager) throws SQLException {
+        RequeteInsertUsager req = new RequeteInsertUsager();
+        miseAJour(req, usager);
+    }
+
+    @Override
+    public void update(Usager usager) throws SQLException {
+        RequeteUpdateUsager req = new RequeteUpdateUsager();
+        miseAJour(req, usager);
+    }
+
+    @Override
+    public void delete(Usager usager) throws SQLException {
+        throw new UnsupportedOperationException("Delete non implémenté pour Usager");
+    }
+
+    @Override
+    protected Usager creerInstance(ResultSet curseur) throws SQLException {
+        Usager usager = new Usager();
+        usager.setIdUsager(curseur.getInt("id_usager"));
+        usager.setNomUsager(curseur.getString("nom_usager"));
+        usager.setPrenomUsager(curseur.getString("prenom_usager"));
+        usager.setMailUsager(curseur.getString("mail_usager"));
+        usager.setMotDePasse(curseur.getString("mot_de_passe"));
+        usager.setNumeroCarteTisseo(curseur.getString("numero_carte_tisseo"));
+        usager.setAdmin(curseur.getBoolean("is_admin"));
+        return usager;
+    }
+
+    /**
+     * Vérifie si un email existe déjà
+     */
+    public boolean emailExiste(String email) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Usager WHERE mail_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+            
+        }
+        return false;
+    }
+
+    /**
+     * Modifie le mot de passe d'un utilisateur
+     */
+    public boolean modifierMotDePasse(String email, String nouveauMotDePasse) throws SQLException {
+        RequeteUpdateMotDePasse req = new RequeteUpdateMotDePasse();
+        Usager usagerTemp = new Usager();
+        usagerTemp.setMailUsager(email);
+        usagerTemp.setMotDePasse(nouveauMotDePasse);
+        int result = miseAJour(req, usagerTemp);
+        return result > 0;
+    }
+
+    /**
+     * Récupère la carte Tisséo d'un utilisateur
+     */
+    public String getCarteTisseoByUsager(int idUsager) throws SQLException {
+        String sql = "SELECT numero_carte_tisseo FROM Usager WHERE id_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, idUsager);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getString("numero_carte_tisseo");
+            }
+            
+        }
+        return null;
+    }
+
+    /**
+     * Enregistre la carte Tisséo d'un utilisateur (version statique)
+     */
+    public static boolean enregistrerCarteTisseo(int idUsager, String numeroCarte) {
+        String sql = "UPDATE Usager SET numero_carte_tisseo = ? WHERE id_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, numeroCarte);
+            stmt.setInt(2, idUsager);
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur enregistrement carte Tisséo: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Récupère tous les utilisateurs (méthode static pour compatibilité)
+     */
+    public static List<Usager> getAllUsagers() {
+        try {
+            return getInstance().findAll();
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération utilisateurs: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Ajoute un nouvel utilisateur (méthode static pour compatibilité)
+     */
+    public static boolean ajouterUsager(Usager usager) {
+        try {
+            getInstance().create(usager);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Erreur ajout utilisateur: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Modifie un utilisateur existant (méthode static pour compatibilité)
+     */
+    public static boolean modifierUsager(Usager usager) {
+        try {
+            getInstance().update(usager);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Erreur modification utilisateur: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 
     /**
      * Vérifie si un email existe déjà dans la base de données
@@ -37,373 +217,6 @@ public class UsagerDAO {
     }
 
     /**
-     * Récupère un utilisateur par son adresse email
-     * Utilisé pour la connexion et pour récupérer les informations de l'utilisateur connecté
-     * 
-     * @param email l'adresse email de l'utilisateur recherché
-     * @return l'objet Usager correspondant, ou null si non trouvé
-     */
-    public static Usager getUsagerByEmail(String email) {
-        // Requête SQL pour sélectionner un utilisateur par son email
-        String sql = "SELECT * FROM Usager WHERE mail_usager = ?";
-        
-        try (
-            Connection conn = MySQLConnection.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
-        ) {
-            stmt.setString(1, email); // 1er ? : email de l'utilisateur recherché
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    // Création d'un nouvel objet Usager
-                    Usager usager = new Usager();
-                    
-                    // Remplissage de l'objet avec les données de la base
-                    usager.setIdUsager(rs.getInt("id_usager"));              // ID auto-généré
-                    usager.setNomUsager(rs.getString("nom_usager"));         // Nom de famille
-                    usager.setPrenomUsager(rs.getString("prenom_usager"));   // Prénom
-                    usager.setMailUsager(rs.getString("mail_usager"));       // Email
-                    usager.setMotDePasse(rs.getString("mot_de_passe"));      // Mot de passe
-                    usager.setNumeroCarteTisseo(rs.getString("numero_carte_tisseo"));
-                    usager.setAdmin(rs.getBoolean("is_admin"));
-                    
-                    return usager;
-                }
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération de l'usager: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null; // Aucun utilisateur trouvé
-    }
-    /**
-     * Modifie le mot de passe d'un utilisateur
-     * @param email l'email de l'utilisateur
-     * @param nouveauMotDePasse le nouveau mot de passe
-     * @return true si la modification a réussi, false sinon
-     */
-    public static boolean modifierMotDePasse(String email, String nouveauMotDePasse) {
-        String sql = "UPDATE Usager SET mot_de_passe = ? WHERE mail_usager = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, nouveauMotDePasse);
-            stmt.setString(2, email);
-            
-            int lignesAffectees = stmt.executeUpdate();
-            
-            if (lignesAffectees > 0) {
-                System.out.println("Mot de passe modifié pour l'utilisateur: " + email);
-                return true;
-            } else {
-                System.out.println("Aucun utilisateur trouvé avec l'email: " + email);
-                return false;
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur lors de la modification du mot de passe: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-
-    /**
-     * Récupère tous les utilisateurs
-     */
-    public static List<Usager> getAllUsagers() {
-        List<Usager> usagers = new ArrayList<>();
-        String sql = "SELECT * FROM Usager ORDER BY nom_usager, prenom_usager";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            
-            while (rs.next()) {
-                Usager usager = mapResultSetToUsager(rs);
-                usagers.add(usager);
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur récupération utilisateurs: " + e.getMessage());
-            e.printStackTrace();
-        }
-        
-        return usagers;
-    }
-    
-    /**
-     * Vérifie si un email existe déjà
-     */
-    public static boolean emailExiste(String email) {
-        String sql = "SELECT COUNT(*) FROM Usager WHERE mail_usager = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, email);
-            ResultSet rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur vérification email: " + e.getMessage());
-            e.printStackTrace();
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Ajoute un nouvel utilisateur
-     */
-    public static boolean ajouterUsager(Usager usager) {
-        String sql = "INSERT INTO Usager (nom_usager, prenom_usager, mail_usager, mot_de_passe, is_admin) " +
-                    "VALUES (?, ?, ?, ?, ?)";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, usager.getNomUsager());
-            stmt.setString(2, usager.getPrenomUsager());
-            stmt.setString(3, usager.getMailUsager());
-            stmt.setString(4, usager.getMotDePasse()); // Devrait être hashé en production
-            stmt.setBoolean(5, usager.isAdmin());
-            
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur ajout utilisateur: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    /**
-     * Modifie un utilisateur existant
-     */
-    public static boolean modifierUsager(Usager usager) {
-        StringBuilder sql = new StringBuilder("UPDATE Usager SET nom_usager = ?, prenom_usager = ?, " +
-                                            "mail_usager = ?, is_admin = ?");
-        
-        // Ajouter le mot de passe seulement s'il a été modifié
-        boolean mdpModifie = usager.getMotDePasse() != null && !usager.getMotDePasse().isEmpty();
-        if (mdpModifie) {
-            sql.append(", mot_de_passe = ?");
-        }
-        
-        sql.append(" WHERE id_usager = ?");
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
-            
-            stmt.setString(1, usager.getNomUsager());
-            stmt.setString(2, usager.getPrenomUsager());
-            stmt.setString(3, usager.getMailUsager());
-            stmt.setBoolean(4, usager.isAdmin());
-            
-            int paramIndex = 5;
-            if (mdpModifie) {
-                stmt.setString(paramIndex++, usager.getMotDePasse());
-            }
-            
-            stmt.setInt(paramIndex, usager.getIdUsager());
-            
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur modification utilisateur: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    /**
-     * Récupère la carte Tisséo d'un utilisateur
-     */
-    public static String getCarteTisseoByUsager(int idUsager) {
-        String sql = "SELECT numero_carte_tisseo FROM Usager WHERE id_usager = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, idUsager);
-            ResultSet rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                return rs.getString("numero_carte_tisseo");
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur récupération carte Tisséo: " + e.getMessage());
-            e.printStackTrace();
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Enregistre la carte Tisséo d'un utilisateur
-     */
-    public static boolean enregistrerCarteTisseo(int idUsager, String numeroCarte) {
-        String sql = "UPDATE Usager SET numero_carte_tisseo = ? WHERE id_usager = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, numeroCarte);
-            stmt.setInt(2, idUsager);
-            
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur enregistrement carte Tisséo: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    public static boolean mettreAJourAdresse(int idUsager, String adresse, 
-            String codePostal, String ville) {
-    	String sql = "UPDATE Usager SET adresse = ?, code_postal = ?, ville = ? WHERE id_usager = ?";
-
-    	try (Connection conn = MySQLConnection.getConnection();
-    			PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-    		pstmt.setString(1, adresse);
-    		pstmt.setString(2, codePostal);
-    		pstmt.setString(3, ville);
-    		pstmt.setInt(4, idUsager);
-
-    		int rowsAffected = pstmt.executeUpdate();
-
-    		if (rowsAffected > 0) {
-    			return true;
-    		}
-
-    	} catch (SQLException e) {
-    		System.err.println("Erreur mise à jour adresse: " + e.getMessage());
-    		e.printStackTrace();
-    	}
-    	return false;
-    }
-    
-    
-    /**
-     * Met à jour la zone résidentielle d'un utilisateur
-     */
-    public static boolean mettreAJourZoneResidentielle(int idUsager, String idZone) {
-        String sql = "UPDATE Usager SET id_zone_residentielle = ? WHERE id_usager = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, idZone);
-            pstmt.setInt(2, idUsager);
-            
-            int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur mise à jour zone résidentielle: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    /**
-     * Récupère la zone résidentielle d'un utilisateur
-     */
-    public static String getZoneResidentielle(int idUsager) {
-        String sql = "SELECT id_zone_residentielle FROM Usager WHERE id_usager = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, idUsager);
-            ResultSet rs = pstmt.executeQuery();
-            
-            if (rs.next()) {
-                return rs.getString("id_zone_residentielle");
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur récupération zone résidentielle: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null;
-    }
-    
-    /**
-     * Récupère l'adresse complète d'un utilisateur
-     */
-    public static String getAdresseComplete(int idUsager) {
-        String sql = "SELECT adresse, code_postal, ville FROM Usager WHERE id_usager = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, idUsager);
-            ResultSet rs = pstmt.executeQuery();
-            
-            if (rs.next()) {
-                String adresse = rs.getString("adresse");
-                String codePostal = rs.getString("code_postal");
-                String ville = rs.getString("ville");
-                
-                if (adresse == null || adresse.trim().isEmpty()) {
-                    return "Non renseignée";
-                }
-                
-                StringBuilder sb = new StringBuilder(adresse);
-                if (codePostal != null && !codePostal.trim().isEmpty()) {
-                    sb.append(", ").append(codePostal);
-                }
-                if (ville != null && !ville.trim().isEmpty()) {
-                    sb.append(" ").append(ville);
-                }
-                return sb.toString();
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur récupération adresse: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return "Non renseignée";
-    }
-    
-    /**
-     * Vérifie si un utilisateur a renseigné son adresse
-     */
-    public static boolean hasAdresse(int idUsager) {
-        String sql = "SELECT adresse FROM Usager WHERE id_usager = ?";
-        
-        try (Connection conn = MySQLConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, idUsager);
-            ResultSet rs = pstmt.executeQuery();
-            
-            if (rs.next()) {
-                String adresse = rs.getString("adresse");
-                return adresse != null && !adresse.trim().isEmpty();
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur vérification adresse: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    /**
      * Mappe un ResultSet vers un objet Usager
      */
     private static Usager mapResultSetToUsager(ResultSet rs) throws SQLException {
@@ -417,7 +230,16 @@ public class UsagerDAO {
         usager.setAdmin(rs.getBoolean("is_admin"));
         return usager;
     }
-    		
-    	
+    /**
+     * Récupère un utilisateur par son adresse email (version statique)
+     */
+    public static Usager getUsagerByEmail(String email) {
+        try {
+            return getInstance().findById(email);
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération utilisateur par email: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }	
 }
-    

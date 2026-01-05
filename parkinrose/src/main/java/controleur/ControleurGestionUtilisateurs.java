@@ -9,31 +9,66 @@ import modele.dao.UsagerDAO;
 import modele.dao.VehiculeUsagerDAO;
 import modele.dao.AbonnementDAO;
 import modele.dao.StationnementDAO;
+import modele.dao.MySQLConnection;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
-
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.event.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.sql.*;
 import java.util.List;
 
 public class ControleurGestionUtilisateurs implements ActionListener {
     
+    // États du contrôleur
+    private enum Etat {
+        INITIAL,
+        CHARGEMENT,
+        AFFICHAGE,
+        RECHERCHE,
+        CREATION,
+        MODIFICATION,
+        GESTION_VEHICULES,
+        GESTION_ABONNEMENTS,
+        CONSULTATION_STATIONNEMENTS,
+        CHANGEMENT_ADMIN,
+        RETOUR,
+        ERREUR
+    }
+    
+    // Références
     private PageGestionUtilisateurs vue;
+    private Etat etat;
+    
+    // DAOs
+    private UsagerDAO usagerDAO;
+    private VehiculeUsagerDAO vehiculeUsagerDAO;
+    private AbonnementDAO abonnementDAO;
+    
+    // Données
+    private Usager usagerSelectionne;
     
     public ControleurGestionUtilisateurs(PageGestionUtilisateurs vue) {
         this.vue = vue;
-        configurerListeners();
+        this.etat = Etat.INITIAL;
+        this.usagerDAO = UsagerDAO.getInstance();
+        this.vehiculeUsagerDAO = VehiculeUsagerDAO.getInstance();
+        this.abonnementDAO = AbonnementDAO.getInstance();
+        
+        initialiserControleur();
+    }
+    
+    private void initialiserControleur() {
+        try {
+            configurerListeners();
+            chargerUtilisateurs();
+            etat = Etat.AFFICHAGE;
+        } catch (Exception e) {
+            gererErreurInitialisation(e.getMessage());
+        }
     }
     
     private void configurerListeners() {
+        // Boutons
         vue.getBtnRechercher().addActionListener(this);
         vue.getBtnActualiser().addActionListener(this);
         vue.getBtnNouveau().addActionListener(this);
@@ -44,12 +79,14 @@ public class ControleurGestionUtilisateurs implements ActionListener {
         vue.getBtnVoirStationnements().addActionListener(this);
         vue.getBtnRetour().addActionListener(this);
         
-        // Recherche à la frappe (Enter)
+        // Recherche à la frappe
         vue.getTxtRecherche().addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    vue.rechercherUtilisateurs();
+                if (etat == Etat.AFFICHAGE && e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    etat = Etat.RECHERCHE;
+                    rechercherUtilisateurs();
+                    etat = Etat.AFFICHAGE;
                 }
             }
         });
@@ -59,173 +96,414 @@ public class ControleurGestionUtilisateurs implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         Object source = e.getSource();
         
-        if (source == vue.getBtnRechercher()) {
-            vue.rechercherUtilisateurs();
-        } else if (source == vue.getBtnActualiser()) {
-            vue.chargerUtilisateurs();
-            vue.afficherInformation("Liste actualisée");
-        } else if (source == vue.getBtnNouveau()) {
-            vue.afficherFormulaireNouvelUtilisateur();
-        } else if (source == vue.getBtnModifier()) {
-            vue.modifierUtilisateur();
-        } else if (source == vue.getBtnSupprimer()) {
-            toggleAdminStatus();
-        } else if (source == vue.getBtnVoirVehicules()) {
-            gererVehicules();
-        } else if (source == vue.getBtnVoirAbonnements()) {
-            gererAbonnements();
-        } else if (source == vue.getBtnVoirStationnements()) {
-            voirStationnements();
-        } else if (source == vue.getBtnRetour()) {
-            retourAdministration();
+        switch (etat) {
+            case AFFICHAGE:
+                if (source == vue.getBtnRechercher()) {
+                    etat = Etat.RECHERCHE;
+                    rechercherUtilisateurs();
+                    etat = Etat.AFFICHAGE;
+                } else if (source == vue.getBtnActualiser()) {
+                    etat = Etat.CHARGEMENT;
+                    chargerUtilisateurs();
+                    etat = Etat.AFFICHAGE;
+                } else if (source == vue.getBtnNouveau()) {
+                    etat = Etat.CREATION;
+                    afficherFormulaireNouvelUtilisateur();
+                } else if (source == vue.getBtnModifier()) {
+                    etat = Etat.MODIFICATION;
+                    modifierUtilisateur();
+                } else if (source == vue.getBtnSupprimer()) {
+                    etat = Etat.CHANGEMENT_ADMIN;
+                    changerStatutAdmin();
+                } else if (source == vue.getBtnVoirVehicules()) {
+                    etat = Etat.GESTION_VEHICULES;
+                    gererVehicules();
+                } else if (source == vue.getBtnVoirAbonnements()) {
+                    etat = Etat.GESTION_ABONNEMENTS;
+                    gererAbonnements();
+                } else if (source == vue.getBtnVoirStationnements()) {
+                    etat = Etat.CONSULTATION_STATIONNEMENTS;
+                    voirStationnements();
+                } else if (source == vue.getBtnRetour()) {
+                    etat = Etat.RETOUR;
+                    retourAdministration();
+                }
+                break;
+                
+            case CREATION:
+            case MODIFICATION:
+            case CHANGEMENT_ADMIN:
+            case GESTION_VEHICULES:
+            case GESTION_ABONNEMENTS:
+            case CONSULTATION_STATIONNEMENTS:
+                // Les traitements sont gérés dans les méthodes spécifiques
+                break;
+                
+            case ERREUR:
+                // Ne rien faire en état d'erreur
+                break;
         }
     }
     
-    private void toggleAdminStatus() {
-        Usager usager = vue.getUsagerSelectionne();
-        if (usager == null) {
+    private void chargerUtilisateurs() {
+        try {
+            vue.chargerUtilisateurs();
+            vue.afficherInformation("Liste des utilisateurs chargée avec succès");
+        } catch (Exception e) {
+            gererErreur("Erreur chargement utilisateurs", e.getMessage());
+        }
+    }
+    
+    private void rechercherUtilisateurs() {
+        vue.rechercherUtilisateurs();
+    }
+    
+    private void afficherFormulaireNouvelUtilisateur() {
+        JDialog dialog = new JDialog(vue, "Nouvel utilisateur", true);
+        dialog.setSize(400, 400);
+        dialog.setLocationRelativeTo(vue);
+        dialog.setLayout(new java.awt.GridBagLayout());
+        
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.insets = new java.awt.Insets(5, 5, 5, 5);
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        
+        // Champs
+        JLabel lblNom = new JLabel("Nom:*");
+        JTextField txtNom = new JTextField(20);
+        
+        JLabel lblPrenom = new JLabel("Prénom:*");
+        JTextField txtPrenom = new JTextField(20);
+        
+        JLabel lblEmail = new JLabel("Email:*");
+        JTextField txtEmail = new JTextField(20);
+        
+        JLabel lblMdp = new JLabel("Mot de passe:*");
+        JPasswordField txtMdp = new JPasswordField(20);
+        
+        JCheckBox chkAdmin = new JCheckBox("Administrateur");
+        
+        // Layout
+        gbc.gridx = 0; gbc.gridy = 0;
+        dialog.add(lblNom, gbc);
+        gbc.gridx = 1;
+        dialog.add(txtNom, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 1;
+        dialog.add(lblPrenom, gbc);
+        gbc.gridx = 1;
+        dialog.add(txtPrenom, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 2;
+        dialog.add(lblEmail, gbc);
+        gbc.gridx = 1;
+        dialog.add(txtEmail, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 3;
+        dialog.add(lblMdp, gbc);
+        gbc.gridx = 1;
+        dialog.add(txtMdp, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
+        dialog.add(chkAdmin, gbc);
+        
+        // Boutons
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1;
+        JButton btnAnnuler = new JButton("Annuler");
+        btnAnnuler.addActionListener(e -> dialog.dispose());
+        
+        gbc.gridx = 1;
+        JButton btnValider = new JButton("Créer");
+        btnValider.setBackground(new java.awt.Color(30, 144, 255));
+        btnValider.setForeground(java.awt.Color.WHITE);
+        btnValider.addActionListener(e -> {
+            if (!validerFormulaireNouvelUtilisateur(txtNom, txtPrenom, txtEmail, txtMdp)) {
+                return;
+            }
+            
+            creerNouvelUtilisateur(
+                txtNom.getText().trim(),
+                txtPrenom.getText().trim(),
+                txtEmail.getText().trim(),
+                new String(txtMdp.getPassword()),
+                chkAdmin.isSelected(),
+                dialog
+            );
+        });
+        
+        JPanel panelBoutons = new JPanel(new java.awt.FlowLayout());
+        panelBoutons.add(btnAnnuler);
+        panelBoutons.add(btnValider);
+        
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
+        dialog.add(panelBoutons, gbc);
+        
+        dialog.pack();
+        dialog.setVisible(true);
+        etat = Etat.AFFICHAGE;
+    }
+    
+    private boolean validerFormulaireNouvelUtilisateur(JTextField txtNom, JTextField txtPrenom, 
+                                                      JTextField txtEmail, JPasswordField txtMdp) {
+        String nom = txtNom.getText().trim();
+        String prenom = txtPrenom.getText().trim();
+        String email = txtEmail.getText().trim();
+        String mdp = new String(txtMdp.getPassword());
+        
+        if (nom.isEmpty() || prenom.isEmpty() || email.isEmpty() || mdp.isEmpty()) {
+            vue.afficherErreur("Tous les champs obligatoires (*) doivent être remplis");
+            return false;
+        }
+        
+        if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+            vue.afficherErreur("Format d'email invalide");
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private void creerNouvelUtilisateur(String nom, String prenom, String email, 
+                                       String mdp, boolean estAdmin, JDialog dialog) {
+        try {
+            if (usagerDAO.emailExiste(email)) {
+                vue.afficherErreur("Cet email est déjà utilisé");
+                return;
+            }
+            
+            Usager nouvelUsager = new Usager();
+            nouvelUsager.setNomUsager(nom);
+            nouvelUsager.setPrenomUsager(prenom);
+            nouvelUsager.setMailUsager(email);
+            nouvelUsager.setMotDePasse(mdp);
+            nouvelUsager.setAdmin(estAdmin);
+            
+            usagerDAO.create(nouvelUsager);
+            vue.afficherInformation("Utilisateur créé avec succès");
+            chargerUtilisateurs();
+            dialog.dispose();
+        } catch (SQLException ex) {
+            gererErreur("Erreur création utilisateur", ex.getMessage());
+        }
+    }
+    
+    private void modifierUtilisateur() {
+        usagerSelectionne = vue.getUsagerSelectionne();
+        if (usagerSelectionne == null) {
             vue.afficherInformation("Veuillez sélectionner un utilisateur");
+            etat = Etat.AFFICHAGE;
             return;
         }
         
-        String action = usager.isAdmin() ? "retirer les droits d'administrateur" : "donner les droits d'administrateur";
+        JDialog dialog = new JDialog(vue, "Modifier l'utilisateur", true);
+        dialog.setSize(400, 350);
+        dialog.setLocationRelativeTo(vue);
+        dialog.setLayout(new java.awt.GridBagLayout());
+        
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.insets = new java.awt.Insets(5, 5, 5, 5);
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        
+        // Champs pré-remplis
+        JLabel lblNom = new JLabel("Nom:*");
+        JTextField txtNom = new JTextField(usagerSelectionne.getNomUsager(), 20);
+        
+        JLabel lblPrenom = new JLabel("Prénom:*");
+        JTextField txtPrenom = new JTextField(usagerSelectionne.getPrenomUsager(), 20);
+        
+        JLabel lblEmail = new JLabel("Email:*");
+        JTextField txtEmail = new JTextField(usagerSelectionne.getMailUsager(), 20);
+        
+        JLabel lblMdp = new JLabel("Nouveau mot de passe:");
+        JPasswordField txtMdp = new JPasswordField(20);
+        txtMdp.setToolTipText("Laissez vide pour ne pas modifier");
+        
+        JCheckBox chkAdmin = new JCheckBox("Administrateur", usagerSelectionne.isAdmin());
+        
+        // Layout
+        gbc.gridx = 0; gbc.gridy = 0;
+        dialog.add(lblNom, gbc);
+        gbc.gridx = 1;
+        dialog.add(txtNom, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 1;
+        dialog.add(lblPrenom, gbc);
+        gbc.gridx = 1;
+        dialog.add(txtPrenom, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 2;
+        dialog.add(lblEmail, gbc);
+        gbc.gridx = 1;
+        dialog.add(txtEmail, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 3;
+        dialog.add(lblMdp, gbc);
+        gbc.gridx = 1;
+        dialog.add(txtMdp, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
+        dialog.add(chkAdmin, gbc);
+        
+        // Boutons
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1;
+        JButton btnAnnuler = new JButton("Annuler");
+        btnAnnuler.addActionListener(e -> dialog.dispose());
+        
+        gbc.gridx = 1;
+        JButton btnValider = new JButton("Enregistrer");
+        btnValider.setBackground(new java.awt.Color(30, 144, 255));
+        btnValider.setForeground(java.awt.Color.WHITE);
+        btnValider.addActionListener(e -> {
+            if (!validerFormulaireModification(txtNom, txtPrenom, txtEmail)) {
+                return;
+            }
+            
+            modifierUtilisateurExistant(
+                txtNom.getText().trim(),
+                txtPrenom.getText().trim(),
+                txtEmail.getText().trim(),
+                new String(txtMdp.getPassword()),
+                chkAdmin.isSelected(),
+                dialog
+            );
+        });
+        
+        JPanel panelBoutons = new JPanel(new java.awt.FlowLayout());
+        panelBoutons.add(btnAnnuler);
+        panelBoutons.add(btnValider);
+        
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
+        dialog.add(panelBoutons, gbc);
+        
+        dialog.pack();
+        dialog.setVisible(true);
+        etat = Etat.AFFICHAGE;
+    }
+    
+    private boolean validerFormulaireModification(JTextField txtNom, JTextField txtPrenom, 
+                                                 JTextField txtEmail) {
+        String nom = txtNom.getText().trim();
+        String prenom = txtPrenom.getText().trim();
+        String email = txtEmail.getText().trim();
+        
+        if (nom.isEmpty() || prenom.isEmpty() || email.isEmpty()) {
+            vue.afficherErreur("Nom, prénom et email sont obligatoires");
+            return false;
+        }
+        
+        if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+            vue.afficherErreur("Format d'email invalide");
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private void modifierUtilisateurExistant(String nom, String prenom, String email, 
+                                            String mdp, boolean estAdmin, JDialog dialog) {
+        try {
+            if (!email.equals(usagerSelectionne.getMailUsager()) && usagerDAO.emailExiste(email)) {
+                vue.afficherErreur("Cet email est déjà utilisé par un autre utilisateur");
+                return;
+            }
+            
+            usagerSelectionne.setNomUsager(nom);
+            usagerSelectionne.setPrenomUsager(prenom);
+            usagerSelectionne.setMailUsager(email);
+            usagerSelectionne.setAdmin(estAdmin);
+            
+            if (!mdp.isEmpty()) {
+                usagerSelectionne.setMotDePasse(mdp);
+            }
+            
+            usagerDAO.update(usagerSelectionne);
+            vue.afficherInformation("Utilisateur modifié avec succès");
+            chargerUtilisateurs();
+            dialog.dispose();
+        } catch (SQLException ex) {
+            gererErreur("Erreur modification utilisateur", ex.getMessage());
+        }
+    }
+    
+    private void changerStatutAdmin() {
+        usagerSelectionne = vue.getUsagerSelectionne();
+        if (usagerSelectionne == null) {
+            vue.afficherInformation("Veuillez sélectionner un utilisateur");
+            etat = Etat.AFFICHAGE;
+            return;
+        }
+        
+        String action = usagerSelectionne.isAdmin() ? "retirer les droits d'administrateur" : "donner les droits d'administrateur";
         
         if (vue.demanderConfirmation("Voulez-vous " + action + " à " + 
-                                   usager.getPrenomUsager() + " " + usager.getNomUsager() + " ?")) {
+                                   usagerSelectionne.getPrenomUsager() + " " + 
+                                   usagerSelectionne.getNomUsager() + " ?")) {
             
             try {
-                boolean success = mettreAJourStatutAdmin(usager.getIdUsager(), !usager.isAdmin());
+                boolean success = mettreAJourStatutAdmin(usagerSelectionne.getIdUsager(), !usagerSelectionne.isAdmin());
                 if (success) {
                     vue.afficherInformation("Statut administrateur modifié avec succès");
-                    vue.chargerUtilisateurs();
+                    chargerUtilisateurs();
                 } else {
                     vue.afficherErreur("Erreur lors de la modification du statut");
                 }
             } catch (Exception e) {
-                vue.afficherErreur("Erreur: " + e.getMessage());
+                gererErreur("Erreur changement statut admin", e.getMessage());
             }
         }
+        
+        etat = Etat.AFFICHAGE;
     }
     
-    private boolean mettreAJourStatutAdmin(int idUsager, boolean estAdmin) {
+    private boolean mettreAJourStatutAdmin(int idUsager, boolean estAdmin) throws SQLException {
         String sql = "UPDATE Usager SET is_admin = ? WHERE id_usager = ?";
         
-        try (java.sql.Connection conn = modele.dao.MySQLConnection.getConnection();
-             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setBoolean(1, estAdmin);
             pstmt.setInt(2, idUsager);
             
             int rowsAffected = pstmt.executeUpdate();
             return rowsAffected > 0;
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
         }
     }
     
     private void gererVehicules() {
-        Usager usager = vue.getUsagerSelectionne();
-        if (usager == null) {
+        usagerSelectionne = vue.getUsagerSelectionne();
+        if (usagerSelectionne == null) {
             vue.afficherInformation("Veuillez sélectionner un utilisateur");
+            etat = Etat.AFFICHAGE;
             return;
         }
         
-        // Afficher une boîte de dialogue pour gérer les véhicules
-        JDialog dialog = new JDialog(vue, "Gestion des Véhicules - " + usager.getNomUsager(), true);
+        JDialog dialog = new JDialog(vue, "Gestion des Véhicules - " + usagerSelectionne.getNomUsager(), true);
         dialog.setSize(700, 500);
         dialog.setLocationRelativeTo(vue);
+        dialog.setLayout(new java.awt.BorderLayout(10, 10));
         
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        
-        // Tableau des véhicules
         String[] colonnes = {"ID", "Plaque", "Type", "Marque", "Modèle", "Principal", "Date d'ajout"};
-        DefaultTableModel modelVehicules = new DefaultTableModel(colonnes, 0) {
+        DefaultTableModel model = new DefaultTableModel(colonnes, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Rendre toutes les cellules non éditables
+                return false;
             }
         };
-        JTable tableVehicules = new JTable(modelVehicules);
+        JTable table = new JTable(model);
         
-        // Charger les véhicules existants
-        chargerVehiculesUsager(usager.getIdUsager(), modelVehicules);
+        chargerVehicules(usagerSelectionne.getIdUsager(), model);
         
-        JScrollPane scrollPane = new JScrollPane(tableVehicules);
+        JScrollPane scrollPane = new JScrollPane(table);
         
-        // Panel de boutons
-        JPanel panelBoutons = new JPanel(new FlowLayout());
+        JPanel panelBoutons = new JPanel();
         JButton btnAjouter = new JButton("Ajouter un véhicule");
         JButton btnSupprimer = new JButton("Supprimer le véhicule");
         JButton btnDefinirPrincipal = new JButton("Définir comme principal");
         JButton btnFermer = new JButton("Fermer");
         
-        btnAjouter.addActionListener(e -> ajouterVehiculeDialog(usager, dialog, modelVehicules));
-        
-        btnSupprimer.addActionListener(e -> {
-            int selectedRow = tableVehicules.getSelectedRow();
-            if (selectedRow >= 0) {
-                int idVehiculeUsager = (int) modelVehicules.getValueAt(selectedRow, 0);
-                String plaque = (String) modelVehicules.getValueAt(selectedRow, 1);
-                boolean estPrincipal = "Oui".equals(modelVehicules.getValueAt(selectedRow, 5));
-                
-                if (vue.demanderConfirmation("Supprimer le véhicule " + plaque + " ?")) {
-                    if (estPrincipal) {
-                        int confirmation = JOptionPane.showConfirmDialog(dialog,
-                            "Ce véhicule est défini comme principal. Sa suppression désactivera le véhicule principal.\nContinuer quand même ?",
-                            "Attention - Véhicule principal",
-                            JOptionPane.YES_NO_OPTION,
-                            JOptionPane.WARNING_MESSAGE);
-                        
-                        if (confirmation != JOptionPane.YES_OPTION) {
-                            return;
-                        }
-                    }
-                    
-                    if (VehiculeUsagerDAO.supprimerVehicule(idVehiculeUsager)) {
-                        modelVehicules.removeRow(selectedRow);
-                        vue.afficherInformation("Véhicule supprimé avec succès");
-                    } else {
-                        vue.afficherErreur("Erreur lors de la suppression du véhicule");
-                    }
-                }
-            } else {
-                vue.afficherInformation("Veuillez sélectionner un véhicule");
-            }
-        });
-        
-        btnDefinirPrincipal.addActionListener(e -> {
-            int selectedRow = tableVehicules.getSelectedRow();
-            if (selectedRow >= 0) {
-                int idVehiculeUsager = (int) modelVehicules.getValueAt(selectedRow, 0);
-                String plaque = (String) modelVehicules.getValueAt(selectedRow, 1);
-                
-                // Vérifier si déjà principal
-                if ("Oui".equals(modelVehicules.getValueAt(selectedRow, 5))) {
-                    JOptionPane.showMessageDialog(dialog,
-                        "Ce véhicule est déjà défini comme véhicule principal",
-                        "Information",
-                        JOptionPane.INFORMATION_MESSAGE);
-                    return;
-                }
-                
-                if (vue.demanderConfirmation("Définir le véhicule " + plaque + " comme véhicule principal ?")) {
-                    if (VehiculeUsagerDAO.definirVehiculePrincipal(idVehiculeUsager, usager.getIdUsager())) {
-                        vue.afficherInformation("Véhicule défini comme principal avec succès");
-                        // Rafraîchir la liste
-                        modelVehicules.setRowCount(0);
-                        chargerVehiculesUsager(usager.getIdUsager(), modelVehicules);
-                    } else {
-                        vue.afficherErreur("Erreur lors de la définition du véhicule principal");
-                    }
-                }
-            } else {
-                vue.afficherInformation("Veuillez sélectionner un véhicule");
-            }
-        });
-        
+        btnAjouter.addActionListener(e -> ajouterVehiculeDialog(dialog, model));
+        btnSupprimer.addActionListener(e -> supprimerVehicule(table, model));
+        btnDefinirPrincipal.addActionListener(e -> definirPrincipalVehicule(table, model));
         btnFermer.addActionListener(e -> dialog.dispose());
         
         panelBoutons.add(btnAjouter);
@@ -233,26 +511,46 @@ public class ControleurGestionUtilisateurs implements ActionListener {
         panelBoutons.add(btnDefinirPrincipal);
         panelBoutons.add(btnFermer);
         
-        panel.add(new JLabel("Véhicules de " + usager.getPrenomUsager() + " " + usager.getNomUsager() + 
-                            " (" + usager.getMailUsager() + ")"), BorderLayout.NORTH);
-        panel.add(scrollPane, BorderLayout.CENTER);
-        panel.add(panelBoutons, BorderLayout.SOUTH);
+        dialog.add(new JLabel("Véhicules de " + usagerSelectionne.getPrenomUsager() + " " + usagerSelectionne.getNomUsager()), 
+                  java.awt.BorderLayout.NORTH);
+        dialog.add(scrollPane, java.awt.BorderLayout.CENTER);
+        dialog.add(panelBoutons, java.awt.BorderLayout.SOUTH);
         
-        dialog.add(panel);
         dialog.setVisible(true);
+        etat = Etat.AFFICHAGE;
     }
     
-    private void ajouterVehiculeDialog(Usager usager, JDialog parentDialog, DefaultTableModel model) {
-        JDialog dialog = new JDialog(parentDialog, "Ajouter un véhicule", true);
+    private void chargerVehicules(int idUsager, DefaultTableModel model) {
+        try {
+            model.setRowCount(0);
+            List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsagerStatic(idUsager);
+            
+            for (VehiculeUsager v : vehicules) {
+                model.addRow(new Object[]{
+                    v.getIdVehiculeUsager(),
+                    v.getPlaqueImmatriculation(),
+                    v.getTypeVehicule(),
+                    v.getMarque() != null ? v.getMarque() : "",
+                    v.getModele() != null ? v.getModele() : "",
+                    v.isEstPrincipal() ? "Oui" : "Non",
+                    v.getDateAjout().toString()
+                });
+            }
+        } catch (Exception e) {
+            gererErreur("Erreur chargement véhicules", e.getMessage());
+        }
+    }
+    
+    private void ajouterVehiculeDialog(JDialog parent, DefaultTableModel model) {
+        JDialog dialog = new JDialog(parent, "Ajouter un véhicule", true);
         dialog.setSize(400, 350);
-        dialog.setLocationRelativeTo(parentDialog);
-        dialog.setLayout(new GridBagLayout());
+        dialog.setLocationRelativeTo(parent);
+        dialog.setLayout(new java.awt.GridBagLayout());
         
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        java.awt.GridBagConstraints gbc = new java.awt.GridBagConstraints();
+        gbc.insets = new java.awt.Insets(5, 5, 5, 5);
+        gbc.fill = java.awt.GridBagConstraints.HORIZONTAL;
         
-        // Formulaire
         JLabel lblPlaque = new JLabel("Plaque d'immatriculation:*");
         JTextField txtPlaque = new JTextField(15);
         
@@ -267,7 +565,6 @@ public class ControleurGestionUtilisateurs implements ActionListener {
         
         JCheckBox chkPrincipal = new JCheckBox("Définir comme véhicule principal");
         
-        // Ajout des composants
         gbc.gridx = 0; gbc.gridy = 0;
         dialog.add(lblPlaque, gbc);
         gbc.gridx = 1;
@@ -301,225 +598,258 @@ public class ControleurGestionUtilisateurs implements ActionListener {
         btnValider.addActionListener(e -> {
             String plaque = txtPlaque.getText().trim().toUpperCase();
             
-            // Validation
             if (plaque.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "La plaque d'immatriculation est obligatoire", 
-                    "Erreur", JOptionPane.ERROR_MESSAGE);
+                vue.afficherErreur("La plaque d'immatriculation est obligatoire");
                 return;
             }
             
-            if (!plaque.matches("[A-Z]{2}-\\d{3}-[A-Z]{2}")) {
-                JOptionPane.showMessageDialog(dialog, 
-                    "Format de plaque invalide. Utilisez le format: AA-123-AA", 
-                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            if (!validerFormatPlaque(plaque)) {
+                vue.afficherErreur("Format de plaque invalide. Utilisez AA-123-AA ou AA123AA");
                 return;
             }
             
-            // Vérifier si la plaque existe déjà pour cet utilisateur
-            if (VehiculeUsagerDAO.plaqueExistePourUsager(usager.getIdUsager(), plaque)) {
-                JOptionPane.showMessageDialog(dialog, 
-                    "Cette plaque d'immatriculation est déjà enregistrée pour cet utilisateur", 
-                    "Plaque existante", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
+            String plaqueNormalisee = normaliserPlaque(plaque);
             
-            // Créer le véhicule
-            VehiculeUsager vehicule = new VehiculeUsager(
-                usager.getIdUsager(),
-                plaque,
-                (String) comboType.getSelectedItem()
-            );
-            vehicule.setMarque(txtMarque.getText().trim());
-            vehicule.setModele(txtModele.getText().trim());
-            vehicule.setEstPrincipal(chkPrincipal.isSelected());
-            
-            // Sauvegarder
-            if (VehiculeUsagerDAO.ajouterVehicule(vehicule)) {
-                JOptionPane.showMessageDialog(dialog, 
-                    "Véhicule ajouté avec succès !", 
-                    "Succès", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                if (vehiculeUsagerDAO.plaqueExistePourUsager(usagerSelectionne.getIdUsager(), plaqueNormalisee)) {
+                    vue.afficherErreur("Cette plaque existe déjà pour cet utilisateur");
+                    return;
+                }
                 
-                // Rafraîchir la liste dans le dialogue parent
-                model.setRowCount(0);
-                chargerVehiculesUsager(usager.getIdUsager(), model);
+                VehiculeUsager vehicule = new VehiculeUsager(
+                    usagerSelectionne.getIdUsager(),
+                    plaqueNormalisee,
+                    (String) comboType.getSelectedItem()
+                );
+                vehicule.setMarque(txtMarque.getText().trim());
+                vehicule.setModele(txtModele.getText().trim());
+                vehicule.setEstPrincipal(chkPrincipal.isSelected());
+                
+                vehiculeUsagerDAO.create(vehicule);
+                
+                vue.afficherInformation("Véhicule ajouté avec succès");
+                chargerVehicules(usagerSelectionne.getIdUsager(), model);
                 dialog.dispose();
-            } else {
-                JOptionPane.showMessageDialog(dialog, 
-                    "Erreur lors de l'ajout du véhicule", 
-                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            } catch (SQLException ex) {
+                gererErreur("Erreur ajout véhicule", ex.getMessage());
             }
         });
         
-        JPanel panelBoutonsDialog = new JPanel(new FlowLayout());
-        panelBoutonsDialog.add(btnAnnuler);
-        panelBoutonsDialog.add(btnValider);
+        JPanel panelBoutons = new JPanel();
+        panelBoutons.add(btnAnnuler);
+        panelBoutons.add(btnValider);
         
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
-        dialog.add(panelBoutonsDialog, gbc);
+        dialog.add(panelBoutons, gbc);
         
         dialog.pack();
         dialog.setVisible(true);
     }
     
-    private void chargerVehiculesUsager(int idUsager, DefaultTableModel model) {
-        model.setRowCount(0);
-        List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsager(idUsager);
-        
-        for (VehiculeUsager v : vehicules) {
-            model.addRow(new Object[]{
-                v.getIdVehiculeUsager(),
-                v.getPlaqueImmatriculation(),
-                v.getTypeVehicule(),
-                v.getMarque() != null ? v.getMarque() : "",
-                v.getModele() != null ? v.getModele() : "",
-                v.isEstPrincipal() ? "Oui" : "Non",
-                v.getDateAjout().toString()
-            });
+    private void supprimerVehicule(JTable table, DefaultTableModel model) {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow >= 0) {
+            int idVehicule = (int) model.getValueAt(selectedRow, 0);
+            String plaque = (String) model.getValueAt(selectedRow, 1);
+            boolean estPrincipal = "Oui".equals(model.getValueAt(selectedRow, 5));
+            
+            if (vue.demanderConfirmation("Supprimer le véhicule " + plaque + " ?")) {
+                if (estPrincipal) {
+                    int confirmation = JOptionPane.showConfirmDialog(vue,
+                        "Ce véhicule est défini comme principal. Sa suppression désactivera le véhicule principal.\nContinuer quand même ?",
+                        "Attention - Véhicule principal",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                    
+                    if (confirmation != JOptionPane.YES_OPTION) {
+                        return;
+                    }
+                }
+                
+                try {
+                    if (VehiculeUsagerDAO.supprimerVehiculeStatic(idVehicule)) {
+                        model.removeRow(selectedRow);
+                        vue.afficherInformation("Véhicule supprimé avec succès");
+                    } else {
+                        vue.afficherErreur("Erreur lors de la suppression du véhicule");
+                    }
+                } catch (Exception ex) {
+                    gererErreur("Erreur suppression véhicule", ex.getMessage());
+                }
+            }
+        } else {
+            vue.afficherInformation("Veuillez sélectionner un véhicule");
+        }
+    }
+    
+    private void definirPrincipalVehicule(JTable table, DefaultTableModel model) {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow >= 0) {
+            int idVehicule = (int) model.getValueAt(selectedRow, 0);
+            String plaque = (String) model.getValueAt(selectedRow, 1);
+            
+            if ("Oui".equals(model.getValueAt(selectedRow, 5))) {
+                vue.afficherInformation("Ce véhicule est déjà défini comme principal");
+                return;
+            }
+            
+            if (vue.demanderConfirmation("Définir le véhicule " + plaque + " comme véhicule principal ?")) {
+                try {
+                    if (VehiculeUsagerDAO.definirVehiculePrincipalStatic(idVehicule, usagerSelectionne.getIdUsager())) {
+                        vue.afficherInformation("Véhicule défini comme principal avec succès");
+                        chargerVehicules(usagerSelectionne.getIdUsager(), model);
+                    } else {
+                        vue.afficherErreur("Erreur lors de la définition du véhicule principal");
+                    }
+                } catch (Exception ex) {
+                    gererErreur("Erreur définition véhicule principal", ex.getMessage());
+                }
+            }
+        } else {
+            vue.afficherInformation("Veuillez sélectionner un véhicule");
         }
     }
     
     private void gererAbonnements() {
-        Usager usager = vue.getUsagerSelectionne();
-        if (usager == null) {
+        usagerSelectionne = vue.getUsagerSelectionne();
+        if (usagerSelectionne == null) {
             vue.afficherInformation("Veuillez sélectionner un utilisateur");
+            etat = Etat.AFFICHAGE;
             return;
         }
         
-        // Récupérer tous les abonnements disponibles
-        List<Abonnement> abonnements = AbonnementDAO.getAllAbonnements();
-        
-        // Créer un tableau pour afficher les abonnements actuels
-        String[] abonnementsArray = abonnements.stream()
-            .map(a -> a.getLibelleAbonnement() + " (" + a.getTarifAbonnement() + "€)")
-            .toArray(String[]::new);
-        
-        // Vérifier l'abonnement actuel
-        Abonnement abonnementActuel = AbonnementDAO.getAbonnementByUsager(usager.getIdUsager());
-        String abonnementActuelStr = "Aucun";
-        String idAbonnementActuel = null;
-        if (AbonnementDAO.hasAbonnement(usager.getIdUsager(), abonnementActuel.getIdAbonnement())) {
-        	abonnementActuelStr = abonnementActuel.getLibelleAbonnement();
-        	idAbonnementActuel = abonnementActuel.getIdAbonnement();
-        }
-        
-        JDialog dialog = new JDialog(vue, "Gestion des Abonnements", true);
-        dialog.setSize(500, 300);
-        dialog.setLocationRelativeTo(vue);
-        
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5, 5, 5, 5);
-        
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        panel.add(new JLabel("Abonnement actuel: " + abonnementActuel), gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 1;
-        panel.add(new JLabel("Nouvel abonnement:"), gbc);
-        gbc.gridx = 1;
-        JComboBox<String> comboAbonnements = new JComboBox<>(abonnementsArray);
-        panel.add(comboAbonnements, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
-        JPanel panelBoutons = new JPanel(new FlowLayout());
-        JButton btnAttribuer = new JButton("Attribuer");
-        JButton btnSupprimer = new JButton("Supprimer");
-        JButton btnFermer = new JButton("Fermer");
-        
-        btnAttribuer.addActionListener(e -> {
-            int selectedIndex = comboAbonnements.getSelectedIndex();
-            if (selectedIndex >= 0) {
-                Abonnement abonnementSelectionne = abonnements.get(selectedIndex);
-                
-                if (vue.demanderConfirmation("Attribuer l'abonnement " + 
-                    abonnementSelectionne.getLibelleAbonnement() + " à " + 
-                    usager.getPrenomUsager() + " " + usager.getNomUsager() + " ?")) {
+        try {
+            List<Abonnement> abonnements = abonnementDAO.findAll();
+            
+            if (abonnements.isEmpty()) {
+                vue.afficherInformation("Aucun abonnement disponible");
+                etat = Etat.AFFICHAGE;
+                return;
+            }
+            
+            String[] options = abonnements.stream()
+                .map(a -> a.getLibelleAbonnement() + " (" + a.getTarifAbonnement() + "€/mois)")
+                .toArray(String[]::new);
+            
+            List<Abonnement> abonnementsActuels = abonnementDAO.getAbonnementsByUsager(usagerSelectionne.getIdUsager());
+            String abonnementActuel = "Aucun";
+            if (!abonnementsActuels.isEmpty()) {
+                abonnementActuel = abonnementsActuels.get(0).getLibelleAbonnement();
+            }
+            
+            JDialog dialog = new JDialog(vue, "Gestion des Abonnements", true);
+            dialog.setSize(500, 300);
+            dialog.setLocationRelativeTo(vue);
+            dialog.setLayout(new java.awt.BorderLayout(10, 10));
+            
+            JPanel panelInfo = new JPanel(new java.awt.GridLayout(4, 1, 5, 5));
+            panelInfo.add(new JLabel("Utilisateur: " + usagerSelectionne.getPrenomUsager() + " " + usagerSelectionne.getNomUsager()));
+            panelInfo.add(new JLabel("Email: " + usagerSelectionne.getMailUsager()));
+            panelInfo.add(new JLabel("Abonnement actuel: " + abonnementActuel));
+            
+            JComboBox<String> comboAbonnements = new JComboBox<>(options);
+            panelInfo.add(new JLabel("Nouvel abonnement:"));
+            panelInfo.add(comboAbonnements);
+            
+            JPanel panelBoutons = new JPanel();
+            JButton btnAttribuer = new JButton("Attribuer/Mettre à jour");
+            JButton btnSupprimer = new JButton("Supprimer");
+            JButton btnFermer = new JButton("Fermer");
+            
+            btnAttribuer.addActionListener(e -> {
+                int selectedIndex = comboAbonnements.getSelectedIndex();
+                if (selectedIndex >= 0) {
+                    Abonnement abonnement = abonnements.get(selectedIndex);
                     
-                    if (AbonnementDAO.ajouterAbonnementUtilisateur(usager.getIdUsager(), 
-                        abonnementSelectionne.getIdAbonnement())) {
-                        vue.afficherInformation("Abonnement attribué avec succès");
-                        vue.chargerUtilisateurs();
-                        dialog.dispose();
-                    } else {
-                        vue.afficherErreur("Erreur lors de l'attribution de l'abonnement");
+                    if (vue.demanderConfirmation("Attribuer l'abonnement '" + 
+                        abonnement.getLibelleAbonnement() + "' à " + 
+                        usagerSelectionne.getPrenomUsager() + " " + usagerSelectionne.getNomUsager() + " ?")) {
+                        
+                        try {
+                            boolean success = abonnementDAO.ajouterAbonnementUtilisateur(
+                                usagerSelectionne.getIdUsager(), abonnement.getIdAbonnement());
+                            
+                            if (success) {
+                                vue.afficherInformation("Abonnement attribué avec succès");
+                                dialog.dispose();
+                            } else {
+                                vue.afficherErreur("Erreur lors de l'attribution de l'abonnement");
+                            }
+                        } catch (SQLException ex) {
+                            gererErreur("Erreur attribution abonnement", ex.getMessage());
+                        }
                     }
                 }
-            }
-        });
-        
-        btnSupprimer.addActionListener(e -> {
-            if (AbonnementDAO.hasAbonnement(usager.getIdUsager(), abonnementActuel.getIdAbonnement())) {
+            });
+            
+            btnSupprimer.addActionListener(e -> {
                 if (vue.demanderConfirmation("Supprimer l'abonnement de " + 
-                    usager.getPrenomUsager() + " " + usager.getNomUsager() + " ?")) {
+                    usagerSelectionne.getPrenomUsager() + " " + usagerSelectionne.getNomUsager() + " ?")) {
                     
-                    if (AbonnementDAO.supprimerAbonnementUtilisateur(usager.getIdUsager())) {
+                    try {
+                        abonnementDAO.supprimerAbonnementsUtilisateur(usagerSelectionne.getIdUsager());
                         vue.afficherInformation("Abonnement supprimé avec succès");
-                        vue.chargerUtilisateurs();
                         dialog.dispose();
-                    } else {
-                        vue.afficherErreur("Erreur lors de la suppression de l'abonnement");
+                    } catch (SQLException ex) {
+                        gererErreur("Erreur suppression abonnement", ex.getMessage());
                     }
                 }
-            } else {
-                vue.afficherInformation("Cet utilisateur n'a pas d'abonnement actif");
-            }
-        });
-        
-        btnFermer.addActionListener(e -> dialog.dispose());
-        
-        panelBoutons.add(btnAttribuer);
-        panelBoutons.add(btnSupprimer);
-        panelBoutons.add(btnFermer);
-        panel.add(panelBoutons, gbc);
-        
-        dialog.add(panel);
-        dialog.setVisible(true);
+            });
+            
+            btnFermer.addActionListener(e -> dialog.dispose());
+            
+            panelBoutons.add(btnAttribuer);
+            panelBoutons.add(btnSupprimer);
+            panelBoutons.add(btnFermer);
+            
+            dialog.add(panelInfo, java.awt.BorderLayout.CENTER);
+            dialog.add(panelBoutons, java.awt.BorderLayout.SOUTH);
+            
+            dialog.setVisible(true);
+            etat = Etat.AFFICHAGE;
+            
+        } catch (SQLException e) {
+            gererErreur("Erreur chargement abonnements", e.getMessage());
+        }
     }
     
     private void voirStationnements() {
-        Usager usager = vue.getUsagerSelectionne();
-        if (usager == null) {
+        usagerSelectionne = vue.getUsagerSelectionne();
+        if (usagerSelectionne == null) {
             vue.afficherInformation("Veuillez sélectionner un utilisateur");
+            etat = Etat.AFFICHAGE;
             return;
         }
         
-        // Créer une fenêtre pour afficher l'historique des stationnements
         JDialog dialog = new JDialog(vue, "Historique des Stationnements", true);
         dialog.setSize(900, 500);
         dialog.setLocationRelativeTo(vue);
+        dialog.setLayout(new java.awt.BorderLayout(10, 10));
         
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        
-        // Tableau des stationnements
         String[] colonnes = {"ID", "Type", "Véhicule", "Lieu", "Date début", "Date fin", "Durée", "Coût", "Statut", "Paiement"};
-        DefaultTableModel modelStationnements = new DefaultTableModel(colonnes, 0) {
+        DefaultTableModel model = new DefaultTableModel(colonnes, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
-        JTable tableStationnements = new JTable(modelStationnements);
+        JTable table = new JTable(model);
         
-        // Charger les stationnements
-        chargerStationnementsUsager(usager.getIdUsager(), modelStationnements);
+        chargerStationnements(usagerSelectionne.getIdUsager(), model);
         
-        JScrollPane scrollPane = new JScrollPane(tableStationnements);
+        JScrollPane scrollPane = new JScrollPane(table);
         
-        // Panel d'information
-        JPanel panelInfo = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panelInfo.add(new JLabel("Stationnements de " + usager.getPrenomUsager() + " " + 
-                                usager.getNomUsager() + " (" + modelStationnements.getRowCount() + " stationnement(s))"));
+        JPanel panelInfo = new JPanel();
+        panelInfo.add(new JLabel("Stationnements de " + usagerSelectionne.getPrenomUsager() + " " + 
+                                usagerSelectionne.getNomUsager() + " (" + model.getRowCount() + " stationnement(s))"));
         
-        // Panel de boutons
-        JPanel panelBoutons = new JPanel(new FlowLayout());
+        JPanel panelBoutons = new JPanel();
         JButton btnActualiser = new JButton("Actualiser");
         JButton btnFermer = new JButton("Fermer");
         
         btnActualiser.addActionListener(e -> {
-            modelStationnements.setRowCount(0);
-            chargerStationnementsUsager(usager.getIdUsager(), modelStationnements);
+            model.setRowCount(0);
+            chargerStationnements(usagerSelectionne.getIdUsager(), model);
             vue.afficherInformation("Liste actualisée");
         });
         
@@ -528,61 +858,44 @@ public class ControleurGestionUtilisateurs implements ActionListener {
         panelBoutons.add(btnActualiser);
         panelBoutons.add(btnFermer);
         
-        panel.add(panelInfo, BorderLayout.NORTH);
-        panel.add(scrollPane, BorderLayout.CENTER);
-        panel.add(panelBoutons, BorderLayout.SOUTH);
+        dialog.add(panelInfo, java.awt.BorderLayout.NORTH);
+        dialog.add(scrollPane, java.awt.BorderLayout.CENTER);
+        dialog.add(panelBoutons, java.awt.BorderLayout.SOUTH);
         
-        dialog.add(panel);
         dialog.setVisible(true);
+        etat = Etat.AFFICHAGE;
     }
     
-    private void chargerStationnementsUsager(int idUsager, DefaultTableModel model) {
-        String sql = "SELECT s.*, " +
-                    "COALESCE(p.libelle_parking, z.libelle_zone) as lieu, " +
-                    "CASE WHEN s.duree_heures > 0 OR s.duree_minutes > 0 " +
-                    "THEN CONCAT(s.duree_heures, 'h', LPAD(s.duree_minutes, 2, '0'), 'min') " +
-                    "ELSE '-' END as duree, " +
-                    "s.statut_paiement " +
-                    "FROM Stationnement s " +
-                    "LEFT JOIN Parking p ON s.id_parking = p.id_parking " +
-                    "LEFT JOIN Zone z ON s.id_zone = z.id_zone " +
-                    "WHERE s.id_usager = ? " +
-                    "ORDER BY s.date_creation DESC";
-        
-        try (java.sql.Connection conn = modele.dao.MySQLConnection.getConnection();
-             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+    private void chargerStationnements(int idUsager, DefaultTableModel model) {
+        try {
+            StationnementDAO stationnementDAO = StationnementDAO.getInstance();
+            List<modele.Stationnement> stationnements = stationnementDAO.getHistoriqueStationnements(idUsager);
             
-            pstmt.setInt(1, idUsager);
-            java.sql.ResultSet rs = pstmt.executeQuery();
+            java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm");
             
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-            
-            while (rs.next()) {
-                java.sql.Timestamp dateCreation = rs.getTimestamp("date_creation");
-                java.sql.Timestamp dateFin = rs.getTimestamp("date_fin");
-                
+            for (modele.Stationnement s : stationnements) {
                 model.addRow(new Object[]{
-                    rs.getInt("id_stationnement"),
-                    rs.getString("type_stationnement"),
-                    rs.getString("type_vehicule") + " - " + rs.getString("plaque_immatriculation"),
-                    rs.getString("lieu"),
-                    dateCreation != null ? dateFormat.format(dateCreation) : "-",
-                    dateFin != null ? dateFormat.format(dateFin) : "-",
-                    rs.getString("duree"),
-                    String.format("%.2f €", rs.getDouble("cout")),
-                    rs.getString("statut"),
-                    rs.getString("statut_paiement")
+                    s.getIdStationnement(),
+                    s.getTypeStationnement(),
+                    s.getTypeVehicule() + " - " + s.getPlaqueImmatriculation(),
+                    s.getIdTarification(),
+                    s.getDateCreation() != null ? dateFormat.format(
+                        java.sql.Timestamp.valueOf(s.getDateCreation())) : "-",
+                    s.getDateFin() != null ? dateFormat.format(
+                        java.sql.Timestamp.valueOf(s.getDateFin())) : "-",
+                    s.getDureeHeures() + "h" + s.getDureeMinutes() + "min",
+                    String.format("%.2f €", s.getCout()),
+                    s.getStatut(),
+                    s.getStatutPaiement()
                 });
             }
-            
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (SQLException e) {
+            gererErreur("Erreur chargement stationnements", e.getMessage());
         }
     }
     
     private void retourAdministration() {
-        // Retour à la page d'administration
-        String emailAdmin = getEmailAdminFromVue();
+        String emailAdmin = vue.getEmailAdmin();
         if (emailAdmin != null) {
             new Page_Administration(emailAdmin).setVisible(true);
             vue.dispose();
@@ -591,17 +904,34 @@ public class ControleurGestionUtilisateurs implements ActionListener {
         }
     }
     
-    private String getEmailAdminFromVue() {
-        try {
-            // Essaie de récupérer l'email admin de la vue
-            if (vue instanceof PageGestionUtilisateurs) {
-                // Tu pourrais avoir une méthode getEmailAdmin() dans PageGestionUtilisateurs
-                java.lang.reflect.Method method = vue.getClass().getMethod("getEmailAdmin");
-                return (String) method.invoke(vue);
-            }
-        } catch (Exception e) {
-            // Si la méthode n'existe pas, retourne un email par défaut
+    // Méthodes utilitaires
+    
+    private boolean validerFormatPlaque(String plaque) {
+        return plaque.matches("[A-Z]{2}-\\d{3}-[A-Z]{2}") || 
+               plaque.matches("[A-Z]{2}\\d{3}[A-Z]{2}");
+    }
+    
+    private String normaliserPlaque(String plaque) {
+        if (plaque.matches("[A-Z]{2}\\d{3}[A-Z]{2}")) {
+            return plaque.substring(0, 2) + "-" + 
+                   plaque.substring(2, 5) + "-" + 
+                   plaque.substring(5);
         }
-        return "admin@pr.com"; // Valeur par défaut
+        return plaque;
+    }
+    
+    private void gererErreur(String titre, String message) {
+        System.err.println(titre + ": " + message);
+        vue.afficherErreur(titre);
+        etat = Etat.ERREUR;
+    }
+    
+    private void gererErreurInitialisation(String message) {
+        System.err.println("Erreur initialisation: " + message);
+        JOptionPane.showMessageDialog(vue,
+            message + "\n\nL'application va se fermer.",
+            "Erreur d'initialisation",
+            JOptionPane.ERROR_MESSAGE);
+        System.exit(1);
     }
 }

@@ -6,7 +6,7 @@ public class VehiculeUsager {
     private int idVehiculeUsager;
     private int idUsager;
     private String plaqueImmatriculation;
-    private String typeVehicule; // "Voiture", "Moto", "Camion"
+    private String typeVehicule;
     private String marque;
     private String modele;
     private LocalDate dateAjout;

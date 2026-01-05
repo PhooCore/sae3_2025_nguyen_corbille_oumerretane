@@ -1,214 +1,260 @@
 package controleur;
 
 import ihm.Page_Garer_Voirie;
-import javax.swing.JButton;
-import javax.swing.JOptionPane;
+import ihm.Page_Principale;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.util.List;
 import modele.Usager;
+import modele.Zone;
+import modele.VehiculeUsager;
 import modele.dao.UsagerDAO;
 import modele.dao.VehiculeUsagerDAO;
-import modele.VehiculeUsager;
-import java.util.List;
 
 public class ControleurGarerVoirie implements ActionListener {
     
-    private enum EtatVoirie {
+    // États du contrôleur
+    private enum Etat {
         INITIAL,
         SAISIE,
         VALIDATION,
-        PREPARATION,
-        REDIRECTION
+        STATIONNEMENT_GRATUIT,
+        PREPARATION_PAIEMENT,
+        REDIRECTION,
+        ERREUR
     }
     
+    // Références
     private Page_Garer_Voirie vue;
-    private EtatVoirie etat;
-    private StationnementControleur controleurStationnement;
+    private Etat etat;
+    
+    // Contrôleurs
+    private StationnementControleur stationnementControleur;
+    
+    // Données
+    private String emailUtilisateur;
     private Usager usager;
+    private List<Zone> zones;
+    private VehiculeUsager vehiculeSelectionne;
     
     public ControleurGarerVoirie(Page_Garer_Voirie vue) {
         this.vue = vue;
-        this.usager = UsagerDAO.getUsagerByEmail(vue.emailUtilisateur);
-        this.controleurStationnement = new StationnementControleur(vue.emailUtilisateur);
-        this.etat = EtatVoirie.INITIAL;
-        configurerListeners();
-        initialiserVueAvecDonneesUtilisateur();
-        etat = EtatVoirie.SAISIE;
+        this.emailUtilisateur = vue.getEmailUtilisateur();
+        this.etat = Etat.INITIAL;
+        
+        initialiserControleur();
     }
     
-    private void initialiserVueAvecDonneesUtilisateur() {
-        if (usager != null) {
-            // Charger le véhicule principal
-            VehiculeUsager vehiculePrincipal = VehiculeUsagerDAO.getVehiculePrincipal(usager.getIdUsager());
-            if (vehiculePrincipal != null) {
-                vue.lblPlaque.setText(vehiculePrincipal.getPlaqueImmatriculation());
-                // Mettre à jour le type de véhicule dans la vue
-                String typeVehicule = vehiculePrincipal.getTypeVehicule();
-                if ("Voiture".equals(typeVehicule)) {
-                    vue.radioVoiture.setSelected(true);
-                } else if ("Moto".equals(typeVehicule)) {
-                    vue.radioMoto.setSelected(true);
-                } else if ("Camion".equals(typeVehicule)) {
-                    vue.radioCamion.setSelected(true);
-                }
-            } else {
-                // Si pas de véhicule principal, essayer d'en avoir un autre
-                List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
-                if (!vehicules.isEmpty()) {
-                    vue.lblPlaque.setText(vehicules.get(0).getPlaqueImmatriculation());
-                } else {
-                    vue.lblPlaque.setText("Non définie");
-                }
-            }
+    private void initialiserControleur() {
+        try {
+            chargerUtilisateur();
+            initialiserStationnementControleur();
+            initialiserVue();
+            etat = Etat.SAISIE;
+            
+        } catch (Exception e) {
+            gererErreurInitialisation(e.getMessage());
         }
+    }
+    
+    private void chargerUtilisateur() throws Exception {
+        this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+        if (usager == null) {
+            throw new Exception("Utilisateur non trouvé");
+        }
+    }
+    
+    private void initialiserStationnementControleur() {
+        this.stationnementControleur = new StationnementControleur(emailUtilisateur);
+    }
+    
+    private void initialiserVue() {
+        configurerListeners();
+        vue.setNomUsager(usager.getNomUsager());
+        vue.setPrenomUsager(usager.getPrenomUsager());
+        vue.setEmailUsager(usager.getMailUsager());
         
-        // Calculer le coût initial
+        chargerZones();
+        chargerVehiculePrincipal();
         recalculerCout();
     }
     
     private void configurerListeners() {
-        // Ajouter ActionListener aux boutons
-        vue.btnAnnuler.addActionListener(this);
-        vue.btnValider.addActionListener(this);
-        vue.btnModifierPlaque.addActionListener(this);
+        // Boutons
+        vue.getBtnAnnuler().addActionListener(this);
+        vue.getBtnValider().addActionListener(this);
+        vue.getBtnModifierPlaque().addActionListener(this);
         
-        // Ajouter ItemListener pour le recalcul automatique du coût
-        vue.comboZone.addItemListener(new ItemListener() {
+        // Combos pour le recalcul automatique du coût
+        vue.getComboZone().addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == ItemEvent.SELECTED) {
+                if (etat == Etat.SAISIE && e.getStateChange() == ItemEvent.SELECTED) {
                     recalculerCout();
                 }
             }
         });
         
-        vue.comboHeures.addItemListener(new ItemListener() {
+        vue.getComboHeures().addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == ItemEvent.SELECTED) {
+                if (etat == Etat.SAISIE && e.getStateChange() == ItemEvent.SELECTED) {
                     recalculerCout();
                 }
             }
         });
         
-        vue.comboMinutes.addItemListener(new ItemListener() {
+        vue.getComboMinutes().addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == ItemEvent.SELECTED) {
-                    recalculerCout();
-                }
-            }
-        });
-        
-        // Ajouter ItemListener aux radio buttons
-        vue.radioVoiture.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == ItemEvent.SELECTED) {
-                    recalculerCout();
-                }
-            }
-        });
-        
-        vue.radioMoto.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == ItemEvent.SELECTED) {
-                    recalculerCout();
-                }
-            }
-        });
-        
-        vue.radioCamion.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == ItemEvent.SELECTED) {
+                if (etat == Etat.SAISIE && e.getStateChange() == ItemEvent.SELECTED) {
                     recalculerCout();
                 }
             }
         });
     }
     
+    private void chargerZones() {
+        try {
+            vue.chargerZones();
+            this.zones = vue.getZones();
+        } catch (Exception e) {
+            gererErreur("Erreur chargement zones", e.getMessage());
+        }
+    }
+    
+    private void chargerVehiculePrincipal() {
+        try {
+            VehiculeUsager vehiculePrincipal = VehiculeUsagerDAO.getVehiculePrincipalStatic(usager.getIdUsager());
+            if (vehiculePrincipal != null) {
+                afficherVehicule(vehiculePrincipal);
+            } else {
+                List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsagerStatic(usager.getIdUsager());
+                if (!vehicules.isEmpty()) {
+                    afficherVehicule(vehicules.get(0));
+                } else {
+                    vue.setPlaque("Non définie");
+                    vue.afficherMessageInformation("Aucun véhicule", 
+                        "Vous n'avez pas encore de véhicule enregistré.");
+                }
+            }
+        } catch (Exception e) {
+            vue.setPlaque("ERREUR CHARGEMENT");
+            gererErreur("Erreur chargement véhicules", e.getMessage());
+        }
+    }
+    
+    private void afficherVehicule(VehiculeUsager vehicule) {
+        vue.setPlaque(vehicule.getPlaqueImmatriculation());
+        vue.setTypeVehicule(vehicule.getTypeVehicule());
+        this.vehiculeSelectionne = vehicule;
+    }
+    
     @Override
     public void actionPerformed(ActionEvent e) {
-        String action = getActionBouton((JButton) e.getSource());
-        
-        System.out.println("Action: " + action + " - État: " + etat);
+        Object source = e.getSource();
         
         switch (etat) {
             case SAISIE:
-                if (action.equals("ANNULER")) {
-                    etat = EtatVoirie.REDIRECTION;
+                if (source == vue.getBtnAnnuler()) {
                     annuler();
-                } else if (action.equals("VALIDER")) {
-                    etat = EtatVoirie.VALIDATION;
+                } else if (source == vue.getBtnValider()) {
                     validerStationnement();
-                } else if (action.equals("MODIFIER_PLAQUE")) {
+                } else if (source == vue.getBtnModifierPlaque()) {
                     modifierPlaque();
                 }
                 break;
                 
             case VALIDATION:
-                // État intermédiaire pour validation
+                // Traitement en cours via les méthodes spécifiques
                 break;
                 
-            case PREPARATION:
-                // État intermédiaire pour préparation
+            case STATIONNEMENT_GRATUIT:
+                // Traitement en cours via les méthodes spécifiques
                 break;
                 
-            case REDIRECTION:
-                // Ne rien faire
+            case PREPARATION_PAIEMENT:
+                // Traitement en cours via les méthodes spécifiques
+                break;
+                
+            case ERREUR:
+                // Ne rien faire en état d'erreur
                 break;
         }
     }
     
     private void validerStationnement() {
-        // Validation des données
-        String plaque = vue.lblPlaque.getText();
-        if ("Non définie".equals(plaque) || plaque.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(vue,
-                "Veuillez définir une plaque d'immatriculation",
+        etat = Etat.VALIDATION;
+        
+        if (!validerPreRequis()) {
+            etat = Etat.SAISIE;
+            return;
+        }
+        
+        Zone zone = vue.getZoneSelectionnee();
+        int heures = Integer.parseInt(vue.getComboHeures().getSelectedItem().toString());
+        int minutes = Integer.parseInt(vue.getComboMinutes().getSelectedItem().toString());
+        
+        double cout = calculerCoutFinal(zone, heures, minutes);
+        
+        if (cout == 0.00) {
+            // Stationnement gratuit
+            etat = Etat.STATIONNEMENT_GRATUIT;
+            demanderConfirmationStationnementGratuit(zone, heures, minutes);
+        } else {
+            // Stationnement payant
+            etat = Etat.PREPARATION_PAIEMENT;
+            demanderConfirmationStationnementPayant(zone, heures, minutes, cout);
+        }
+    }
+    
+    private boolean validerPreRequis() {
+        String plaque = vue.getPlaque();
+        if ("Non définie".equals(plaque) || plaque.trim().isEmpty() || 
+            "ERREUR CHARGEMENT".equals(plaque)) {
+            vue.afficherMessageErreur(
                 "Plaque manquante",
-                JOptionPane.ERROR_MESSAGE);
-            etat = EtatVoirie.SAISIE;
-            return;
+                "Veuillez définir une plaque d'immatriculation");
+            return false;
         }
         
-        if (!controleurStationnement.validerPlaque(plaque)) {
-            JOptionPane.showMessageDialog(vue,
-                "Format de plaque invalide. Utilisez AA-123-AA",
+        if (!stationnementControleur.validerPlaque(plaque)) {
+            vue.afficherMessageErreur(
                 "Erreur de plaque",
-                JOptionPane.ERROR_MESSAGE);
-            etat = EtatVoirie.SAISIE;
-            return;
+                "Format de plaque invalide. Utilisez AA-123-AA");
+            return false;
         }
         
-        int indexZone = vue.comboZone.getSelectedIndex();
-        if (indexZone < 0) {
-            JOptionPane.showMessageDialog(vue,
-                "Veuillez sélectionner une zone",
+        Zone zone = vue.getZoneSelectionnee();
+        if (zone == null) {
+            vue.afficherMessageErreur(
                 "Zone manquante",
-                JOptionPane.ERROR_MESSAGE);
-            etat = EtatVoirie.SAISIE;
-            return;
+                "Veuillez sélectionner une zone");
+            return false;
         }
         
-        // Récupérer les valeurs
-        String typeVehicule = getTypeVehicule();
-        String idZone = vue.zones.get(indexZone).getIdZone();
-        String nomZone = vue.zones.get(indexZone).getLibelleZone();
-        int heures = Integer.parseInt(vue.comboHeures.getSelectedItem().toString());
-        int minutes = Integer.parseInt(vue.comboMinutes.getSelectedItem().toString());
+        String typeVehicule = vue.getTypeVehicule();
+        if (typeVehicule == null) {
+            vue.afficherMessageErreur(
+                "Type de véhicule manquant",
+                "Veuillez sélectionner un type de véhicule");
+            return false;
+        }
         
-        // Calculer le coût de base
+        return true;
+    }
+    
+    private double calculerCoutFinal(Zone zone, int heures, int minutes) {
         int dureeTotaleMinutes = (heures * 60) + minutes;
-        double cout = vue.zones.get(indexZone).calculerCout(dureeTotaleMinutes);
+        double cout = zone.calculerCout(dureeTotaleMinutes);
         
         // Appliquer le tarif de l'abonnement si l'usager en a un
-        if (usager != null && controleurStationnement.usagerAUnAbonnementActif(usager.getIdUsager())) {
-            double tarifAbonnement = controleurStationnement.getTarifAbonnement(usager.getIdUsager());
+        if (stationnementControleur.usagerAUnAbonnementActif(usager.getIdUsager())) {
+            double tarifAbonnement = stationnementControleur.getTarifAbonnement(usager.getIdUsager());
             if (tarifAbonnement > 0) {
                 cout = tarifAbonnement;
             } else if (tarifAbonnement == 0.0) {
@@ -216,99 +262,102 @@ public class ControleurGarerVoirie implements ActionListener {
             }
         }
         
-        // Vérifier si c'est une zone bleue avec stationnement gratuit
-        boolean estZoneBleueGratuite = idZone.equals("ZONE_BLEUE") && cout == 0.00;
-        
-        // Demander confirmation
-        String messageConfirmation = "Confirmez-vous le stationnement ?\n\n" +
-            "Type de véhicule: " + typeVehicule + "\n" +
-            "Plaque: " + plaque + "\n" +
-            "Zone: " + nomZone + "\n" +
+        return cout;
+    }
+    
+    private void demanderConfirmationStationnementGratuit(Zone zone, int heures, int minutes) {
+        String message = "Confirmez-vous le stationnement ?\n\n" +
+            "Type de véhicule: " + vue.getTypeVehicule() + "\n" +
+            "Plaque: " + vue.getPlaque() + "\n" +
+            "Zone: " + zone.getLibelleZone() + "\n" +
             "Durée: " + heures + "h" + minutes + "min\n" +
-            "Coût: " + String.format("%.2f", cout) + " €";
-        
-        if (estZoneBleueGratuite) {
-            messageConfirmation += "\n\n✅ Ce stationnement est GRATUIT !";
-        }
+            "Coût: GRATUIT";
         
         int confirmation = JOptionPane.showConfirmDialog(vue,
-            messageConfirmation,
-            "Confirmation de stationnement",
-            JOptionPane.YES_NO_OPTION);
+            message,
+            "Confirmation de stationnement gratuit",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE);
         
         if (confirmation == JOptionPane.YES_OPTION) {
-            etat = EtatVoirie.PREPARATION;
-            
-            // Si zone bleue gratuite, enregistrer directement sans paiement
-            if (estZoneBleueGratuite) {
-                enregistrerStationnementGratuit(typeVehicule, plaque, idZone, nomZone, heures, minutes);
-            } else {
-                preparerStationnement(typeVehicule, plaque, idZone, nomZone, heures, minutes, cout);
-            }
+            enregistrerStationnementGratuit(zone, heures, minutes);
         } else {
-            etat = EtatVoirie.SAISIE;
+            etat = Etat.SAISIE;
         }
     }
     
-    /**
-     * Enregistre directement un stationnement gratuit sans passer par la page de paiement
-     */
-    private void enregistrerStationnementGratuit(String typeVehicule, String plaque, 
-                                                 String idZone, String nomZone, 
-                                                 int heures, int minutes) {
-        System.out.println("=== ENREGISTREMENT STATIONNEMENT GRATUIT ZONE BLEUE ===");
+    private void demanderConfirmationStationnementPayant(Zone zone, int heures, int minutes, double cout) {
+        String message = "Confirmez-vous le stationnement ?\n\n" +
+            "Type de véhicule: " + vue.getTypeVehicule() + "\n" +
+            "Plaque: " + vue.getPlaque() + "\n" +
+            "Zone: " + zone.getLibelleZone() + "\n" +
+            "Durée: " + heures + "h" + minutes + "min\n" +
+            "Coût: " + String.format("%.2f", cout) + " €";
         
-        // Créer le stationnement directement via le contrôleur
-        boolean succes = controleurStationnement.creerStationnementVoirieGratuit(
+        int confirmation = JOptionPane.showConfirmDialog(vue,
+            message,
+            "Confirmation de stationnement",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE);
+        
+        if (confirmation == JOptionPane.YES_OPTION) {
+            preparerStationnementPayant(zone, heures, minutes);
+        } else {
+            etat = Etat.SAISIE;
+        }
+    }
+    
+    private void enregistrerStationnementGratuit(Zone zone, int heures, int minutes) {
+        String typeVehicule = vue.getTypeVehicule();
+        String plaque = vue.getPlaque();
+        
+        boolean succes = stationnementControleur.creerStationnementVoirieGratuit(
             typeVehicule,
             plaque,
-            idZone,
+            zone.getIdZone(),
             heures,
             minutes
         );
         
         if (succes) {
-            JOptionPane.showMessageDialog(vue,
-                "✅ Stationnement gratuit activé avec succès !\n\n" +
-                "Votre stationnement en Zone Bleue est maintenant actif.\n" +
-                "Durée: " + heures + "h" + minutes + "min",
+            vue.afficherMessageInformation(
                 "Stationnement activé",
-                JOptionPane.INFORMATION_MESSAGE);
+                "✅ Stationnement gratuit activé avec succès !\n\n" +
+                "Votre stationnement en " + zone.getLibelleZone() + " est maintenant actif.\n" +
+                "Durée: " + heures + "h" + minutes + "min\n" +
+                "Statut: GRATUIT");
             
-            etat = EtatVoirie.REDIRECTION;
             retourPagePrincipale();
         } else {
-            JOptionPane.showMessageDialog(vue,
-                "❌ Une erreur est survenue lors de l'activation du stationnement.",
+            vue.afficherMessageErreur(
                 "Erreur",
-                JOptionPane.ERROR_MESSAGE);
-            etat = EtatVoirie.SAISIE;
+                "❌ Une erreur est survenue lors de l'activation du stationnement.");
+            etat = Etat.SAISIE;
         }
     }
     
-    private void preparerStationnement(String typeVehicule, String plaque, String idZone, 
-                                      String nomZone, int heures, int minutes, double cout) {
+    private void preparerStationnementPayant(Zone zone, int heures, int minutes) {
+        String typeVehicule = vue.getTypeVehicule();
+        String plaque = vue.getPlaque();
         
-        // Utiliser le contrôleur de stationnement pour préparer le stationnement
-        boolean succes = controleurStationnement.preparerStationnementVoirie(
+        boolean succes = stationnementControleur.preparerStationnementVoirie(
             typeVehicule,
             plaque,
-            idZone,
+            zone.getIdZone(),
             heures,
             minutes,
             vue
         );
         
         if (succes) {
-            etat = EtatVoirie.REDIRECTION;
-            // La redirection est gérée par le contrôleur de stationnement
+            etat = Etat.REDIRECTION;
         } else {
-            etat = EtatVoirie.SAISIE;
+            vue.afficherMessageErreur("Erreur", "Impossible de préparer le stationnement.");
+            etat = Etat.SAISIE;
         }
     }
     
     private void modifierPlaque() {
-        // Demander si l'utilisateur veut modifier ou choisir parmi ses véhicules
         String[] options = {"Choisir un véhicule existant", "Saisir une nouvelle plaque"};
         int choix = JOptionPane.showOptionDialog(vue,
             "Que souhaitez-vous faire ?",
@@ -327,18 +376,16 @@ public class ControleurGarerVoirie implements ActionListener {
     }
     
     private void choisirVehiculeExistant() {
-        if (usager != null) {
-            List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsager(usager.getIdUsager());
+        try {
+            List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsagerStatic(usager.getIdUsager());
             
             if (vehicules.isEmpty()) {
-                JOptionPane.showMessageDialog(vue,
-                    "Vous n'avez aucun véhicule enregistré.\nVeuillez d'abord ajouter un véhicule.",
+                vue.afficherMessageInformation(
                     "Aucun véhicule",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "Vous n'avez aucun véhicule enregistré.");
                 return;
             }
             
-            // Créer un tableau pour la sélection
             String[] options = new String[vehicules.size()];
             for (int i = 0; i < vehicules.size(); i++) {
                 VehiculeUsager v = vehicules.get(i);
@@ -355,148 +402,203 @@ public class ControleurGarerVoirie implements ActionListener {
                 options[0]);
             
             if (selection != null) {
-                // Trouver le véhicule correspondant
                 for (VehiculeUsager v : vehicules) {
                     if (selection.startsWith(v.getPlaqueImmatriculation())) {
-                        vue.lblPlaque.setText(v.getPlaqueImmatriculation());
-                        
-                        // Mettre à jour le type de véhicule dans la vue
-                        String typeVehicule = v.getTypeVehicule();
-                        if ("Voiture".equals(typeVehicule)) {
-                            vue.radioVoiture.setSelected(true);
-                        } else if ("Moto".equals(typeVehicule)) {
-                            vue.radioMoto.setSelected(true);
-                        } else if ("Camion".equals(typeVehicule)) {
-                            vue.radioCamion.setSelected(true);
-                        }
+                        afficherVehicule(v);
+                        recalculerCout();
                         break;
                     }
                 }
-                // Recalculer le coût après changement
-                recalculerCout();
             }
+            
+        } catch (Exception e) {
+            gererErreur("Erreur sélection véhicule", e.getMessage());
         }
     }
     
     private void saisirNouvellePlaque() {
-        String nouvellePlaque = JOptionPane.showInputDialog(vue, 
-            "Entrez la plaque d'immatriculation (format: AA-123-AA):", 
-            vue.lblPlaque.getText());
+        String plaqueActuelle = vue.getPlaque();
+        if ("Non définie".equals(plaqueActuelle) || "ERREUR CHARGEMENT".equals(plaqueActuelle)) {
+            plaqueActuelle = "";
+        }
         
-        if (nouvellePlaque != null && !nouvellePlaque.trim().isEmpty()) {
-            String plaqueNettoyee = nouvellePlaque.trim().toUpperCase();
-            
-            if (controleurStationnement.validerPlaque(plaqueNettoyee)) {
-                vue.lblPlaque.setText(plaqueNettoyee);
-                
-                // Demander si l'utilisateur veut sauvegarder ce véhicule
-                if (usager != null) {
-                    int sauvegarder = JOptionPane.showConfirmDialog(vue,
-                        "Voulez-vous enregistrer ce véhicule pour une utilisation future ?",
-                        "Enregistrer le véhicule",
-                        JOptionPane.YES_NO_OPTION);
-                    
-                    if (sauvegarder == JOptionPane.YES_OPTION) {
-                        // Demander le type de véhicule
-                        String typeVehicule = getTypeVehicule();
-                        
-                        // Créer et sauvegarder le véhicule
-                        VehiculeUsager vehicule = new VehiculeUsager(
-                            usager.getIdUsager(),
-                            plaqueNettoyee,
-                            typeVehicule
-                        );
-                        
-                        // Demander si c'est le véhicule principal
-                        int estPrincipal = JOptionPane.showConfirmDialog(vue,
-                            "Définir ce véhicule comme véhicule principal ?",
-                            "Véhicule principal",
-                            JOptionPane.YES_NO_OPTION);
-                        
-                        vehicule.setEstPrincipal(estPrincipal == JOptionPane.YES_OPTION);
-                        
-                        if (VehiculeUsagerDAO.ajouterVehicule(vehicule)) {
-                            JOptionPane.showMessageDialog(vue,
-                                "Véhicule enregistré avec succès !",
-                                "Succès",
-                                JOptionPane.INFORMATION_MESSAGE);
-                        }
-                    }
-                }
-                // Recalculer le coût après changement
-                recalculerCout();
-            } else {
-                JOptionPane.showMessageDialog(vue,
-                    "Format de plaque invalide. Utilisez AA-123-AA",
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
+        String nouvellePlaque = JOptionPane.showInputDialog(vue, 
+            "Entrez la plaque d'immatriculation (format: AA-123-AA ou AA123AA):", 
+            plaqueActuelle);
+        
+        if (nouvellePlaque == null) {
+            return;
+        }
+        
+        String plaqueNettoyee = nouvellePlaque.trim().toUpperCase();
+        
+        if (plaqueNettoyee.isEmpty()) {
+            vue.afficherMessageErreur("Plaque vide", "La plaque ne peut pas être vide.");
+            return;
+        }
+        
+        plaqueNettoyee = normaliserFormatPlaque(plaqueNettoyee);
+        
+        if (!stationnementControleur.validerPlaque(plaqueNettoyee)) {
+            vue.afficherMessageErreur(
+                "Format invalide",
+                "Format de plaque invalide. Utilisez AA-123-AA ou AA123AA");
+            return;
+        }
+        
+        vue.setPlaque(plaqueNettoyee);
+        
+        if (vue.getTypeVehicule() == null) {
+            String type = demanderTypeVehicule();
+            if (type != null) {
+                vue.setTypeVehicule(type);
             }
+        }
+        
+        if (usager != null) {
+            int sauvegarder = JOptionPane.showConfirmDialog(vue,
+                "Voulez-vous enregistrer ce véhicule pour une utilisation future ?",
+                "Enregistrer le véhicule",
+                JOptionPane.YES_NO_OPTION);
+            
+            if (sauvegarder == JOptionPane.YES_OPTION) {
+                sauvegarderVehicule(plaqueNettoyee);
+            }
+        }
+        
+        recalculerCout();
+    }
+    
+    private String normaliserFormatPlaque(String plaque) {
+        if (plaque.matches("[A-Z]{2}\\d{3}[A-Z]{2}")) {
+            return plaque.substring(0, 2) + "-" + 
+                   plaque.substring(2, 5) + "-" + 
+                   plaque.substring(5);
+        }
+        return plaque;
+    }
+    
+    private String demanderTypeVehicule() {
+        String[] types = {"Voiture", "Moto", "Camion"};
+        return (String) JOptionPane.showInputDialog(vue,
+            "Sélectionnez le type de véhicule :",
+            "Type de véhicule",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            types,
+            types[0]);
+    }
+    
+    private void sauvegarderVehicule(String plaque) {
+        try {
+            String typeVehicule = vue.getTypeVehicule();
+            if (typeVehicule == null) {
+                typeVehicule = demanderTypeVehicule();
+                if (typeVehicule == null) return;
+                vue.setTypeVehicule(typeVehicule);
+            }
+            
+            List<VehiculeUsager> vehicules = VehiculeUsagerDAO.getVehiculesByUsagerStatic(usager.getIdUsager());
+            for (VehiculeUsager v : vehicules) {
+                if (plaque.equals(v.getPlaqueImmatriculation())) {
+                    vue.afficherMessageInformation("Véhicule existant",
+                        "Ce véhicule est déjà enregistré.");
+                    return;
+                }
+            }
+            
+            VehiculeUsager vehicule = new VehiculeUsager(
+                usager.getIdUsager(),
+                plaque,
+                typeVehicule
+            );
+            
+            if (vehicules.isEmpty()) {
+                vehicule.setEstPrincipal(true);
+            } else {
+                int estPrincipal = JOptionPane.showConfirmDialog(vue,
+                    "Définir ce véhicule comme véhicule principal ?",
+                    "Véhicule principal",
+                    JOptionPane.YES_NO_OPTION);
+                
+                vehicule.setEstPrincipal(estPrincipal == JOptionPane.YES_OPTION);
+            }
+            
+            boolean succes = VehiculeUsagerDAO.ajouterVehiculeStatic(vehicule);
+            if (succes) {
+                vue.afficherMessageInformation("Succès",
+                    "Véhicule enregistré avec succès !");
+            } else {
+                vue.afficherMessageErreur("Erreur",
+                    "Erreur lors de l'enregistrement du véhicule.");
+            }
+            
+        } catch (Exception e) {
+            gererErreur("Erreur sauvegarde véhicule", e.getMessage());
         }
     }
     
     private void recalculerCout() {
         try {
-            int heures = Integer.parseInt(vue.comboHeures.getSelectedItem().toString());
-            int minutes = Integer.parseInt(vue.comboMinutes.getSelectedItem().toString());
+            int heures = Integer.parseInt(vue.getComboHeures().getSelectedItem().toString());
+            int minutes = Integer.parseInt(vue.getComboMinutes().getSelectedItem().toString());
             int dureeTotaleMinutes = (heures * 60) + minutes;
             
-            int index = vue.comboZone.getSelectedIndex();
-            if (index >= 0 && index < vue.zones.size()) {
-                double cout = vue.zones.get(index).calculerCout(dureeTotaleMinutes);
+            Zone zone = vue.getZoneSelectionnee();
+            if (zone != null) {
+                double cout = calculerCoutFinal(zone, heures, minutes);
                 
-                // Appliquer le tarif de l'abonnement si l'usager en a un
-                if (usager != null && controleurStationnement.usagerAUnAbonnementActif(usager.getIdUsager())) {
-                    double tarifAbonnement = controleurStationnement.getTarifAbonnement(usager.getIdUsager());
-                    if (tarifAbonnement > 0) {
-                        cout = tarifAbonnement;
-                    } else if (tarifAbonnement == 0.0) {
-                        cout = 0.0;
-                    }
-                }
-                
-                // Afficher "GRATUIT" pour les stationnements gratuits
                 if (cout == 0.00) {
-                    vue.lblCout.setText("GRATUIT");
-                    vue.lblCout.setForeground(new java.awt.Color(0, 150, 0)); // Vert
+                    vue.setCoutAvecCouleur("GRATUIT", new Color(0, 150, 0));
                 } else {
-                    vue.lblCout.setText(String.format("%.2f €", cout));
-                    vue.lblCout.setForeground(java.awt.Color.BLACK);
+                    vue.setCout(String.format("%.2f €", cout));
                 }
             }
         } catch (Exception e) {
-            vue.lblCout.setText("0.00 €");
-            vue.lblCout.setForeground(java.awt.Color.BLACK);
+            vue.setCout("0.00 €");
         }
-    }
-    
-    private String getTypeVehicule() {
-        if (vue.radioVoiture.isSelected()) return "Voiture";
-        if (vue.radioMoto.isSelected()) return "Moto";
-        return "Camion";
     }
     
     private void annuler() {
-        etat = EtatVoirie.REDIRECTION;
-        retourPagePrincipale();
+        int confirmation = JOptionPane.showConfirmDialog(vue,
+            "Êtes-vous sûr de vouloir annuler ?\nVos sélections seront perdues.",
+            "Confirmation annulation",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE);
+        
+        if (confirmation == JOptionPane.YES_OPTION) {
+            retourPagePrincipale();
+        }
     }
     
     private void retourPagePrincipale() {
-        ihm.Page_Principale pagePrincipale = new ihm.Page_Principale(vue.emailUtilisateur);
-        pagePrincipale.setVisible(true);
-        vue.dispose();
+        try {
+            etat = Etat.REDIRECTION;
+            Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
+            pagePrincipale.setVisible(true);
+            vue.dispose();
+        } catch (Exception e) {
+            gererErreur("Erreur redirection", e.getMessage());
+        }
     }
     
-    private String getActionBouton(JButton b) {
-        String texte = b.getText();
-        if (texte != null) {
-            if (texte.contains("Annuler")) {
-                return "ANNULER";
-            } else if (texte.contains("Valider")) {
-                return "VALIDER";
-            } else if (texte.contains("Modifier")) {
-                return "MODIFIER_PLAQUE";
-            }
-        }
-        return "INCONNU";
+    private void gererErreur(String titre, String message) {
+        System.err.println(titre + ": " + message);
+        vue.afficherMessageErreur(titre, message);
+        etat = Etat.ERREUR;
+    }
+    
+    private void gererErreurInitialisation(String message) {
+        System.err.println("Erreur initialisation: " + message);
+        JOptionPane.showMessageDialog(vue,
+            message + "\n\nL'application va se fermer.",
+            "Erreur d'initialisation",
+            JOptionPane.ERROR_MESSAGE);
+        System.exit(1);
+    }
+    
+    // Getters pour débogage
+    public Etat getEtat() {
+        return etat;
     }
 }

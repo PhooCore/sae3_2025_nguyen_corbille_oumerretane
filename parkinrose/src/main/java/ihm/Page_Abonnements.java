@@ -2,17 +2,19 @@ package ihm;
 
 import javax.swing.*;
 import modele.Abonnement;
+import modele.Usager;
 import modele.dao.AbonnementDAO;
 import modele.dao.UsagerDAO;
 import java.awt.*;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.sql.SQLException;
 
 public class Page_Abonnements extends JFrame {
     
     private String emailUtilisateur;
     private int idUsager;
+    private Usager usager;
     private List<Abonnement> abonnements;
     private List<Abonnement> abonnementsFiltres;
     private JPanel panelAbonnements;
@@ -20,18 +22,31 @@ public class Page_Abonnements extends JFrame {
     private JCheckBox checkGratuit, checkMoto, checkAnnuel, checkHebdo;
     private JTextField txtRechercher;
     private JButton rechercheBtn;
-    
-    // Add these as instance variables to store references
-    private JPanel headerPanel;
     private JLabel lblTitre;
-    private JButton btnRetour; // Ajout de la référence au bouton
+    private JButton btnRetour;
     
     public Page_Abonnements(String email) {
         this.emailUtilisateur = email;
-        this.idUsager = UsagerDAO.getUsagerByEmail(email).getIdUsager();
-        this.abonnements = AbonnementDAO.getAllAbonnements();
-        this.abonnementsFiltres = new ArrayList<>(abonnements);
+        try {
+            this.usager = UsagerDAO.getInstance().findById(email);
+            if (usager != null) {
+                this.idUsager = usager.getIdUsager();
+            } else {
+                JOptionPane.showMessageDialog(this, "Utilisateur non trouvé", "Erreur", JOptionPane.ERROR_MESSAGE);
+                dispose();
+                return;
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Erreur de chargement: " + e.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+            dispose();
+            return;
+        }
+        
+        this.abonnementsFiltres = new ArrayList<>();
         initialiserPage();
+        
+        // Instancier le contrôleur
+        new controleur.ControleurAbonnements(this);
     }
     
     private void initialiserPage() {
@@ -45,7 +60,7 @@ public class Page_Abonnements extends JFrame {
         mainPanel.setBackground(Color.WHITE);
         
         // Header avec titre et filtres
-        headerPanel = creerHeaderPanel();
+        JPanel headerPanel = creerHeaderPanel();
         mainPanel.add(headerPanel, BorderLayout.NORTH);
         
         // Panel pour les cartes d'abonnement
@@ -56,14 +71,8 @@ public class Page_Abonnements extends JFrame {
         scrollPane.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         
-        afficherAbonnements();
-        
         // Bouton retour
-        btnRetour = new JButton("Retour au compte"); // Initialisation du bouton
-        btnRetour.addActionListener(e -> {
-            new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
-            dispose();
-        });
+        btnRetour = new JButton("Retour au compte");
         
         JPanel panelBouton = new JPanel(new FlowLayout(FlowLayout.CENTER));
         panelBouton.setBackground(Color.WHITE);
@@ -82,48 +91,24 @@ public class Page_Abonnements extends JFrame {
         topPanel.setBackground(Color.WHITE);
         
         // Titre avec compteur
-        lblTitre = new JLabel("Choisissez votre abonnement (" + abonnementsFiltres.size() + ")", SwingConstants.CENTER);
+        lblTitre = new JLabel("Choisissez votre abonnement (0)", SwingConstants.CENTER);
         lblTitre.setFont(new Font("Arial", Font.BOLD, 24));
         topPanel.add(lblTitre, BorderLayout.CENTER);
         
-        // Barre de recherche - Inspirée de Page_Accueil
+        // Barre de recherche
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         searchPanel.setBackground(Color.WHITE);
         
         txtRechercher = new JTextField();
         txtRechercher.setPreferredSize(new Dimension(200, 30));
         txtRechercher.setFont(new Font("Arial", Font.PLAIN, 12));
-        
-        // Ajout du texte par défaut
         txtRechercher.setText("Rechercher un abonnement...");
         txtRechercher.setForeground(Color.GRAY);
         
-        // Gestion du focus pour le texte par défaut
-        txtRechercher.addFocusListener(new java.awt.event.FocusAdapter() {
-            public void focusGained(java.awt.event.FocusEvent evt) {
-                if (txtRechercher.getText().equals("Rechercher un abonnement...")) {
-                    txtRechercher.setText("");
-                    txtRechercher.setForeground(Color.BLACK);
-                }
-            }
-            
-            public void focusLost(java.awt.event.FocusEvent evt) {
-                if (txtRechercher.getText().isEmpty()) {
-                    txtRechercher.setText("Rechercher un abonnement...");
-                    txtRechercher.setForeground(Color.GRAY);
-                }
-            }
-        });
-        
-        // Bouton de recherche avec icône
         rechercheBtn = new JButton("Rechercher");
         rechercheBtn.setPreferredSize(new Dimension(120, 30));
         rechercheBtn.setFont(new Font("Arial", Font.PLAIN, 12));
         rechercheBtn.setFocusPainted(false);
-        rechercheBtn.addActionListener(e -> appliquerFiltres());
-        
-        // Recherche automatique à l'appui sur Entrée
-        txtRechercher.addActionListener(e -> appliquerFiltres());
         
         searchPanel.add(txtRechercher);
         searchPanel.add(rechercheBtn);
@@ -144,11 +129,6 @@ public class Page_Abonnements extends JFrame {
         checkAnnuel = new JCheckBox("Annuels");
         checkHebdo = new JCheckBox("Hebdomadaires");
         
-        checkGratuit.addActionListener(e -> appliquerFiltres());
-        checkMoto.addActionListener(e -> appliquerFiltres());
-        checkAnnuel.addActionListener(e -> appliquerFiltres());
-        checkHebdo.addActionListener(e -> appliquerFiltres());
-        
         filtresPanel.add(lblFiltrer);
         filtresPanel.add(checkGratuit);
         filtresPanel.add(checkMoto);
@@ -168,7 +148,6 @@ public class Page_Abonnements extends JFrame {
             "Ordre alphabétique (A-Z)",
             "Ordre alphabétique (Z-A)"
         });
-        comboTri.addActionListener(e -> appliquerFiltres());
         
         filtresPanel.add(lblTrier);
         filtresPanel.add(comboTri);
@@ -178,83 +157,19 @@ public class Page_Abonnements extends JFrame {
         return headerPanel;
     }
     
-    private void appliquerFiltres() {
-        // Réinitialiser la liste filtrée
-        abonnementsFiltres = new ArrayList<>(abonnements);
-        
-        // Récupérer le texte de recherche
-        String rechercheTexte = txtRechercher.getText().trim();
-        
-        // Appliquer la recherche textuelle si différente du texte par défaut
-        if (!rechercheTexte.isEmpty() && !rechercheTexte.equals("Rechercher un abonnement...")) {
-            String rechercheLower = rechercheTexte.toLowerCase();
-            abonnementsFiltres.removeIf(a -> 
-                !a.getLibelleAbonnement().toLowerCase().contains(rechercheLower) &&
-                !a.getIdAbonnement().toLowerCase().contains(rechercheLower)
-            );
-        }
-        
-        // Appliquer les filtres par catégorie
-        if (checkGratuit.isSelected()) {
-            abonnementsFiltres.removeIf(a -> a.getTarifAbonnement() > 0);
-        }
-        
-        if (checkMoto.isSelected()) {
-            abonnementsFiltres.removeIf(a -> !a.getIdAbonnement().toUpperCase().contains("MOTO"));
-        }
-        
-        if (checkAnnuel.isSelected()) {
-            abonnementsFiltres.removeIf(a -> !a.getIdAbonnement().toUpperCase().contains("ANNUEL"));
-        }
-        
-        if (checkHebdo.isSelected()) {
-            abonnementsFiltres.removeIf(a -> !a.getIdAbonnement().toUpperCase().contains("HEBDO") 
-                                          && !a.getIdAbonnement().toUpperCase().contains("SEMAINE"));
-        }
-        
-        // Appliquer le tri
-        String triSelectionne = (String) comboTri.getSelectedItem();
-        switch (triSelectionne) {
-            case "Prix croissant":
-                abonnementsFiltres.sort(Comparator.comparingDouble(Abonnement::getTarifAbonnement));
-                break;
-            case "Prix décroissant":
-                abonnementsFiltres.sort(Comparator.comparingDouble(Abonnement::getTarifAbonnement).reversed());
-                break;
-            case "Ordre alphabétique (A-Z)":
-                abonnementsFiltres.sort(Comparator.comparing(Abonnement::getLibelleAbonnement));
-                break;
-            case "Ordre alphabétique (Z-A)":
-                abonnementsFiltres.sort(Comparator.comparing(Abonnement::getLibelleAbonnement).reversed());
-                break;
-        }
-        
-        // Mettre à jour le titre avec le nouveau compteur
-        lblTitre.setText("Choisissez votre abonnement (" + abonnementsFiltres.size() + ")");
-        
-        // Réafficher les abonnements
-        afficherAbonnements();
-    }
-    
-    private void afficherAbonnements() {
-        // Vider le panel actuel
+    // Méthodes pour mettre à jour l'affichage depuis le contrôleur
+    public void mettreAJourAffichageAbonnements(List<Abonnement> abonnements) {
         panelAbonnements.removeAll();
         
-        // Ajouter chaque abonnement filtré
-        for (Abonnement abonnement : abonnementsFiltres) {
+        for (Abonnement abonnement : abonnements) {
             panelAbonnements.add(creerCarteAbonnement(abonnement));
         }
         
-        // Si aucun abonnement ne correspond aux filtres
-        if (abonnementsFiltres.isEmpty()) {
-            String rechercheTexte = txtRechercher.getText().trim();
-            String message;
-            
-            if (!rechercheTexte.isEmpty() && !rechercheTexte.equals("Rechercher un abonnement...")) {
-                message = "Aucun abonnement ne correspond à \"" + rechercheTexte + "\"";
-            } else {
-                message = "Aucun abonnement ne correspond à vos critères de filtrage";
-            }
+        if (abonnements.isEmpty()) {
+            String message = getRechercheTexte().isEmpty() || 
+                           getRechercheTexte().equals("Rechercher un abonnement...") ?
+                    "Aucun abonnement ne correspond à vos critères de filtrage" :
+                    "Aucun abonnement ne correspond à \"" + getRechercheTexte() + "\"";
             
             JLabel lblAucun = new JLabel("<html><center>" + message + "<br>Tentez d'autres critères de recherche</center></html>", SwingConstants.CENTER);
             lblAucun.setFont(new Font("Arial", Font.ITALIC, 16));
@@ -263,9 +178,12 @@ public class Page_Abonnements extends JFrame {
             panelAbonnements.add(lblAucun);
         }
         
-        // Rafraîchir l'affichage
         panelAbonnements.revalidate();
         panelAbonnements.repaint();
+    }
+    
+    public void mettreAJourTitre(int nombreAbonnements) {
+        lblTitre.setText("Choisissez votre abonnement (" + nombreAbonnements + ")");
     }
     
     private JPanel creerCarteAbonnement(Abonnement abonnement) {
@@ -276,7 +194,6 @@ public class Page_Abonnements extends JFrame {
         ));
         carte.setBackground(Color.WHITE);
         
-        // Partie gauche : Informations de base
         JPanel panelInfo = new JPanel(new GridLayout(0, 1, 5, 5));
         panelInfo.setBackground(Color.WHITE);
         
@@ -287,7 +204,6 @@ public class Page_Abonnements extends JFrame {
         JLabel lblTarif = new JLabel(String.format("%.2f €", abonnement.getTarifAbonnement()));
         lblTarif.setFont(new Font("Arial", Font.BOLD, 18));
         
-        // Couleur verte pour les abonnements gratuits, sinon vert foncé
         if (abonnement.getTarifAbonnement() == 0) {
             lblTarif.setForeground(new Color(0, 180, 0));
             lblTarif.setText("GRATUIT");
@@ -299,7 +215,6 @@ public class Page_Abonnements extends JFrame {
         lblId.setFont(new Font("Arial", Font.ITALIC, 12));
         lblId.setForeground(Color.GRAY);
         
-        // Badges pour catégories
         JPanel badgesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         badgesPanel.setBackground(Color.WHITE);
         
@@ -341,69 +256,36 @@ public class Page_Abonnements extends JFrame {
         panelInfo.add(badgesPanel);
         
         // Partie droite : Bouton de sélection
-        JButton btnChoisir = new JButton("Choisir cet abonnement");
-        btnChoisir.setActionCommand("SOUSCRIRE_" + abonnement.getIdAbonnement()); // Ajout de l'action command
-        btnChoisir.setBackground(new Color(0, 120, 215));
-        btnChoisir.setForeground(Color.WHITE);
+        String texteBouton;
+        boolean estActif;
+        
+        try {
+            boolean hasAbonnement = AbonnementDAO.getInstance().getAbonnementsByUsager(idUsager)
+                .stream().anyMatch(a -> a.getIdAbonnement().equals(abonnement.getIdAbonnement()));
+            
+            if (hasAbonnement) {
+                texteBouton = "Déjà souscrit";
+                estActif = false;
+            } else {
+                texteBouton = "Choisir cet abonnement";
+                estActif = true;
+            }
+        } catch (SQLException e) {
+            texteBouton = "Choisir cet abonnement";
+            estActif = true;
+        }
+        
+        JButton btnChoisir = new JButton(texteBouton);
+        if (estActif) {
+            btnChoisir.setBackground(new Color(0, 120, 215));
+            btnChoisir.setForeground(Color.WHITE);
+        } else {
+            btnChoisir.setBackground(Color.GRAY);
+            btnChoisir.setForeground(Color.WHITE);
+            btnChoisir.setEnabled(false);
+        }
         btnChoisir.setFont(new Font("Arial", Font.BOLD, 14));
         btnChoisir.setFocusPainted(false);
-        
-        // Vérifier si l'utilisateur a déjà cet abonnement
-        if (AbonnementDAO.hasAbonnement(idUsager, abonnement.getIdAbonnement())) {
-            btnChoisir.setText("Déjà souscrit");
-            btnChoisir.setEnabled(false);
-            btnChoisir.setBackground(Color.GRAY);
-        } else {
-            // Stocker le tarif pour l'utiliser dans l'actionListener
-            double tarif = abonnement.getTarifAbonnement();
-            
-            btnChoisir.addActionListener(e -> {
-                if (tarif == 0) {
-                    // Afficher popup de confirmation pour abonnement gratuit
-                    int confirmation = JOptionPane.showConfirmDialog(
-                        this,
-                        "Voulez-vous vraiment souscrire à l'abonnement gratuit :\n\n" +
-                        "\"" + abonnement.getLibelleAbonnement() + "\"\n" +
-                        "Code : " + abonnement.getIdAbonnement() + "\n\n" +
-                        "Cet abonnement sera activé immédiatement sans frais.",
-                        "Confirmation d'abonnement gratuit",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE
-                    );
-                    
-                    if (confirmation == JOptionPane.YES_OPTION) {
-                        // Ajouter l'abonnement gratuit à l'utilisateur
-                        boolean success = AbonnementDAO.ajouterAbonnementUtilisateur(idUsager, abonnement.getIdAbonnement());
-                        
-                        if (success) {
-                            JOptionPane.showMessageDialog(
-                                this,
-                                "Abonnement souscrit avec succès !\n" +
-                                "Votre abonnement \"" + abonnement.getLibelleAbonnement() + "\" est maintenant actif.",
-                                "Abonnement activé",
-                                JOptionPane.INFORMATION_MESSAGE
-                            );
-                            
-                            // Mettre à jour l'affichage (le bouton deviendra "Déjà souscrit")
-                            appliquerFiltres();
-                            new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
-                            dispose();
-                        } else {
-                            JOptionPane.showMessageDialog(
-                                this,
-                                "❌ Une erreur est survenue lors de la souscription.",
-                                "Erreur",
-                                JOptionPane.ERROR_MESSAGE
-                            );
-                        }
-                    }
-                } else {
-                    // Pour les abonnements payants, ouvrir la page de paiement
-                    new Page_Paiement_Abonnement(emailUtilisateur, abonnement).setVisible(true);
-                    dispose();
-                }
-            });
-        }
         
         JPanel panelBouton = new JPanel(new BorderLayout());
         panelBouton.setBackground(Color.WHITE);
@@ -415,13 +297,17 @@ public class Page_Abonnements extends JFrame {
         return carte;
     }
     
-    // Getters pour les tests ou extensions
+    // Getters pour le contrôleur
     public String getEmailUtilisateur() {
         return emailUtilisateur;
     }
     
     public int getIdUsager() {
         return idUsager;
+    }
+    
+    public Usager getUsager() {
+        return usager;
     }
     
     public List<Abonnement> getAbonnements() {
@@ -432,13 +318,63 @@ public class Page_Abonnements extends JFrame {
         return abonnementsFiltres;
     }
     
-    // GETTERS POUR LE CONTROLEUR
     public JButton getBtnRetour() {
         return btnRetour;
     }
     
-    // Méthode pour obtenir l'utilisateur (si nécessaire pour le contrôleur)
-    public modele.Usager getUsager() {
-        return modele.dao.UsagerDAO.getUsagerByEmail(emailUtilisateur);
+    public JPanel getPanelAbonnements() {
+        return panelAbonnements;
+    }
+    
+    public JComboBox<String> getComboTri() {
+        return comboTri;
+    }
+    
+    public JCheckBox getCheckGratuit() {
+        return checkGratuit;
+    }
+    
+    public JCheckBox getCheckMoto() {
+        return checkMoto;
+    }
+    
+    public JCheckBox getCheckAnnuel() {
+        return checkAnnuel;
+    }
+    
+    public JCheckBox getCheckHebdo() {
+        return checkHebdo;
+    }
+    
+    public JTextField getTxtRechercher() {
+        return txtRechercher;
+    }
+    
+    public JButton getRechercheBtn() {
+        return rechercheBtn;
+    }
+    
+    public String getRechercheTexte() {
+        return txtRechercher.getText().trim();
+    }
+    
+    public boolean isCheckGratuitSelected() {
+        return checkGratuit.isSelected();
+    }
+    
+    public boolean isCheckMotoSelected() {
+        return checkMoto.isSelected();
+    }
+    
+    public boolean isCheckAnnuelSelected() {
+        return checkAnnuel.isSelected();
+    }
+    
+    public boolean isCheckHebdoSelected() {
+        return checkHebdo.isSelected();
+    }
+    
+    public String getTriSelectionne() {
+        return (String) comboTri.getSelectedItem();
     }
 }

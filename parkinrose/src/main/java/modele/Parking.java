@@ -12,9 +12,9 @@ public class Parking {
     private int placesMoto;
     private int placesMotoDisponibles;
     private boolean estRelais;
-    private Float positionX;  // Nouveau - position relative X (0.0 à 1.0)
-    private Float positionY;  // Nouveau - position relative Y (0.0 à 1.0)
-    
+    private Float positionX; 
+    private Float positionY; 
+    private double tarifHoraire;
     // Constructeur existant (sans positions)
     public Parking(String idParking, String libelleParking, String adresseParking, 
                    int nombrePlaces, int placesDisponibles, double hauteurParking, 
@@ -169,6 +169,13 @@ public class Parking {
     
     public boolean hasPlacesDisponibles() {
         return placesDisponibles > 0;
+    }
+    public double getTarifHoraire() {
+        return tarifHoraire;
+    }
+    
+    public void setTarifHoraire(double tarifHoraire) {
+        this.tarifHoraire = tarifHoraire;
     }
     
     @Override

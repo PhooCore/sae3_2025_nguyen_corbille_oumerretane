@@ -4,77 +4,112 @@ import ihm.Page_Abonnements;
 import ihm.Page_Utilisateur;
 import ihm.Page_Paiement_Abonnement;
 import modele.Abonnement;
+import modele.Usager;
 import modele.dao.AbonnementDAO;
+import modele.dao.UsagerDAO;
 import javax.swing.*;
-
-import java.awt.Color;
-import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.SQLException;
 import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
 
 public class ControleurAbonnements implements ActionListener {
     
-    private enum EtatAbonnements {
+    // États du contrôleur
+    private enum Etat {
         INITIAL,
-        CHARGEMENT,
-        AFFICHAGE,
+        CHARGEMENT_ABONNEMENTS,
+        AFFICHAGE_ABONNEMENTS,
         SELECTION_ABONNEMENT,
         CONFIRMATION_REMPLACEMENT,
+        TRAITEMENT_ABONNEMENT,
         REDIRECTION_PAIEMENT,
-        RETOUR_EN_COURS,
         ERREUR
     }
     
+    // Références
     private Page_Abonnements vue;
-    private EtatAbonnements etat;
+    private Etat etat;
+    
+    // Données
     private String emailUtilisateur;
+    private int idUsager;
+    private Usager usager;
     private List<Abonnement> abonnementsDisponibles;
+    private List<Abonnement> abonnementsFiltres;
     private Abonnement abonnementSelectionne;
-    private Map<String, JButton> boutonsAbonnements;
     
     public ControleurAbonnements(Page_Abonnements vue) {
         this.vue = vue;
         this.emailUtilisateur = vue.getEmailUtilisateur();
-        this.etat = EtatAbonnements.INITIAL;
-        this.boutonsAbonnements = new HashMap<>();
-      
+        this.etat = Etat.INITIAL;
+        
+        initialiserControleur();
+    }
+    
+    private void initialiserControleur() {
+        chargerUtilisateur();
         configurerListeners();
-        chargerAbonnements();
+    }
+    
+    private void chargerUtilisateur() {
+        try {
+            this.usager = UsagerDAO.getInstance().findById(emailUtilisateur);
+            if (usager != null) {
+                this.idUsager = usager.getIdUsager();
+                chargerAbonnements();
+            } else {
+                afficherErreur("Utilisateur non trouvé");
+                vue.dispose();
+            }
+        } catch (SQLException e) {
+            afficherErreur("Erreur de chargement: " + e.getMessage());
+            vue.dispose();
+        }
     }
     
     private void configurerListeners() {
-        etat = EtatAbonnements.CHARGEMENT;
+        // Bouton retour
+        vue.getBtnRetour().addActionListener(this);
         
-        // Configurer le bouton retour
-        if (vue.getBtnRetour() != null) {
-            vue.getBtnRetour().addActionListener(this);
-        }
+        // Bouton recherche
+        vue.getRechercheBtn().addActionListener(this);
         
-        // Configurer les listeners des boutons d'abonnements
-        configurerListenersRecursifs(vue.getContentPane());
+        // Checkboxes de filtrage
+        vue.getCheckGratuit().addActionListener(this);
+        vue.getCheckMoto().addActionListener(this);
+        vue.getCheckAnnuel().addActionListener(this);
+        vue.getCheckHebdo().addActionListener(this);
+        
+        // ComboBox de tri
+        vue.getComboTri().addActionListener(this);
+        
+        // Barre de recherche (Entrée)
+        vue.getTxtRechercher().addActionListener(this);
     }
     
     private void chargerAbonnements() {
+        etat = Etat.CHARGEMENT_ABONNEMENTS;
         
         SwingWorker<List<Abonnement>, Void> worker = new SwingWorker<List<Abonnement>, Void>() {
             @Override
             protected List<Abonnement> doInBackground() throws Exception {
-                return AbonnementDAO.getAllAbonnements();
+                return AbonnementDAO.getInstance().findAll();
             }
             
             @Override
             protected void done() {
                 try {
                     abonnementsDisponibles = get();
-                    etat = EtatAbonnements.AFFICHAGE;
+                    abonnementsFiltres = abonnementsDisponibles;
+                    etat = Etat.AFFICHAGE_ABONNEMENTS;
+                    vue.mettreAJourTitre(abonnementsFiltres.size());
+                    
+                    // Configurer les listeners des boutons d'abonnements
+                    configurerListenersAbonnements();
                     
                 } catch (Exception e) {
-                    System.err.println("Erreur lors du chargement des abonnements:");
-                    e.printStackTrace();
-                    etat = EtatAbonnements.ERREUR;
+                    etat = Etat.ERREUR;
                     afficherErreur("Erreur de chargement des abonnements");
                 }
             }
@@ -83,161 +118,222 @@ public class ControleurAbonnements implements ActionListener {
         worker.execute();
     }
     
-    private void configurerListenersRecursifs(java.awt.Container container) {
+    private void configurerListenersAbonnements() {
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                // Attendre que les abonnements soient affichés
+                Thread.sleep(100);
+                return null;
+            }
+            
+            @Override
+            protected void done() {
+                for (Abonnement abonnement : abonnementsFiltres) {
+                    JButton btn = trouverBoutonAbonnement(abonnement);
+                    if (btn != null) {
+                        btn.addActionListener(e -> gererSelectionAbonnement(abonnement));
+                    }
+                }
+            }
+        };
+        worker.execute();
+    }
+    
+    private JButton trouverBoutonAbonnement(Abonnement abonnement) {
+        return trouverBoutonRecursif(vue.getPanelAbonnements(), abonnement.getLibelleAbonnement());
+    }
+    
+    private JButton trouverBoutonRecursif(java.awt.Container container, String libelle) {
         for (java.awt.Component comp : container.getComponents()) {
             if (comp instanceof JButton) {
                 JButton btn = (JButton) comp;
-                String actionCommand = btn.getActionCommand();
-                
-                if (actionCommand != null) {
-                    if (actionCommand.startsWith("SOUSCRIRE_")) {
-                        String idAbonnement = actionCommand.replace("SOUSCRIRE_", "");
-                        boutonsAbonnements.put(idAbonnement, btn);
-                        btn.addActionListener(this);
-                    } else if (actionCommand.startsWith("GERER_") || actionCommand.startsWith("RESILIER_")) {
-                        btn.addActionListener(this);
+                if (btn.getText().contains("Choisir cet abonnement")) {
+                    java.awt.Container parent = btn.getParent();
+                    if (parent != null) {
+                        for (java.awt.Component compParent : parent.getComponents()) {
+                            if (compParent instanceof JLabel) {
+                                JLabel label = (JLabel) compParent;
+                                if (label.getText().equals(libelle)) {
+                                    return btn;
+                                }
+                            }
+                        }
                     }
                 }
-            } else if (comp instanceof JPanel) {
-                configurerListenersRecursifs((JPanel) comp);
-            } else if (comp instanceof JScrollPane) {
-                JScrollPane scrollPane = (JScrollPane) comp;
-                configurerListenersRecursifs(scrollPane.getViewport());
-            } else if (comp instanceof Container) {
-                configurerListenersRecursifs((Container) comp);
+            } else if (comp instanceof java.awt.Container) {
+                JButton result = trouverBoutonRecursif((java.awt.Container) comp, libelle);
+                if (result != null) {
+                    return result;
+                }
             }
         }
+        return null;
     }
     
     @Override
     public void actionPerformed(ActionEvent e) {
         Object source = e.getSource();
+        
+        // Identifier l'action
         String action = "INCONNU";
         
-        if (source instanceof JButton) {
-            JButton btn = (JButton) source;
-            String actionCommand = btn.getActionCommand();
-            String texte = btn.getText();
-            
-            if (actionCommand != null) {
-                if (actionCommand.startsWith("SOUSCRIRE_")) {
-                    action = actionCommand;
-                } else if (actionCommand.startsWith("GERER_")) {
-                    action = "GERER";
-                } else if (actionCommand.startsWith("RESILIER_")) {
-                    action = "RESILIER";
-                }
-            } else if (texte != null && texte.contains("Retour")) {
-                action = "RETOUR";
-            }
+        if (source == vue.getBtnRetour()) {
+            action = "RETOUR";
+        } else if (source == vue.getRechercheBtn()) {
+            action = "FILTRER";
+        } else if (source == vue.getTxtRechercher()) {
+            action = "FILTRER";
+        } else if (source == vue.getCheckGratuit() || 
+                   source == vue.getCheckMoto() || 
+                   source == vue.getCheckAnnuel() || 
+                   source == vue.getCheckHebdo()) {
+            action = "FILTRER";
+        } else if (source == vue.getComboTri()) {
+            action = "FILTRER";
         }
         
-        
-        if (!estActionValide(etat, action)) {
-            return;
-        }
-        
+        // Traiter selon l'état actuel
         switch (etat) {
-            case AFFICHAGE:
-                traiterActionsAffichage(action);
-                break;
-                
-            case SELECTION_ABONNEMENT:
-                traiterSelectionAbonnement(action);
-                break;
-                
-            case CONFIRMATION_REMPLACEMENT:
-                traiterConfirmationRemplacement(action);
-                break;
-                
-            case RETOUR_EN_COURS:
-                traiterRetour(action);
+            case AFFICHAGE_ABONNEMENTS:
+                if (action.equals("RETOUR")) {
+                    retourProfil();
+                } else if (action.equals("FILTRER")) {
+                    appliquerFiltres();
+                }
                 break;
                 
             case ERREUR:
                 if (action.equals("RETOUR")) {
-                    etat = EtatAbonnements.RETOUR_EN_COURS;
                     retourProfil();
                 }
                 break;
         }
     }
     
-    private boolean estActionValide(EtatAbonnements etatActuel, String action) {
-        switch (etatActuel) {
-            case AFFICHAGE:
-                return action.equals("RETOUR") || 
-                       action.startsWith("SOUSCRIRE_") ||
-                       action.equals("GERER") || 
-                       action.equals("RESILIER");
-                
-            case SELECTION_ABONNEMENT:
-            case CONFIRMATION_REMPLACEMENT:
-                return action.equals("CONFIRMER") || 
-                       action.equals("ANNULER") || 
-                       action.equals("RETOUR");
-                
-            case RETOUR_EN_COURS:
-            case REDIRECTION_PAIEMENT:
-                return false;
-                
-            default:
-                return false;
-        }
-    }
-    
-    private void traiterActionsAffichage(String action) {
-        if (action.equals("RETOUR")) {
-            etat = EtatAbonnements.RETOUR_EN_COURS;
-            retourProfil();
-            
-        } else if (action.startsWith("SOUSCRIRE_")) {
-            etat = EtatAbonnements.SELECTION_ABONNEMENT;
-            String idAbonnement = action.replace("SOUSCRIRE_", "");
-            selectionnerAbonnement(idAbonnement);
-            
-        } else if (action.equals("RESILIER")) {
-            // Gérer la résiliation d'abonnement
-            JOptionPane.showMessageDialog(vue,
-                "Pour résilier votre abonnement, veuillez retourner sur votre page de compte.",
-                "Résiliation d'abonnement",
-                JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
-    
-    private void selectionnerAbonnement(String idAbonnement) {
+    private void appliquerFiltres() {
+        if (abonnementsDisponibles == null) return;
         
-        abonnementSelectionne = null;
-        for (Abonnement abonnement : abonnementsDisponibles) {
-            if (abonnement.getIdAbonnement().equals(idAbonnement)) {
-                abonnementSelectionne = abonnement;
+        // Récupérer les valeurs des filtres
+        String rechercheTexte = vue.getRechercheTexte();
+        boolean filtreGratuit = vue.isCheckGratuitSelected();
+        boolean filtreMoto = vue.isCheckMotoSelected();
+        boolean filtreAnnuel = vue.isCheckAnnuelSelected();
+        boolean filtreHebdo = vue.isCheckHebdoSelected();
+        String triSelectionne = vue.getTriSelectionne();
+        
+        // Appliquer les filtres
+        abonnementsFiltres = new java.util.ArrayList<>(abonnementsDisponibles);
+        
+        // Recherche textuelle
+        if (!rechercheTexte.isEmpty() && !rechercheTexte.equals("Rechercher un abonnement...")) {
+            String rechercheLower = rechercheTexte.toLowerCase();
+            abonnementsFiltres.removeIf(a -> 
+                !a.getLibelleAbonnement().toLowerCase().contains(rechercheLower) &&
+                !a.getIdAbonnement().toLowerCase().contains(rechercheLower)
+            );
+        }
+        
+        // Filtres par catégorie
+        if (filtreGratuit) {
+            abonnementsFiltres.removeIf(a -> a.getTarifAbonnement() > 0);
+        }
+        
+        if (filtreMoto) {
+            abonnementsFiltres.removeIf(a -> !a.getIdAbonnement().toUpperCase().contains("MOTO"));
+        }
+        
+        if (filtreAnnuel) {
+            abonnementsFiltres.removeIf(a -> !a.getIdAbonnement().toUpperCase().contains("ANNUEL"));
+        }
+        
+        if (filtreHebdo) {
+            abonnementsFiltres.removeIf(a -> !a.getIdAbonnement().toUpperCase().contains("HEBDO") 
+                                          && !a.getIdAbonnement().toUpperCase().contains("SEMAINE"));
+        }
+        
+        // Appliquer le tri
+        switch (triSelectionne) {
+            case "Prix croissant":
+                abonnementsFiltres.sort(java.util.Comparator.comparingDouble(Abonnement::getTarifAbonnement));
                 break;
+            case "Prix décroissant":
+                abonnementsFiltres.sort(java.util.Comparator.comparingDouble(Abonnement::getTarifAbonnement).reversed());
+                break;
+            case "Ordre alphabétique (A-Z)":
+                abonnementsFiltres.sort(java.util.Comparator.comparing(Abonnement::getLibelleAbonnement));
+                break;
+            case "Ordre alphabétique (Z-A)":
+                abonnementsFiltres.sort(java.util.Comparator.comparing(Abonnement::getLibelleAbonnement).reversed());
+                break;
+        }
+        
+        // Mettre à jour la vue
+        vue.mettreAJourAffichageAbonnements(abonnementsFiltres);
+        vue.mettreAJourTitre(abonnementsFiltres.size());
+        
+        // Reconfigurer les listeners des boutons
+        configurerListenersAbonnements();
+    }
+    
+    private void gererSelectionAbonnement(Abonnement abonnement) {
+        this.abonnementSelectionne = abonnement;
+        etat = Etat.SELECTION_ABONNEMENT;
+        
+        SwingWorker<List<Abonnement>, Void> worker = new SwingWorker<List<Abonnement>, Void>() {
+            @Override
+            protected List<Abonnement> doInBackground() throws Exception {
+                return AbonnementDAO.getInstance().getAbonnementsByUsager(idUsager);
             }
-        }
+            
+            @Override
+            protected void done() {
+                try {
+                    List<Abonnement> abonnementsExistants = get();
+                    
+                    if (!abonnementsExistants.isEmpty()) {
+                        etat = Etat.CONFIRMATION_REMPLACEMENT;
+                        demanderConfirmationRemplacement(abonnementsExistants.get(0));
+                    } else {
+                        if (abonnementSelectionne.getTarifAbonnement() == 0) {
+                            demanderConfirmationAbonnementGratuit();
+                        } else {
+                            etat = Etat.REDIRECTION_PAIEMENT;
+                            redirigerVersPaiement();
+                        }
+                    }
+                } catch (Exception e) {
+                    afficherErreur("Erreur: " + e.getMessage());
+                    etat = Etat.ERREUR;
+                }
+            }
+        };
+        worker.execute();
+    }
+    
+    private void demanderConfirmationAbonnementGratuit() {
+        int confirmation = JOptionPane.showConfirmDialog(
+            vue,
+            "Voulez-vous vraiment souscrire à l'abonnement gratuit :\n\n" +
+            "\"" + abonnementSelectionne.getLibelleAbonnement() + "\"\n" +
+            "Code : " + abonnementSelectionne.getIdAbonnement() + "\n\n" +
+            "Cet abonnement sera activé immédiatement sans frais.",
+            "Confirmation d'abonnement gratuit",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        );
         
-        if (abonnementSelectionne == null) {
-            etat = EtatAbonnements.ERREUR;
-            afficherErreur("Abonnement non trouvé");
-            return;
-        }
-        
-        // Vérifier si l'utilisateur a déjà un abonnement
-        Abonnement abonnementExistant = 
-            AbonnementDAO.getAbonnementByUsager(vue.getUsager().getIdUsager());
-        
-        if (!abonnementExistant.equals(null)) {
-            etat = EtatAbonnements.CONFIRMATION_REMPLACEMENT;
-            demanderConfirmationRemplacement(abonnementExistant);
+        if (confirmation == JOptionPane.YES_OPTION) {
+            souscrireAbonnementGratuit();
         } else {
-            etat = EtatAbonnements.REDIRECTION_PAIEMENT;
-            redirigerVersPaiement();
+            etat = Etat.AFFICHAGE_ABONNEMENTS;
         }
     }
     
     private void demanderConfirmationRemplacement(Abonnement abonnementExistant) {
-        
         Object[] options = {"Remplacer", "Conserver mon abonnement actuel"};
-        int choix = JOptionPane.showOptionDialog(vue,
+        int choix = JOptionPane.showOptionDialog(
+            vue,
             "<html><div style='text-align: center;'>"
             + "<h3>Abonnement existant détecté</h3>"
             + "<p>Vous avez déjà un abonnement actif :</p>"
@@ -251,64 +347,97 @@ public class ControleurAbonnements implements ActionListener {
             JOptionPane.QUESTION_MESSAGE,
             null,
             options,
-            options[1]);
+            options[1]
+        );
         
         if (choix == JOptionPane.YES_OPTION) {
-            etat = EtatAbonnements.REDIRECTION_PAIEMENT;
-            redirigerVersPaiement();
+            if (abonnementSelectionne.getTarifAbonnement() == 0) {
+                souscrireAbonnementGratuit();
+            } else {
+                etat = Etat.REDIRECTION_PAIEMENT;
+                redirigerVersPaiement();
+            }
         } else {
-            etat = EtatAbonnements.AFFICHAGE;
+            etat = Etat.AFFICHAGE_ABONNEMENTS;
         }
     }
     
-    private void redirigerVersPaiement() {
+    private void souscrireAbonnementGratuit() {
+        etat = Etat.TRAITEMENT_ABONNEMENT;
         
+        SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() throws Exception {
+                return AbonnementDAO.getInstance().ajouterAbonnementUtilisateur(
+                    idUsager, 
+                    abonnementSelectionne.getIdAbonnement()
+                );
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    boolean success = get();
+                    
+                    if (success) {
+                        JOptionPane.showMessageDialog(
+                            vue,
+                            "Abonnement souscrit avec succès !\n" +
+                            "Votre abonnement \"" + abonnementSelectionne.getLibelleAbonnement() + 
+                            "\" est maintenant actif.",
+                            "Abonnement activé",
+                            JOptionPane.INFORMATION_MESSAGE
+                        );
+                        
+                        retourProfil();
+                    } else {
+                        JOptionPane.showMessageDialog(
+                            vue,
+                            "❌ Une erreur est survenue lors de la souscription.",
+                            "Erreur",
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                        etat = Etat.AFFICHAGE_ABONNEMENTS;
+                    }
+                } catch (Exception e) {
+                    afficherErreur("Erreur: " + e.getMessage());
+                    etat = Etat.ERREUR;
+                }
+            }
+        };
+        worker.execute();
+    }
+    
+    private void redirigerVersPaiement() {
         Page_Paiement_Abonnement pagePaiement = new Page_Paiement_Abonnement(
             emailUtilisateur, 
             abonnementSelectionne
         );
         pagePaiement.setVisible(true);
-    }
-    
-    private void traiterSelectionAbonnement(String action) {
-        // Gestion des actions pendant la sélection
-    }
-    
-    private void traiterConfirmationRemplacement(String action) {
-        // Gestion des actions pendant la confirmation de remplacement
-    }
-    
-    private void traiterRetour(String action) {
-        // Gestion du retour en cours
+        vue.dispose();
     }
     
     private void retourProfil() {
-        
         Page_Utilisateur pageUtilisateur = new Page_Utilisateur(emailUtilisateur, true);
         pageUtilisateur.setVisible(true);
         vue.dispose();
     }
     
     private void afficherErreur(String message) {
-        JOptionPane.showMessageDialog(vue,
+        JOptionPane.showMessageDialog(
+            vue,
             message,
             "Erreur",
-            JOptionPane.ERROR_MESSAGE);
+            JOptionPane.ERROR_MESSAGE
+        );
     }
     
-    public EtatAbonnements getEtat() {
+    // Getters pour le débogage
+    public Etat getEtat() {
         return etat;
-    }
-    
-    public String getEtatString() {
-        return etat.toString();
     }
     
     public int getNombreAbonnements() {
         return abonnementsDisponibles != null ? abonnementsDisponibles.size() : 0;
-    }
-    
-    public String getAbonnementSelectionne() {
-        return abonnementSelectionne != null ? abonnementSelectionne.getLibelleAbonnement() : "Aucun";
     }
 }

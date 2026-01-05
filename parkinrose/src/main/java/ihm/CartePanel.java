@@ -73,11 +73,12 @@ public class CartePanel extends JPanel {
      */
     private void chargerParkings() {
         try {
-            parkings = ParkingDAO.getAllParkings();
-            repaint(); // Redessine le panel avec les nouvelles données
+            // Utiliser le Singleton pour récupérer les parkings
+            parkings = ParkingDAO.getInstance().getAllParkings();
+            repaint();
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des parkings: " + e.getMessage());
-            parkings = new ArrayList<>(); // Liste vide en cas d'erreur
+            parkings = new ArrayList<>();
         }
     }
     

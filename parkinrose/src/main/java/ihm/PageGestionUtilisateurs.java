@@ -11,6 +11,7 @@ import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.sql.SQLException;
 import java.util.List;
 
 public class PageGestionUtilisateurs extends JFrame {
@@ -35,17 +36,15 @@ public class PageGestionUtilisateurs extends JFrame {
     private JButton btnRetour;
     
     private String emailAdmin;
+    private UsagerDAO usagerDAO;
     
     // Constructeur avec email admin
     public PageGestionUtilisateurs(String emailAdmin) {
         this.emailAdmin = emailAdmin;
+        this.usagerDAO = UsagerDAO.getInstance();
         
         // Vérifier les droits administrateur
         if (!verifierDroitsAdmin()) {
-            JOptionPane.showMessageDialog(null, 
-                "Accès refusé : vous n'avez pas les droits administrateur nécessaires.",
-                "Accès non autorisé",
-                JOptionPane.ERROR_MESSAGE);
             return;
         }
         
@@ -60,6 +59,7 @@ public class PageGestionUtilisateurs extends JFrame {
             return demanderAuthentificationAdmin();
         }
         
+        // Utiliser la méthode statique qui ne déclare pas SQLException
         Usager admin = UsagerDAO.getUsagerByEmail(emailAdmin);
         if (admin == null) {
             JOptionPane.showMessageDialog(null,
@@ -128,66 +128,25 @@ public class PageGestionUtilisateurs extends JFrame {
     }
     
     private void initialisePage() {
-        setTitle("Gestion des Utilisateurs - Admin");
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(1200, 700);
+        // Configuration de base de la fenêtre
+        setTitle("Gestion des Utilisateurs - Administration");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(1100, 700);
         setLocationRelativeTo(null);
         
+        // Panel principal
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
         
-        // === PANEL HAUT - RECHERCHE ===
-        JPanel panelHaut = new JPanel(new BorderLayout(10, 10));
-        panelHaut.setBorder(new EmptyBorder(0, 0, 10, 0));
-        
-        // Titre et info admin
-        JPanel panelTitre = new JPanel(new BorderLayout());
-        JLabel lblTitre = new JLabel("Gestion des Utilisateurs", SwingConstants.CENTER);
-        lblTitre.setFont(new Font("Arial", Font.BOLD, 18));
-        
-        JLabel lblAdminInfo = new JLabel("Connecté en tant que: " + emailAdmin);
-        lblAdminInfo.setFont(new Font("Arial", Font.ITALIC, 12));
-        lblAdminInfo.setForeground(Color.BLUE);
-        
-        JButton btnRetourAdmin = new JButton("← Retour à l'administration");
-        btnRetourAdmin.setFont(new Font("Arial", Font.PLAIN, 12));
-        btnRetourAdmin.addActionListener(e -> {
-            new Page_Administration(emailAdmin).setVisible(true);
-            dispose();
-        });
-        
-        panelTitre.add(lblTitre, BorderLayout.CENTER);
-        panelTitre.add(lblAdminInfo, BorderLayout.EAST);
-        panelTitre.add(btnRetourAdmin, BorderLayout.WEST);
-        panelHaut.add(panelTitre, BorderLayout.NORTH);
-        
         // Barre de recherche
-        JPanel panelRecherche = new JPanel(new BorderLayout(5, 5));
-        panelRecherche.setBorder(BorderFactory.createTitledBorder("Recherche"));
-        
-        txtRecherche = new JTextField();
-        txtRecherche.setToolTipText("Rechercher par nom, prénom, email... (Appuyez sur Entrée)");
-        
+        JPanel searchPanel = new JPanel(new BorderLayout(10, 10));
+        txtRecherche = new JTextField(30);
         btnRechercher = new JButton("Rechercher");
-        btnRechercher.setBackground(new Color(70, 130, 180));
-        btnRechercher.setForeground(Color.WHITE);
+        searchPanel.add(new JLabel("Recherche par nom, prénom ou email:"), BorderLayout.WEST);
+        searchPanel.add(txtRecherche, BorderLayout.CENTER);
+        searchPanel.add(btnRechercher, BorderLayout.EAST);
         
-        btnActualiser = new JButton("Actualiser");
-        btnActualiser.setBackground(new Color(60, 179, 113));
-        btnActualiser.setForeground(Color.WHITE);
-        
-        JPanel panelBoutonsRecherche = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
-        panelBoutonsRecherche.add(btnRechercher);
-        panelBoutonsRecherche.add(btnActualiser);
-        
-        panelRecherche.add(new JLabel("Recherche:"), BorderLayout.WEST);
-        panelRecherche.add(txtRecherche, BorderLayout.CENTER);
-        panelRecherche.add(panelBoutonsRecherche, BorderLayout.EAST);
-        
-        panelHaut.add(panelRecherche, BorderLayout.CENTER);
-        mainPanel.add(panelHaut, BorderLayout.NORTH);
-        
-        // === PANEL CENTRAL - TABLEAU ===
+        // Table des utilisateurs
         String[] colonnes = {"ID", "Nom", "Prénom", "Email", "Admin", "Carte Tisséo"};
         tableModel = new DefaultTableModel(colonnes, 0) {
             @Override
@@ -197,71 +156,54 @@ public class PageGestionUtilisateurs extends JFrame {
             
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 4) {
-                    return Boolean.class;
-                }
+                if (columnIndex == 4) return Boolean.class;
                 return String.class;
             }
         };
         
         tableUtilisateurs = new JTable(tableModel);
-        tableUtilisateurs.setRowHeight(30);
-        tableUtilisateurs.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        tableUtilisateurs.setFont(new Font("Arial", Font.PLAIN, 12));
+        tableUtilisateurs.setAutoCreateRowSorter(true);
         tableUtilisateurs.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
-        tableUtilisateurs.setRowSorter(sorter);
+        tableUtilisateurs.getTableHeader().setReorderingAllowed(false);
         
         JScrollPane scrollPane = new JScrollPane(tableUtilisateurs);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Liste des utilisateurs"));
-        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        scrollPane.setPreferredSize(new Dimension(0, 400));
         
-        // === PANEL BAS - BOUTONS ===
-        JPanel panelBoutons = new JPanel(new GridLayout(2, 4, 10, 10));
-        panelBoutons.setBorder(new EmptyBorder(10, 0, 0, 0));
+        // Panel des boutons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         
+        btnActualiser = new JButton("Actualiser");
         btnNouveau = new JButton("Nouvel utilisateur");
         btnModifier = new JButton("Modifier");
-        btnSupprimer = new JButton("Admin/User");
-        btnVoirVehicules = new JButton("Véhicules");
-        btnVoirAbonnements = new JButton("Abonnements");
-        btnVoirStationnements = new JButton("Stationnements");
+        btnSupprimer = new JButton("Changer statut admin");
+        btnVoirVehicules = new JButton("Gérer véhicules");
+        btnVoirAbonnements = new JButton("Gérer abonnements");
+        btnVoirStationnements = new JButton("Voir stationnements");
         btnRetour = new JButton("Retour");
         
-        // Couleurs des boutons
+        // Styliser les boutons
         btnNouveau.setBackground(new Color(30, 144, 255));
         btnNouveau.setForeground(Color.WHITE);
-        
-        btnModifier.setBackground(new Color(255, 165, 0));
+        btnModifier.setBackground(new Color(255, 140, 0));
         btnModifier.setForeground(Color.WHITE);
-        
         btnSupprimer.setBackground(new Color(220, 20, 60));
         btnSupprimer.setForeground(Color.WHITE);
-        
-        btnVoirVehicules.setBackground(new Color(138, 43, 226));
-        btnVoirVehicules.setForeground(Color.WHITE);
-        
-        btnVoirAbonnements.setBackground(new Color(50, 205, 50));
-        btnVoirAbonnements.setForeground(Color.WHITE);
-        
-        btnVoirStationnements.setBackground(new Color(255, 140, 0));
-        btnVoirStationnements.setForeground(Color.WHITE);
-        
-        btnRetour.setBackground(new Color(169, 169, 169));
+        btnRetour.setBackground(Color.GRAY);
         btnRetour.setForeground(Color.WHITE);
         
-        // Ajout des boutons (8 boutons au total)
-        panelBoutons.add(btnNouveau);
-        panelBoutons.add(btnModifier);
-        panelBoutons.add(btnSupprimer);
-        panelBoutons.add(btnVoirVehicules);
-        panelBoutons.add(btnVoirAbonnements);
-        panelBoutons.add(btnVoirStationnements);
-        panelBoutons.add(btnRetour);
-        panelBoutons.add(new JLabel()); // Espace vide pour compléter la grille
+        buttonPanel.add(btnActualiser);
+        buttonPanel.add(btnNouveau);
+        buttonPanel.add(btnModifier);
+        buttonPanel.add(btnSupprimer);
+        buttonPanel.add(btnVoirVehicules);
+        buttonPanel.add(btnVoirAbonnements);
+        buttonPanel.add(btnVoirStationnements);
+        buttonPanel.add(btnRetour);
         
-        mainPanel.add(panelBoutons, BorderLayout.SOUTH);
+        // Assembler les composants
+        mainPanel.add(searchPanel, BorderLayout.NORTH);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
         
         setContentPane(mainPanel);
     }
@@ -269,19 +211,25 @@ public class PageGestionUtilisateurs extends JFrame {
     // ========== MÉTHODES PUBLIQUES POUR LE CONTRÔLEUR ==========
     
     public void chargerUtilisateurs() {
-        tableModel.setRowCount(0);
-        utilisateursCourants = UsagerDAO.getAllUsagers();
-        
-        for (Usager usager : utilisateursCourants) {
-            String carteTisseo = UsagerDAO.getCarteTisseoByUsager(usager.getIdUsager());
-            tableModel.addRow(new Object[]{
-                usager.getIdUsager(),
-                usager.getNomUsager(),
-                usager.getPrenomUsager(),
-                usager.getMailUsager(),
-                usager.isAdmin(),
-                carteTisseo != null ? carteTisseo : "Non renseignée"
-            });
+        try {
+            tableModel.setRowCount(0);
+            utilisateursCourants = usagerDAO.findAll(); // Utiliser l'instance
+            
+            for (Usager usager : utilisateursCourants) {
+                // Utiliser la méthode statique pour la carte Tisséo
+                String carteTisseo = usager.getNumeroCarteTisseo();
+                tableModel.addRow(new Object[]{
+                    usager.getIdUsager(),
+                    usager.getNomUsager(),
+                    usager.getPrenomUsager(),
+                    usager.getMailUsager(),
+                    usager.isAdmin(),
+                    carteTisseo != null && !carteTisseo.isEmpty() ? carteTisseo : "Non renseignée"
+                });
+            }
+            afficherInformation("Liste des utilisateurs chargée avec succès");
+        } catch (SQLException e) {
+            afficherErreur("Erreur lors du chargement des utilisateurs: " + e.getMessage());
         }
     }
     
@@ -293,24 +241,31 @@ public class PageGestionUtilisateurs extends JFrame {
             return;
         }
         
-        tableModel.setRowCount(0);
-        utilisateursCourants = UsagerDAO.getAllUsagers();
-        
-        for (Usager usager : utilisateursCourants) {
-            if (usager.getNomUsager().toLowerCase().contains(recherche) ||
-                usager.getPrenomUsager().toLowerCase().contains(recherche) ||
-                usager.getMailUsager().toLowerCase().contains(recherche)) {
-                
-                String carteTisseo = UsagerDAO.getCarteTisseoByUsager(usager.getIdUsager());
-                tableModel.addRow(new Object[]{
-                    usager.getIdUsager(),
-                    usager.getNomUsager(),
-                    usager.getPrenomUsager(),
-                    usager.getMailUsager(),
-                    usager.isAdmin(),
-                    carteTisseo != null ? carteTisseo : "Non renseignée"
-                });
+        try {
+            tableModel.setRowCount(0);
+            
+            for (Usager usager : utilisateursCourants) {
+                if (usager.getNomUsager().toLowerCase().contains(recherche) ||
+                    usager.getPrenomUsager().toLowerCase().contains(recherche) ||
+                    usager.getMailUsager().toLowerCase().contains(recherche)) {
+                    
+                    String carteTisseo = usager.getNumeroCarteTisseo();
+                    tableModel.addRow(new Object[]{
+                        usager.getIdUsager(),
+                        usager.getNomUsager(),
+                        usager.getPrenomUsager(),
+                        usager.getMailUsager(),
+                        usager.isAdmin(),
+                        carteTisseo != null && !carteTisseo.isEmpty() ? carteTisseo : "Non renseignée"
+                    });
+                }
             }
+            
+            if (tableModel.getRowCount() == 0) {
+                afficherInformation("Aucun utilisateur trouvé pour: " + recherche);
+            }
+        } catch (Exception e) {
+            afficherErreur("Erreur lors de la recherche: " + e.getMessage());
         }
     }
     
@@ -389,26 +344,27 @@ public class PageGestionUtilisateurs extends JFrame {
                 return;
             }
             
-            // Vérifier si l'email existe déjà
-            if (UsagerDAO.emailExiste(email)) {
-                afficherErreur("Cet email est déjà utilisé");
-                return;
-            }
-            
-            // Créer l'utilisateur
-            Usager nouvelUsager = new Usager();
-            nouvelUsager.setNomUsager(nom);
-            nouvelUsager.setPrenomUsager(prenom);
-            nouvelUsager.setMailUsager(email);
-            nouvelUsager.setMotDePasse(mdp);
-            nouvelUsager.setAdmin(chkAdmin.isSelected());
-            
-            if (UsagerDAO.ajouterUsager(nouvelUsager)) {
+            try {
+                // Vérifier si l'email existe déjà
+                if (usagerDAO.emailExiste(email)) {
+                    afficherErreur("Cet email est déjà utilisé");
+                    return;
+                }
+                
+                // Créer l'utilisateur
+                Usager nouvelUsager = new Usager();
+                nouvelUsager.setNomUsager(nom);
+                nouvelUsager.setPrenomUsager(prenom);
+                nouvelUsager.setMailUsager(email);
+                nouvelUsager.setMotDePasse(mdp);
+                nouvelUsager.setAdmin(chkAdmin.isSelected());
+                
+                usagerDAO.create(nouvelUsager);
                 afficherInformation("Utilisateur créé avec succès");
                 chargerUtilisateurs();
                 dialog.dispose();
-            } else {
-                afficherErreur("Erreur lors de la création de l'utilisateur");
+            } catch (SQLException ex) {
+                afficherErreur("Erreur lors de la création de l'utilisateur: " + ex.getMessage());
             }
         });
         
@@ -504,28 +460,29 @@ public class PageGestionUtilisateurs extends JFrame {
                 return;
             }
             
-            // Vérifier si l'email existe déjà (pour un autre utilisateur)
-            if (!email.equals(usager.getMailUsager()) && UsagerDAO.emailExiste(email)) {
-                afficherErreur("Cet email est déjà utilisé par un autre utilisateur");
-                return;
-            }
-            
-            // Mettre à jour l'utilisateur
-            usager.setNomUsager(nom);
-            usager.setPrenomUsager(prenom);
-            usager.setMailUsager(email);
-            usager.setAdmin(chkAdmin.isSelected());
-            
-            if (!mdp.isEmpty()) {
-                usager.setMotDePasse(mdp);
-            }
-            
-            if (UsagerDAO.modifierUsager(usager)) {
+            try {
+                // Vérifier si l'email existe déjà (pour un autre utilisateur)
+                if (!email.equals(usager.getMailUsager()) && usagerDAO.emailExiste(email)) {
+                    afficherErreur("Cet email est déjà utilisé par un autre utilisateur");
+                    return;
+                }
+                
+                // Mettre à jour l'utilisateur
+                usager.setNomUsager(nom);
+                usager.setPrenomUsager(prenom);
+                usager.setMailUsager(email);
+                usager.setAdmin(chkAdmin.isSelected());
+                
+                if (!mdp.isEmpty()) {
+                    usager.setMotDePasse(mdp);
+                }
+                
+                usagerDAO.update(usager);
                 afficherInformation("Utilisateur modifié avec succès");
                 chargerUtilisateurs();
                 dialog.dispose();
-            } else {
-                afficherErreur("Erreur lors de la modification de l'utilisateur");
+            } catch (SQLException ex) {
+                afficherErreur("Erreur lors de la modification de l'utilisateur: " + ex.getMessage());
             }
         });
         
@@ -599,6 +556,14 @@ public class PageGestionUtilisateurs extends JFrame {
     
     public JButton getBtnRetour() {
         return btnRetour;
+    }
+    
+    public UsagerDAO getUsagerDAO() {
+        return usagerDAO;
+    }
+    
+    public String getEmailAdmin() {
+        return emailAdmin;
     }
     
     // ========== MÉTHODES UTILITAIRES ==========

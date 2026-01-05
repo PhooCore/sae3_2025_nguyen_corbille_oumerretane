@@ -2,13 +2,13 @@ package controleur;
 
 import ihm.Page_Modifier_Adresse;
 import ihm.Page_Utilisateur;
+import modele.Usager;
 import modele.dao.UsagerDAO;
-import modele.dao.ZoneDAO;
-import modele.Zone;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.SQLException;
 
 public class ControleurModifierAdresse implements ActionListener {
     
@@ -64,7 +64,7 @@ public class ControleurModifierAdresse implements ActionListener {
             return;
         }
         
-        // Validation du code postal (format français)
+        // Validation du code postal 
         if (!codePostal.matches("\\d{5}")) {
             JOptionPane.showMessageDialog(vue,
                 "Code postal invalide. Format: 5 chiffres (ex: 31000)",
@@ -73,31 +73,42 @@ public class ControleurModifierAdresse implements ActionListener {
             return;
         }
         
-        // Mettre à jour l'adresse
-        boolean success = UsagerDAO.mettreAJourAdresse(
-            vue.getUsager().getIdUsager(), adresse, codePostal, ville);
-        
-        if (success) {
-            // Récupérer la zone attribuée
-            String zoneId = UsagerDAO.getZoneResidentielle(vue.getUsager().getIdUsager());
+        // Mettre à jour l'usager
+        try {
+            Usager usager = vue.getUsager();
+
+            String adresseComplete = adresse + "|" + codePostal + "|" + ville;
+            usager.setNumeroCarteTisseo(adresseComplete);
             
-            // Afficher confirmation
-            String message = "Adresse enregistrée avec succès !\n\n";
-            message += "Adresse: " + adresse + "\n";
-            message += "CP: " + codePostal + " " + ville + "\n";
+
+            boolean success = UsagerDAO.modifierUsager(usager);
             
+            if (success) {
+                // Afficher confirmation
+                String message = "Adresse enregistrée avec succès !\n\n";
+                message += "Adresse: " + adresse + "\n";
+                message += "CP: " + codePostal + " " + ville + "\n";
+                
+                JOptionPane.showMessageDialog(vue,
+                    message,
+                    "Adresse enregistrée",
+                    JOptionPane.INFORMATION_MESSAGE);
+                
+                // Retour à la page utilisateur
+                retourPageUtilisateur();
+                
+            } else {
+                JOptionPane.showMessageDialog(vue,
+                    "Erreur lors de l'enregistrement de l'adresse",
+                    "Erreur",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+            
+        } catch (Exception ex) {
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(vue,
-                message,
-                "Adresse enregistrée",
-                JOptionPane.INFORMATION_MESSAGE);
-            
-            // Retour à la page utilisateur
-            retourPageUtilisateur();
-            
-        } else {
-            JOptionPane.showMessageDialog(vue,
-                "Erreur lors de l'enregistrement de l'adresse",
-                "Erreur",
+                "Erreur technique lors de la mise à jour: " + ex.getMessage(),
+                "Erreur système",
                 JOptionPane.ERROR_MESSAGE);
         }
     }
