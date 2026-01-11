@@ -5,6 +5,7 @@ import javax.swing.*;
 import controleur.ControleurUtilisateur;
 import modele.Usager;
 import modele.dao.AbonnementDAO;
+import modele.dao.AdresseDAO;
 import modele.dao.UsagerDAO;
 import modele.dao.PaiementDAO;
 import modele.dao.StationnementDAO;
@@ -12,6 +13,7 @@ import modele.dao.ZoneDAO;
 import modele.dao.ParkingDAO;
 import modele.dao.VehiculeUsagerDAO;
 import modele.Abonnement;
+import modele.Adresse;
 import modele.Paiement;
 import modele.Stationnement;
 import modele.Zone;
@@ -101,6 +103,116 @@ public class Page_Utilisateur extends JFrame {
         ajouterLigneInfo(panel, "Nom:", usager.getNomUsager());
         ajouterLigneInfo(panel, "Prénom:", usager.getPrenomUsager());
         ajouterLigneInfo(panel, "Email:", usager.getMailUsager());
+        
+        // Adresse
+        try {
+            Adresse adressePrincipale = AdresseDAO.getInstance().getAdressePrincipale(usager.getIdUsager());
+            
+            JPanel ligneAdresse = new JPanel(new BorderLayout());
+            ligneAdresse.setBackground(Color.WHITE);
+            ligneAdresse.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+            
+            JLabel lblLibelle = new JLabel("Mon adresse:");
+            lblLibelle.setFont(new Font("Arial", Font.BOLD, 14));
+            lblLibelle.setPreferredSize(new Dimension(120, 25));
+            
+            ligneAdresse.add(lblLibelle, BorderLayout.WEST);
+            
+            if (adressePrincipale != null) {
+                // Panel pour afficher l'adresse
+                JPanel panelAdresseText = new JPanel();
+                panelAdresseText.setLayout(new BoxLayout(panelAdresseText, BoxLayout.Y_AXIS));
+                panelAdresseText.setBackground(Color.WHITE);
+                
+                // Lignes d'adresse
+                JLabel lblLigne1 = new JLabel(adressePrincipale.getNumero() + " " + adressePrincipale.getRue());
+                lblLigne1.setFont(new Font("Arial", Font.PLAIN, 14));
+                lblLigne1.setForeground(Color.BLACK);
+                lblLigne1.setAlignmentX(Component.LEFT_ALIGNMENT);
+                panelAdresseText.add(lblLigne1);
+                
+                if (adressePrincipale.getComplement() != null && !adressePrincipale.getComplement().trim().isEmpty()) {
+                    JLabel lblComplement = new JLabel(adressePrincipale.getComplement());
+                    lblComplement.setFont(new Font("Arial", Font.PLAIN, 14));
+                    lblComplement.setForeground(Color.BLACK);
+                    lblComplement.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    panelAdresseText.add(lblComplement);
+                }
+                
+                JLabel lblLigne3 = new JLabel(adressePrincipale.getCodePostal() + " " + adressePrincipale.getVille());
+                lblLigne3.setFont(new Font("Arial", Font.PLAIN, 14));
+                lblLigne3.setForeground(Color.BLACK);
+                lblLigne3.setAlignmentX(Component.LEFT_ALIGNMENT);
+                panelAdresseText.add(lblLigne3);
+                
+                // Panel pour combiner texte et boutons
+                JPanel panelCombined = new JPanel(new BorderLayout());
+                panelCombined.setBackground(Color.WHITE);
+                panelCombined.add(panelAdresseText, BorderLayout.WEST);
+                
+                // Boutons à droite
+                JPanel panelBoutons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+                panelBoutons.setBackground(Color.WHITE);
+                
+                JButton btnGerer = new JButton("Gérer");
+                btnGerer.addActionListener(e -> ouvrirGestionAdresse());
+                
+                JButton btnChanger = new JButton("Changer");
+                btnChanger.addActionListener(e -> {
+                    ouvrirFormulaireAdresse(adressePrincipale);
+                    rafraichirAffichage();
+                });
+                
+                panelBoutons.add(btnGerer);
+                panelBoutons.add(btnChanger);
+                
+                panelCombined.add(panelBoutons, BorderLayout.EAST);
+                ligneAdresse.add(panelCombined, BorderLayout.CENTER);
+                
+            } else {
+                // Aucune adresse
+                JLabel lblValeur = new JLabel("Aucune adresse enregistrée");
+                lblValeur.setFont(new Font("Arial", Font.PLAIN, 14));
+                lblValeur.setForeground(Color.RED);
+                
+                JButton btnAjouter = new JButton("Ajouter une adresse");
+                btnAjouter.addActionListener(e -> {
+                    ouvrirFormulaireAdresse(null);
+                    rafraichirAffichage();
+                });
+                
+                ligneAdresse.add(lblLibelle, BorderLayout.WEST);
+                
+                // Panel pour centrer le texte "Aucune adresse enregistrée"
+                JPanel panelCentre = new JPanel(new BorderLayout());
+                panelCentre.setBackground(Color.WHITE);
+                panelCentre.add(lblValeur, BorderLayout.CENTER);
+                panelCentre.add(btnAjouter, BorderLayout.EAST);
+                
+                ligneAdresse.add(panelCentre, BorderLayout.CENTER);
+            }
+            
+            panel.add(ligneAdresse);
+            
+        } catch (Exception e) {
+            System.err.println("Erreur chargement adresse: " + e.getMessage());
+            
+            JPanel ligneAdresseErreur = new JPanel(new BorderLayout());
+            ligneAdresseErreur.setBackground(Color.WHITE);
+            ligneAdresseErreur.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+            
+            JLabel lblLibelle = new JLabel("Mon adresse:");
+            lblLibelle.setFont(new Font("Arial", Font.BOLD, 14));
+            lblLibelle.setPreferredSize(new Dimension(120, 25));
+            
+            JLabel lblErreur = new JLabel("Erreur de chargement");
+            lblErreur.setFont(new Font("Arial", Font.PLAIN, 14));
+            lblErreur.setForeground(Color.RED);
+            
+            ligneAdresseErreur.add(lblLibelle, BorderLayout.WEST);
+            ligneAdresseErreur.add(lblErreur, BorderLayout.CENTER);
+            panel.add(ligneAdresseErreur);
+        }
         
         panel.add(Box.createVerticalStrut(20));
         
@@ -953,5 +1065,502 @@ public class Page_Utilisateur extends JFrame {
             
             return this;
         }
+    }
+    
+    /**
+     * Ouvre la fenêtre de gestion des adresses (popup)
+     */
+    private void ouvrirGestionAdresse() {
+        try {
+            JDialog dialog = new JDialog(this, "Gestion de mes adresses", true);
+            dialog.setSize(500, 400);
+            dialog.setLocationRelativeTo(this);
+            dialog.setLayout(new BorderLayout(0, 0));
+            
+            // Récupérer les adresses de l'utilisateur
+            List<Adresse> adresses = AdresseDAO.getInstance().getAdressesByUsager(usager.getIdUsager());
+            
+            // En-tête
+            JPanel panelTitre = new JPanel(new BorderLayout());
+            panelTitre.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+            panelTitre.setBackground(new Color(240, 240, 240));
+            
+            JLabel lblTitre = new JLabel("Mes adresses");
+            lblTitre.setFont(new Font("Arial", Font.BOLD, 16));
+            panelTitre.add(lblTitre, BorderLayout.WEST);
+            
+            JButton btnFermer = new JButton("Fermer");
+            btnFermer.setFont(new Font("Arial", Font.PLAIN, 12));
+            btnFermer.addActionListener(e -> dialog.dispose());
+            panelTitre.add(btnFermer, BorderLayout.EAST);
+            
+            dialog.add(panelTitre, BorderLayout.NORTH);
+            
+            // Contenu
+            JPanel panelContenu = new JPanel();
+            panelContenu.setLayout(new BoxLayout(panelContenu, BoxLayout.Y_AXIS));
+            panelContenu.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            panelContenu.setBackground(Color.WHITE);
+            
+            if (adresses.isEmpty()) {
+                JLabel lblAucune = new JLabel("Aucune adresse enregistrée", SwingConstants.CENTER);
+                lblAucune.setFont(new Font("Arial", Font.ITALIC, 14));
+                lblAucune.setForeground(Color.GRAY);
+                lblAucune.setAlignmentX(Component.CENTER_ALIGNMENT);
+                panelContenu.add(lblAucune);
+            } else {
+                for (Adresse adresse : adresses) {
+                    panelContenu.add(creerPanelAdressePopup(adresse, dialog));
+                    panelContenu.add(Box.createVerticalStrut(10));
+                }
+            }
+            
+            JScrollPane scrollPane = new JScrollPane(panelContenu);
+            scrollPane.setBorder(null);
+            scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+            dialog.add(scrollPane, BorderLayout.CENTER);
+            
+            // Pied de page avec bouton ajouter
+            JPanel panelPied = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            panelPied.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+            panelPied.setBackground(Color.WHITE);
+            
+            JButton btnAjouter = new JButton("+ Ajouter une nouvelle adresse");
+            btnAjouter.setFont(new Font("Arial", Font.BOLD, 12));
+            btnAjouter.setBackground(new Color(0, 120, 215));
+            btnAjouter.setForeground(Color.WHITE);
+            btnAjouter.setFocusPainted(false);
+            btnAjouter.addActionListener(e -> {
+                dialog.dispose();
+                ouvrirFormulaireAdresse(null);
+            });
+            
+            panelPied.add(btnAjouter);
+            dialog.add(panelPied, BorderLayout.SOUTH);
+            
+            dialog.setVisible(true);
+            
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                "Erreur lors de l'ouverture de la gestion d'adresses: " + e.getMessage(),
+                "Erreur",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Crée un panneau pour afficher une adresse dans le popup
+     */
+    private JPanel creerPanelAdressePopup(Adresse adresse, JDialog parentDialog) {
+        JPanel panel = new JPanel(new BorderLayout(10, 5));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        panel.setBackground(Color.WHITE);
+        
+        // Indicateur d'adresse principale avec icône
+        JPanel panelTitre = new JPanel(new BorderLayout());
+        panelTitre.setBackground(Color.WHITE);
+        
+        if (adresse.isEstPrincipale()) {
+            JLabel lblPrincipale = new JLabel("★ Adresse principale");
+            lblPrincipale.setFont(new Font("Arial", Font.BOLD, 12));
+            lblPrincipale.setForeground(new Color(0, 100, 200));
+            panelTitre.add(lblPrincipale, BorderLayout.WEST);
+        } else {
+            panelTitre.add(Box.createHorizontalStrut(10), BorderLayout.WEST);
+        }
+        
+        panel.add(panelTitre, BorderLayout.NORTH);
+        
+        // Détails de l'adresse
+        JPanel panelAdresse = new JPanel();
+        panelAdresse.setLayout(new BoxLayout(panelAdresse, BoxLayout.Y_AXIS));
+        panelAdresse.setBackground(Color.WHITE);
+        
+        // Ligne 1 : Numéro + Rue
+        JLabel lblLigne1 = new JLabel(adresse.getNumero() + " " + adresse.getRue());
+        lblLigne1.setFont(new Font("Arial", Font.PLAIN, 13));
+        panelAdresse.add(lblLigne1);
+        
+        // Ligne 2 : Complément (si existe)
+        if (adresse.getComplement() != null && !adresse.getComplement().trim().isEmpty()) {
+            JLabel lblComplement = new JLabel(adresse.getComplement());
+            lblComplement.setFont(new Font("Arial", Font.PLAIN, 13));
+            lblComplement.setForeground(Color.DARK_GRAY);
+            panelAdresse.add(lblComplement);
+        }
+        
+        // Ligne 3 : Code postal + Ville
+        JLabel lblLigne3 = new JLabel(adresse.getCodePostal() + " " + adresse.getVille());
+        lblLigne3.setFont(new Font("Arial", Font.PLAIN, 13));
+        panelAdresse.add(lblLigne3);
+        
+        panel.add(panelAdresse, BorderLayout.CENTER);
+        
+        // Boutons d'action
+        JPanel panelBoutons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        panelBoutons.setBackground(Color.WHITE);
+        
+        if (!adresse.isEstPrincipale()) {
+            JButton btnPrincipale = new JButton("Principale");
+            btnPrincipale.setFont(new Font("Arial", Font.PLAIN, 11));
+            btnPrincipale.setBackground(new Color(255, 215, 0));
+            btnPrincipale.addActionListener(e -> {
+                definirAdressePrincipale(adresse);
+                parentDialog.dispose();
+            });
+            panelBoutons.add(btnPrincipale);
+        }
+        
+        JButton btnModifier = new JButton("Modifier");
+        btnModifier.setFont(new Font("Arial", Font.PLAIN, 11));
+        btnModifier.addActionListener(e -> {
+            parentDialog.dispose();
+            ouvrirFormulaireAdresse(adresse);
+        });
+        
+        JButton btnSupprimer = new JButton("Supprimer");
+        btnSupprimer.setFont(new Font("Arial", Font.PLAIN, 11));
+        btnSupprimer.setBackground(new Color(220, 80, 80));
+        btnSupprimer.setForeground(Color.WHITE);
+        btnSupprimer.addActionListener(e -> {
+            parentDialog.dispose();
+            supprimerAdresse(adresse);
+        });
+        
+        panelBoutons.add(btnModifier);
+        panelBoutons.add(btnSupprimer);
+        
+        panel.add(panelBoutons, BorderLayout.SOUTH);
+        
+        return panel;
+    }
+
+    /**
+     * Ouvre le formulaire pour ajouter/modifier une adresse
+     */
+    private void ouvrirFormulaireAdresse(Adresse adresseExistante) {
+        JDialog dialog = new JDialog(this, 
+            adresseExistante == null ? "Ajouter une adresse" : "Modifier une adresse", 
+            true);
+        dialog.setSize(450, 450);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        
+        // En-tête
+        JPanel panelTitre = new JPanel(new BorderLayout());
+        panelTitre.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        panelTitre.setBackground(new Color(240, 240, 240));
+        
+        JLabel lblTitre = new JLabel(adresseExistante == null ? "Ajouter une adresse" : "Modifier une adresse");
+        lblTitre.setFont(new Font("Arial", Font.BOLD, 16));
+        panelTitre.add(lblTitre, BorderLayout.WEST);
+        
+        dialog.add(panelTitre, BorderLayout.NORTH);
+        
+        // Formulaire
+        JPanel panelFormulaire = new JPanel(new GridBagLayout());
+        panelFormulaire.setBorder(BorderFactory.createEmptyBorder(25, 30, 20, 30));
+        panelFormulaire.setBackground(Color.WHITE);
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 5, 8, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+        
+        // Numéro
+        gbc.gridx = 0; gbc.gridy = 0;
+        JLabel lblNumero = new JLabel("Numéro:*");
+        lblNumero.setFont(new Font("Arial", Font.BOLD, 12));
+        panelFormulaire.add(lblNumero, gbc);
+        
+        JTextField txtNumero = new JTextField(10);
+        txtNumero.setFont(new Font("Arial", Font.PLAIN, 13));
+        txtNumero.setPreferredSize(new Dimension(200, 28));
+        gbc.gridx = 1; gbc.gridy = 0;
+        panelFormulaire.add(txtNumero, gbc);
+        
+        // Rue
+        gbc.gridx = 0; gbc.gridy = 1;
+        JLabel lblRue = new JLabel("Rue:*");
+        lblRue.setFont(new Font("Arial", Font.BOLD, 12));
+        panelFormulaire.add(lblRue, gbc);
+        
+        JTextField txtRue = new JTextField(20);
+        txtRue.setFont(new Font("Arial", Font.PLAIN, 13));
+        txtRue.setPreferredSize(new Dimension(250, 28));
+        gbc.gridx = 1; gbc.gridy = 1;
+        panelFormulaire.add(txtRue, gbc);
+        
+        // Complément
+        gbc.gridx = 0; gbc.gridy = 2;
+        JLabel lblComplement = new JLabel("Complément:");
+        lblComplement.setFont(new Font("Arial", Font.BOLD, 12));
+        panelFormulaire.add(lblComplement, gbc);
+        
+        JTextField txtComplement = new JTextField(20);
+        txtComplement.setFont(new Font("Arial", Font.PLAIN, 13));
+        txtComplement.setPreferredSize(new Dimension(250, 28));
+        gbc.gridx = 1; gbc.gridy = 2;
+        panelFormulaire.add(txtComplement, gbc);
+        
+        // Code postal
+        gbc.gridx = 0; gbc.gridy = 3;
+        JLabel lblCodePostal = new JLabel("Code postal:*");
+        lblCodePostal.setFont(new Font("Arial", Font.BOLD, 12));
+        panelFormulaire.add(lblCodePostal, gbc);
+        
+        JTextField txtCodePostal = new JTextField(10);
+        txtCodePostal.setFont(new Font("Arial", Font.PLAIN, 13));
+        txtCodePostal.setPreferredSize(new Dimension(100, 28));
+        gbc.gridx = 1; gbc.gridy = 3;
+        panelFormulaire.add(txtCodePostal, gbc);
+        
+        // Ville
+        gbc.gridx = 0; gbc.gridy = 4;
+        JLabel lblVille = new JLabel("Ville:*");
+        lblVille.setFont(new Font("Arial", Font.BOLD, 12));
+        panelFormulaire.add(lblVille, gbc);
+        
+        JTextField txtVille = new JTextField(20);
+        txtVille.setFont(new Font("Arial", Font.PLAIN, 13));
+        txtVille.setPreferredSize(new Dimension(200, 28));
+        gbc.gridx = 1; gbc.gridy = 4;
+        panelFormulaire.add(txtVille, gbc);
+        
+        // Pays
+        gbc.gridx = 0; gbc.gridy = 5;
+        JLabel lblPays = new JLabel("Pays:");
+        lblPays.setFont(new Font("Arial", Font.BOLD, 12));
+        panelFormulaire.add(lblPays, gbc);
+        
+        JTextField txtPays = new JTextField(20);
+        txtPays.setFont(new Font("Arial", Font.PLAIN, 13));
+        txtPays.setText("France");
+        txtPays.setPreferredSize(new Dimension(200, 28));
+        gbc.gridx = 1; gbc.gridy = 5;
+        panelFormulaire.add(txtPays, gbc);
+        
+        // Case à cocher pour adresse principale
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
+        JCheckBox chkPrincipale = new JCheckBox("Définir comme adresse principale");
+        chkPrincipale.setFont(new Font("Arial", Font.PLAIN, 12));
+        chkPrincipale.setBackground(Color.WHITE);
+        
+        if (adresseExistante != null) {
+            chkPrincipale.setSelected(adresseExistante.isEstPrincipale());
+        } else {
+            // Par défaut, la première adresse est principale
+            try {
+                List<Adresse> adresses = AdresseDAO.getInstance().getAdressesByUsager(usager.getIdUsager());
+                chkPrincipale.setSelected(adresses.isEmpty());
+            } catch (Exception e) {
+                chkPrincipale.setSelected(true);
+            }
+        }
+        panelFormulaire.add(chkPrincipale, gbc);
+        
+        dialog.add(panelFormulaire, BorderLayout.CENTER);
+        
+        // Pré-remplir si modification
+        if (adresseExistante != null) {
+            txtNumero.setText(adresseExistante.getNumero());
+            txtRue.setText(adresseExistante.getRue());
+            txtComplement.setText(adresseExistante.getComplement());
+            txtCodePostal.setText(adresseExistante.getCodePostal());
+            txtVille.setText(adresseExistante.getVille());
+            txtPays.setText(adresseExistante.getPays());
+        }
+        
+        // Panel boutons
+        JPanel panelBoutons = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
+        panelBoutons.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 220, 220)));
+        panelBoutons.setBackground(Color.WHITE);
+        
+        JButton btnValider = new JButton(adresseExistante == null ? "Ajouter l'adresse" : "Modifier l'adresse");
+        btnValider.setFont(new Font("Arial", Font.BOLD, 13));
+        btnValider.setBackground(new Color(0, 120, 215));
+        btnValider.setForeground(Color.WHITE);
+        btnValider.setPreferredSize(new Dimension(180, 35));
+        btnValider.setFocusPainted(false);
+        
+        JButton btnAnnuler = new JButton("Annuler");
+        btnAnnuler.setFont(new Font("Arial", Font.PLAIN, 13));
+        btnAnnuler.setPreferredSize(new Dimension(100, 35));
+        
+        panelBoutons.add(btnValider);
+        panelBoutons.add(btnAnnuler);
+        
+        // Actions
+        btnValider.addActionListener(e -> {
+            if (validerFormulaireAdresse(txtNumero, txtRue, txtCodePostal, txtVille)) {
+                try {
+                    Adresse adresse;
+                    if (adresseExistante == null) {
+                        adresse = new Adresse();
+                        adresse.setIdUsager(usager.getIdUsager());
+                    } else {
+                        adresse = adresseExistante;
+                    }
+                    
+                    adresse.setNumero(txtNumero.getText().trim());
+                    adresse.setRue(txtRue.getText().trim());
+                    adresse.setComplement(txtComplement.getText().trim());
+                    adresse.setCodePostal(txtCodePostal.getText().trim());
+                    adresse.setVille(txtVille.getText().trim());
+                    adresse.setPays(txtPays.getText().trim());
+                    adresse.setEstPrincipale(chkPrincipale.isSelected());
+                    
+                    if (adresseExistante == null) {
+                        AdresseDAO.getInstance().create(adresse);
+                    } else {
+                        AdresseDAO.getInstance().update(adresse);
+                    }
+                    
+                    // Si c'est l'adresse principale, la définir comme telle
+                    if (adresse.isEstPrincipale()) {
+                        AdresseDAO.getInstance().definirAdressePrincipale(adresse.getIdAdresse(), usager.getIdUsager());
+                    }
+                    
+                    JOptionPane.showMessageDialog(dialog,
+                        adresseExistante == null ? 
+                            "Adresse ajoutée !\n"
+                            + "Votre adresse a été enregistrée avec succès." :
+                            "Adresse modifiée !\n"
+                            + "Votre adresse a été mise à jour avec succès.",
+                        "Succès",
+                        JOptionPane.INFORMATION_MESSAGE);
+                    
+                    // Rafraîchir la page
+                    new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
+                    dispose();
+                    
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Erreur"
+                        + "<p>" + ex.getMessage() + "</p>",
+                        "Erreur",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        
+        btnAnnuler.addActionListener(e -> dialog.dispose());
+        
+        // Raccourci clavier Entrée pour valider
+        dialog.getRootPane().setDefaultButton(btnValider);
+        
+        dialog.add(panelBoutons, BorderLayout.SOUTH);
+        
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Valide le formulaire d'adresse
+     */
+    private boolean validerFormulaireAdresse(JTextField txtNumero, JTextField txtRue, 
+                                            JTextField txtCodePostal, JTextField txtVille) {
+        if (txtNumero.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Le numéro est obligatoire", "Champ manquant", JOptionPane.WARNING_MESSAGE);
+            txtNumero.requestFocus();
+            return false;
+        }
+        
+        if (txtRue.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "La rue est obligatoire", "Champ manquant", JOptionPane.WARNING_MESSAGE);
+            txtRue.requestFocus();
+            return false;
+        }
+        
+        if (txtCodePostal.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Le code postal est obligatoire", "Champ manquant", JOptionPane.WARNING_MESSAGE);
+            txtCodePostal.requestFocus();
+            return false;
+        }
+        
+        if (txtVille.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "La ville est obligatoire", "Champ manquant", JOptionPane.WARNING_MESSAGE);
+            txtVille.requestFocus();
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Supprime une adresse
+     */
+    private void supprimerAdresse(Adresse adresse) {
+        int confirmation = JOptionPane.showConfirmDialog(this,
+            "Êtes-vous sûr de vouloir supprimer cette adresse ?\n\n" +
+            adresse.getAdresseLigne(),
+            "Confirmation de suppression",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
+        
+        if (confirmation == JOptionPane.YES_OPTION) {
+            try {
+                // Si c'est l'adresse principale, demander confirmation supplémentaire
+                if (adresse.isEstPrincipale()) {
+                    int confirmationPrincipale = JOptionPane.showConfirmDialog(this,
+                        "Vous supprimez votre adresse principale.\n" +
+                        "Aucune autre adresse ne sera marquée comme principale.\n\n" +
+                        "Confirmez-vous la suppression ?",
+                        "Suppression adresse principale",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                    
+                    if (confirmationPrincipale != JOptionPane.YES_OPTION) {
+                        return;
+                    }
+                }
+                
+                AdresseDAO.getInstance().delete(adresse);
+                JOptionPane.showMessageDialog(this,
+                    "Adresse supprimée avec succès",
+                    "Suppression réussie",
+                    JOptionPane.INFORMATION_MESSAGE);
+                
+                rafraichirAffichage();
+                
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                    "Erreur lors de la suppression: " + e.getMessage(),
+                    "Erreur",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Définit une adresse comme principale
+     */
+    private void definirAdressePrincipale(Adresse adresse) {
+        try {
+            AdresseDAO.getInstance().definirAdressePrincipale(adresse.getIdAdresse(), usager.getIdUsager());
+            JOptionPane.showMessageDialog(this,
+                "Adresse définie comme principale avec succès",
+                "Succès",
+                JOptionPane.INFORMATION_MESSAGE);
+            
+            rafraichirAffichage();
+            
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                "Erreur: " + e.getMessage(),
+                "Erreur",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Rafraîchit l'affichage des informations
+     */
+    private void rafraichirAffichage() {
+        // Rafraîchir la page en recréant la vue
+    	new Page_Utilisateur(emailUtilisateur, true).setVisible(true);
+    	dispose();
     }
 }
