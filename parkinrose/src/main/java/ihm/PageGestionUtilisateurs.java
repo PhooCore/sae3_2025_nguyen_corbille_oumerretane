@@ -227,7 +227,7 @@ public class PageGestionUtilisateurs extends JFrame {
                     carteTisseo != null && !carteTisseo.isEmpty() ? carteTisseo : "Non renseignée"
                 });
             }
-            afficherInformation("Liste des utilisateurs chargée avec succès");
+            
         } catch (SQLException e) {
             afficherErreur("Erreur lors du chargement des utilisateurs: " + e.getMessage());
         }
@@ -261,9 +261,6 @@ public class PageGestionUtilisateurs extends JFrame {
                 }
             }
             
-            if (tableModel.getRowCount() == 0) {
-                afficherInformation("Aucun utilisateur trouvé pour: " + recherche);
-            }
         } catch (Exception e) {
             afficherErreur("Erreur lors de la recherche: " + e.getMessage());
         }

@@ -28,6 +28,9 @@ public class ControleurTousParkings implements ActionListener {
         RETOUR_ACCUEIL
     }
     
+    // Constantes pour les messages
+    private static final String TITRE_ERREUR = "Erreur";
+    
     private Page_Tous_Parkings vue;
     private EtatControleur etat;
     private Parking parkingSelectionne;
@@ -278,14 +281,20 @@ public class ControleurTousParkings implements ActionListener {
     }
     
     private void selectionnerParking(int index) {
-        if (index >= 0 && index < vue.getParkingsFiltres().size()) {
-            parkingSelectionne = vue.getParkingsFiltres().get(index);
+        List<Parking> parkingsFiltres = vue.getParkingsFiltres();
+        
+        if (estIndexValide(index, parkingsFiltres)) {
+            parkingSelectionne = parkingsFiltres.get(index);
             indexParkingSelectionne = index;
             actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "VERIFIER_TYPE_PARKING"));
         } else {
-            JOptionPane.showMessageDialog(vue, "Parking non trouvé", "Erreur", JOptionPane.ERROR_MESSAGE);
-            etat = EtatControleur.INITIAL;
+            afficherErreur("Parking non trouvé");
+            actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "ANNULER_SELECTION"));
         }
+    }
+    
+    private boolean estIndexValide(int index, List<Parking> parkingsFiltres) {
+        return index >= 0 && index < parkingsFiltres.size();
     }
     
     private void verifierTypeParking() {
@@ -298,11 +307,8 @@ public class ControleurTousParkings implements ActionListener {
                 demanderConfirmationStationnement();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(vue, 
-                "Erreur lors de la vérification du parking: " + ex.getMessage(), 
-                "Erreur", 
-                JOptionPane.ERROR_MESSAGE);
-            etat = EtatControleur.INITIAL;
+            afficherErreur("Erreur lors de la vérification du parking: " + ex.getMessage());
+            actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "ANNULER_SELECTION"));
         }
     }
     
@@ -445,10 +451,7 @@ public class ControleurTousParkings implements ActionListener {
             pageParking.setVisible(true);
             vue.dispose();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(vue, 
-                "Erreur lors de l'ouverture de la page de stationnement: " + e.getMessage(), 
-                "Erreur", 
-                JOptionPane.ERROR_MESSAGE);
+            afficherErreur("Erreur lors de l'ouverture de la page de stationnement: " + e.getMessage());
             actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "ERREUR_OUVERTURE"));
         }
     }
@@ -458,10 +461,7 @@ public class ControleurTousParkings implements ActionListener {
             Page_Utilisateur pageUtilisateur = new Page_Utilisateur(vue.getEmailUtilisateur());
             pageUtilisateur.setVisible(true);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(vue, 
-                "Erreur lors de l'ouverture de la page utilisateur: " + e.getMessage(), 
-                "Erreur", 
-                JOptionPane.ERROR_MESSAGE);
+            afficherErreur("Erreur lors de l'ouverture de la page utilisateur: " + e.getMessage());
         }
     }
     
@@ -471,10 +471,7 @@ public class ControleurTousParkings implements ActionListener {
             pagePrincipale.setVisible(true);
             vue.dispose();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(vue, 
-                "Erreur lors du retour à l'accueil: " + e.getMessage(), 
-                "Erreur", 
-                JOptionPane.ERROR_MESSAGE);
+            afficherErreur("Erreur lors du retour à l'accueil: " + e.getMessage());
         }
     }
     
@@ -485,7 +482,10 @@ public class ControleurTousParkings implements ActionListener {
         return numeroCarte != null ? numeroCarte : "Non disponible";
     }
     
-    // Méthodes pour obtenir l'état actuel
+    private void afficherErreur(String message) {
+        JOptionPane.showMessageDialog(vue, message, TITRE_ERREUR, JOptionPane.ERROR_MESSAGE);
+    }
+    
     public EtatControleur getEtat() {
         return etat;
     }

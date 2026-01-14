@@ -2,6 +2,7 @@ package controleur;
 
 import ihm.Page_Stationnement_En_Cours;
 import ihm.Page_Principale;
+import utils.NotificationManager;
 import javax.swing.JButton;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -22,15 +23,19 @@ public class ControleurStationnementEnCours implements ActionListener {
     private Page_Stationnement_En_Cours vue;
     private EtatStationnement etat;
     private Timer timer;
-    private boolean messageTermineAffiche = false; 
+    private NotificationManager notificationManager;
     
     public ControleurStationnementEnCours(Page_Stationnement_En_Cours vue) {
         this.vue = vue;
         this.etat = EtatStationnement.INITIAL;
+        this.notificationManager = NotificationManager.getInstance();
         configurerListeners();
         
         etat = EtatStationnement.AFFICHAGE_EN_COURS;
         demarrerTimer();
+        
+        // Vérifier immédiatement les notifications
+        verifierNotifications();
     }
     
     private void configurerListeners() {
@@ -158,9 +163,7 @@ public class ControleurStationnementEnCours implements ActionListener {
         if (action.equals("STATIONNEMENT_ACTIF")) {
             etat = EtatStationnement.AFFICHAGE_EN_COURS;
             rafraichirAffichage();
-        } else if (action.equals("STATIONNEMENT_TERMINE")) {
-            etat = EtatStationnement.AFFICHAGE_EN_COURS;
-            stationnementTermine();
+            
         } else if (action.equals("ERREUR_VERIFICATION")) {
             etat = EtatStationnement.AFFICHAGE_EN_COURS;
         }
@@ -198,6 +201,12 @@ public class ControleurStationnementEnCours implements ActionListener {
     private void actualiserDonnees() {
         try {
             vue.chargerStationnementActif();
+            
+            // Vérifier les notifications
+            if (vue.getStationnementActif() != null) {
+                notificationManager.verifierStationnement(vue.getStationnementActif());
+            }
+            
             actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "DONNEES_CHARGEES"));
         } catch (Exception ex) {
             System.err.println("Erreur lors du rechargement des données: " + ex.getMessage());
@@ -218,6 +227,12 @@ public class ControleurStationnementEnCours implements ActionListener {
         }
     }
     
+    private void verifierNotifications() {
+        if (vue.getStationnementActif() != null) {
+            notificationManager.verifierStationnement(vue.getStationnementActif());
+        }
+    }
+    
     private void rafraichirAffichage() {
         try {
             vue.afficherInformationsStationnement();
@@ -226,14 +241,6 @@ public class ControleurStationnementEnCours implements ActionListener {
         }
     }
     
-    private void stationnementTermine() {
-        // N'afficher le message qu'une seule fois
-        if (!messageTermineAffiche) {
-            messageTermineAffiche = true;
-            arreterTimer(); // Arrêter le timer pour éviter les vérifications répétées
-            vue.afficherInformationsStationnement();
-        }
-    }
     
     private void afficherErreurChargement() {
         JOptionPane.showMessageDialog(vue, 
@@ -243,7 +250,6 @@ public class ControleurStationnementEnCours implements ActionListener {
     }
     
     private void demarrerTimer() {
-        // Timer toutes les 30 secondes pour vérifier l'état du stationnement
         timer = new Timer(30000, e -> 
             actionPerformed(new ActionEvent(timer, ActionEvent.ACTION_PERFORMED, "ACTUALISATION_TIMER")));
         timer.start();

@@ -813,7 +813,7 @@ public class CarteAdminOSMPanel extends JPanel {
             "    <div class=\"info-box\">\n" +
             "        <h3>Administration des Parkings</h3>\n" +
             "        <p><b>" + parkingsAvecCoords + " parkings</b> affichés</p>\n" +
-            "        <p>📌 Cliquez sur un parking pour le gérer</p>\n" +
+            "        <p>Cliquez sur un parking pour le gérer</p>\n" +
             "        <p id=\"add-mode-info\" style=\"color: #4CAF50; font-weight: bold; display: none;\">" +
             "📍 Mode ajout: cliquez sur la carte</p>\n" +
             "        <div class=\"legend\">\n" +

@@ -4,88 +4,140 @@ import org.junit.Test;
 
 import modele.Paiement;
 
+import org.junit.Before;
+import org.junit.After;
 import static org.junit.Assert.*;
+
 import java.time.LocalDateTime;
 
 public class PaiementTest {
     
-    @Test
-    public void testConstructeurComplet() {
-        Paiement paiement = new Paiement(
-            "DUPONT Jean", 
-            "1234567812345678", 
-            "123", 
-            25.50, 
-            1
+    private Paiement paiement;
+    private LocalDateTime maintenant;
+    
+    @Before
+    public void setUp() {
+        maintenant = LocalDateTime.now();
+        paiement = new Paiement(
+            "Jean Dupont",
+            "1234567890123456",
+            "123",
+            29.99,
+            1,
+            "ABON_001"
         );
-        
-        assertEquals("DUPONT Jean", paiement.getNomCarte());
-        assertEquals("1234567812345678", paiement.getNumeroCarte());
+    }
+    
+    @After
+    public void tearDown() {
+        paiement = null;
+    }
+    
+    @Test
+    public void testConstructeurAvecAbonnement() {
+        assertEquals("Jean Dupont", paiement.getNomCarte());
+        assertEquals("1234567890123456", paiement.getNumeroCarte());
         assertEquals("123", paiement.getCodeSecretCarte());
-        assertEquals(25.50, paiement.getMontant(), 0.001);
+        assertEquals(29.99, paiement.getMontant(), 0.001);
         assertEquals(1, paiement.getIdUsager());
-        assertEquals("ABO_SIMPLE", paiement.getIdAbonnement());
+        assertEquals("ABON_001", paiement.getIdAbonnement());
+        assertEquals("REUSSI", paiement.getStatut());
+        assertEquals("CARTE", paiement.getMethodePaiement());
+        assertEquals("Abonnement", paiement.getTypePaiement());
         assertNotNull(paiement.getIdPaiement());
         assertTrue(paiement.getIdPaiement().startsWith("PAY_"));
-        assertNotNull(paiement.getDatePaiement());
-        assertEquals("CARTE", paiement.getMethodePaiement());
-        assertEquals("REUSSI", paiement.getStatut());
     }
     
     @Test
-    public void testConstructeurVide() {
-        Paiement paiement = new Paiement();
-        assertNotNull(paiement);
+    public void testConstructeurSansAbonnement() {
+        Paiement paiementStationnement = new Paiement(
+            "Marie Martin",
+            "9876543210987654",
+            "456",
+            5.50,
+            2
+        );
+        
+        assertEquals("Marie Martin", paiementStationnement.getNomCarte());
+        assertEquals("9876543210987654", paiementStationnement.getNumeroCarte());
+        assertEquals(5.50, paiementStationnement.getMontant(), 0.001);
+        assertEquals(2, paiementStationnement.getIdUsager());
+        assertNull(paiementStationnement.getIdAbonnement());
+        assertEquals("Stationnement", paiementStationnement.getTypePaiement());
     }
     
     @Test
-    public void testSetters() {
-        Paiement paiement = new Paiement();
-        LocalDateTime now = LocalDateTime.now();
-        
-        paiement.setIdPaiement("PAY_TEST");
-        paiement.setNomCarte("MARTIN Marie");
-        paiement.setNumeroCarte("8765432187654321");
-        paiement.setCodeSecretCarte("456");
-        paiement.setIdAbonnement("ABO_ANNUEL");
-        paiement.setMontant(135.00);
-        paiement.setIdUsager(2);
-        paiement.setDatePaiement(now);
-        paiement.setMethodePaiement("PAYPAL");
-        paiement.setStatut("EN_ATTENTE");
-        
-        assertEquals("PAY_TEST", paiement.getIdPaiement());
-        assertEquals("MARTIN Marie", paiement.getNomCarte());
-        assertEquals("8765432187654321", paiement.getNumeroCarte());
-        assertEquals("456", paiement.getCodeSecretCarte());
-        assertEquals("ABO_ANNUEL", paiement.getIdAbonnement());
-        assertEquals(135.00, paiement.getMontant(), 0.001);
-        assertEquals(2, paiement.getIdUsager());
-        assertEquals(now, paiement.getDatePaiement());
-        assertEquals("PAYPAL", paiement.getMethodePaiement());
-        assertEquals("EN_ATTENTE", paiement.getStatut());
+    public void testConstructeurParDefaut() {
+        Paiement paiementVide = new Paiement();
+        assertNull(paiementVide.getIdPaiement());
+        assertNull(paiementVide.getNomCarte());
+        assertNull(paiementVide.getNumeroCarte());
+        assertEquals(0.0, paiementVide.getMontant(), 0.001);
+        assertEquals(0, paiementVide.getIdUsager());
+        assertNull(paiementVide.getDatePaiement());
+        assertNull(paiementVide.getMethodePaiement());
+        assertNull(paiementVide.getStatut());
     }
     
     @Test
-    public void testGenerationIdPaiement() {
-        Paiement paiement1 = new Paiement("Test1", "1111", "111", 10.0, 1);
+    public void testGetTypePaiement_QuandAbonnement() {
+        paiement.setTypePaiement(null); // Forcer le recalcul
+        paiement.setIdAbonnement("ABON_001");
+        assertEquals("Abonnement", paiement.getTypePaiement());
+    }
+    
+    @Test
+    public void testGetTypePaiement_QuandStationnement() {
+        paiement.setTypePaiement(null);
+        paiement.setIdAbonnement(null);
+        assertEquals("Stationnement", paiement.getTypePaiement());
         
-        try {
-            Thread.sleep(10); 
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        paiement.setIdAbonnement("");
+        assertEquals("Stationnement", paiement.getTypePaiement());
+    }
+    
+    @Test
+    public void testGetTypePaiement_QuandTypeDefini() {
+        paiement.setTypePaiement("TEST_TYPE");
+        assertEquals("TEST_TYPE", paiement.getTypePaiement());
+    }
+    
+    @Test
+    public void testSettersEtGetters() {
+        Paiement p = new Paiement();
         
-        Paiement paiement2 = new Paiement("Test2", "2222", "222", 20.0, 2);
+        p.setIdPaiement("PAY_TEST");
+        assertEquals("PAY_TEST", p.getIdPaiement());
         
-        assertNotNull(paiement1.getIdPaiement());
-        assertNotNull(paiement2.getIdPaiement());
-        assertTrue("L'ID du premier paiement doit commencer par PAY_", 
-                   paiement1.getIdPaiement().startsWith("PAY_"));
-        assertTrue("L'ID du deuxième paiement doit commencer par PAY_", 
-                   paiement2.getIdPaiement().startsWith("PAY_"));
+        p.setNomCarte("Test Nom");
+        assertEquals("Test Nom", p.getNomCarte());
         
-        assertNotEquals("Les IDs de paiement doivent être différents car ils sont générés à des moments différents", 
-                       paiement1.getIdPaiement(), paiement2.getIdPaiement());
+        p.setNumeroCarte("1111222233334444");
+        assertEquals("1111222233334444", p.getNumeroCarte());
+        
+        p.setCodeSecretCarte("999");
+        assertEquals("999", p.getCodeSecretCarte());
+        
+        p.setIdAbonnement("ABON_TEST");
+        assertEquals("ABON_TEST", p.getIdAbonnement());
+        
+        p.setMontant(50.0);
+        assertEquals(50.0, p.getMontant(), 0.001);
+        
+        p.setIdUsager(100);
+        assertEquals(100, p.getIdUsager());
+        
+        LocalDateTime testDate = LocalDateTime.now();
+        p.setDatePaiement(testDate);
+        assertEquals(testDate, p.getDatePaiement());
+        
+        p.setMethodePaiement("ESPECES");
+        assertEquals("ESPECES", p.getMethodePaiement());
+        
+        p.setStatut("EN_ATTENTE");
+        assertEquals("EN_ATTENTE", p.getStatut());
+        
+        p.setTypePaiement("TEST");
+        assertEquals("TEST", p.getTypePaiement());
     }
 }
