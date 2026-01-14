@@ -8,9 +8,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import modele.Abonnement;
 import modele.Stationnement;
 import modele.Usager;
 import modele.Zone;
+import modele.dao.AbonnementDAO;
 import modele.dao.StationnementDAO;
 import modele.dao.TarifParkingDAO;
 import modele.dao.UsagerDAO;
@@ -441,7 +443,7 @@ public class Page_Stationnement_En_Cours extends JFrame {
             
             JComboBox<String> comboHeures = new JComboBox<>(heures);
             JComboBox<String> comboMinutes = new JComboBox<>(minutes);
-            comboMinutes.setSelectedItem("15"); // 15 min par défaut
+            comboMinutes.setSelectedItem("15"); // Sélectionner 15 min par défaut
             
             JPanel dureePan = new JPanel(new FlowLayout(FlowLayout.LEFT));
             dureePan.add(comboHeures);
@@ -470,7 +472,21 @@ public class Page_Stationnement_En_Cours extends JFrame {
                     int dureeMin = (h * 60) + m;
                     
                     if (dureeMin > 0) {
-                        double cout = zone.calculerCout(dureeMin);
+                        // Vérifier l'abonnement pour le calcul
+                        Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+                        Abonnement abonnement = null;
+                        if (usager != null) {
+                            abonnement = AbonnementDAO.getAbonnementActifStatic(usager.getIdUsager());
+                        }
+                        
+                        // Calculer avec abonnement
+                        double cout;
+                        if (abonnement != null) {
+                            cout = zone.calculerCoutAvecAbonnement(dureeMin, abonnement);
+                        } else {
+                            cout = zone.calculerCout(dureeMin);
+                        }
+                        
                         if (cout == 0.0) {
                             lblCoutCalcule.setText("GRATUIT");
                             lblCoutCalcule.setForeground(new Color(0, 150, 0));
@@ -488,9 +504,21 @@ public class Page_Stationnement_En_Cours extends JFrame {
             comboHeures.addItemListener(calculCoutListener);
             comboMinutes.addItemListener(calculCoutListener);
             
-            // Calculer le coût initial (15 minutes par défaut)
+            // Calculer le coût initial (15 minutes par défaut) avec abonnement
             int dureeInitiale = 15;
-            double coutInitial = zone.calculerCout(dureeInitiale);
+            Usager usagerInitial = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+            Abonnement abonnementInitial = null;
+            if (usagerInitial != null) {
+                abonnementInitial = AbonnementDAO.getAbonnementActifStatic(usagerInitial.getIdUsager());
+            }
+            
+            double coutInitial;
+            if (abonnementInitial != null) {
+                coutInitial = zone.calculerCoutAvecAbonnement(dureeInitiale, abonnementInitial);
+            } else {
+                coutInitial = zone.calculerCout(dureeInitiale);
+            }
+            
             if (coutInitial == 0.0) {
                 lblCoutCalcule.setText("GRATUIT");
                 lblCoutCalcule.setForeground(new Color(0, 150, 0));
@@ -517,7 +545,19 @@ public class Page_Stationnement_En_Cours extends JFrame {
                 }
                 
                 int dureeSupplementaireMinutes = (heuresSupp * 60) + minutesSupp;
-                double coutSupplementaire = zone.calculerCout(dureeSupplementaireMinutes);
+                
+                Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+                Abonnement abonnement = null;
+                if (usager != null) {
+                    abonnement = AbonnementDAO.getAbonnementActifStatic(usager.getIdUsager());
+                }
+                
+                double coutSupplementaire;
+                if (abonnement != null) {
+                    coutSupplementaire = zone.calculerCoutAvecAbonnement(dureeSupplementaireMinutes, abonnement);
+                } else {
+                    coutSupplementaire = zone.calculerCout(dureeSupplementaireMinutes);
+                }
                 
                 // Demander confirmation avec le coût
                 String messageConfirmation = String.format(
@@ -538,11 +578,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
                 
                 if (confirmation == JOptionPane.YES_OPTION) {
                     if (coutSupplementaire > 0.01) {
-                        // Paiement nécessaire
                         ouvrirPagePaiementProlongation(zone, heuresSupp, minutesSupp, 
                             dureeSupplementaireMinutes, coutSupplementaire);
                     } else {
-                        // Prolongation gratuite
                         prolongerStationnementGratuit(dureeSupplementaireMinutes);
                     }
                 }
@@ -556,48 +594,37 @@ public class Page_Stationnement_En_Cours extends JFrame {
         }
     }
 
-    // Nouvelle méthode pour ouvrir la page de paiement pour la prolongation
     private void ouvrirPagePaiementProlongation(Zone zone, int heures, int minutes, 
-                                                int dureeMinutes, double cout) {
-        Page_Paiement pagePaiement = new Page_Paiement(
-            cout,
-            emailUtilisateur,
-            stationnementActif.getTypeVehicule(),
-            stationnementActif.getPlaqueImmatriculation(),
-            zone.getIdZone(),
-            zone.getLibelleZone(),
-            heures,
-            minutes,
-            stationnementActif.getIdStationnement(), // On passe l'ID pour la prolongation
-            null
-        );
-        pagePaiement.setVisible(true);
-        dispose();
+            int dureeMinutes, double cout) {
+    	Page_Paiement pagePaiement = new Page_Paiement(cout, emailUtilisateur, stationnementActif.getTypeVehicule(),
+    												stationnementActif.getPlaqueImmatriculation(), zone.getIdZone(),
+    												zone.getLibelleZone(), heures, minutes, 
+    												stationnementActif.getIdStationnement(), null);
+    	pagePaiement.setVisible(true);
+    	dispose();
     }
 
-    // Nouvelle méthode pour prolonger gratuitement
     private void prolongerStationnementGratuit(int dureeSupplementaireMinutes) {
-        boolean succes = StationnementDAO.prolongerStationnement(
-            stationnementActif.getIdStationnement(), 
-            dureeSupplementaireMinutes
-        );
-        
-        if (succes) {
-            JOptionPane.showMessageDialog(this,
-                "Stationnement prolongé avec succès !",
-                "Succès",
-                JOptionPane.INFORMATION_MESSAGE);
-            rafraichirAffichage();
-        } else {
-            JOptionPane.showMessageDialog(this,
-                "Erreur lors de la prolongation du stationnement",
-                "Erreur",
-                JOptionPane.ERROR_MESSAGE);
-        }
+    	boolean succes = StationnementDAO.prolongerStationnement(
+    			stationnementActif.getIdStationnement(), 
+    			dureeSupplementaireMinutes
+    			);
+
+    	if (succes) {
+    		JOptionPane.showMessageDialog(this,
+    				"Stationnement prolongé avec succès !",
+    				"Succès",
+    		JOptionPane.INFORMATION_MESSAGE);
+    		rafraichirAffichage();
+    	} else {
+    		JOptionPane.showMessageDialog(this,
+    				"Erreur lors de la prolongation du stationnement",
+    				"Erreur",
+    				JOptionPane.ERROR_MESSAGE);
+    	}
     }
 
-    // Getter pour le contrôleur
     public JButton getBtnProlonger() {
-        return btnProlonger;
+    	return btnProlonger;
     }
 }

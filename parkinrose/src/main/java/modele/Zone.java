@@ -140,4 +140,47 @@ public class Zone {
                 return libelleZone + " - " + String.format("%.2f", tarifParHeure) + "€/h";
         }
     }
+    
+    public double calculerCoutAvecAbonnement(int dureeMinutes, Abonnement abonnement) {
+        // Si l'usager a un abonnement actif
+        if (abonnement != null && abonnement.estActif()) {
+            // IMPORTANT: L'abonnement a déjà été payé !
+            // Le tarif de l'abonnement n'est PAS le coût par stationnement
+            // C'est le prix de l'abonnement lui-même (déjà réglé)
+            
+            // Si l'abonnement est gratuit (tarif = 0) → Stationnement gratuit
+            if (abonnement.estGratuit()) {
+                return 0.0;
+            }
+            
+            // Si c'est un abonnement zone bleue et qu'on est en zone bleue → Gratuit
+            if (abonnement.estZoneBleue() && "ZONE_BLEUE".equals(idZone)) {
+                return 0.0;
+            }
+            
+            // Pour tous les autres abonnements (hebdo, annuel, etc.)
+            // Le stationnement est GRATUIT car l'abonnement est déjà payé
+            String idAbo = abonnement.getIdAbonnement();
+            if (idAbo != null && (
+                idAbo.contains("HEBDO") || 
+                idAbo.contains("ANNUEL") || 
+                idAbo.contains("RESIDENT") ||
+                idAbo.contains("MOTO") ||
+                idAbo.contains("PACK")
+            )) {
+                return 0.0;
+            }
+            
+            // Si c'est "ABO_SIMPLE" (paiement ponctuel) → calcul normal
+            if (idAbo != null && idAbo.contains("SIMPLE")) {
+                return calculerCout(dureeMinutes);
+            }
+            
+            // Par défaut, si on a un abonnement, le stationnement est gratuit
+            return 0.0;
+        }
+        
+        // Pas d'abonnement : calcul normal
+        return calculerCout(dureeMinutes);
+    }
 }

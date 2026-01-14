@@ -5,7 +5,9 @@ import java.awt.*;
 import controleur.ControleurGarerVoirie;
 import modele.Zone;
 import modele.dao.ZoneDAO;
+import modele.dao.AbonnementDAO;
 import modele.dao.UsagerDAO;
+import modele.Abonnement;
 import modele.Usager;
 import java.util.List;
 
@@ -164,7 +166,7 @@ public class Page_Garer_Voirie extends JFrame {
     }
     
     private JPanel creerPanelStationnement() {
-        JPanel panel = new JPanel(new GridLayout(4, 2, 10, 10));
+        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10)); // Changé de 4 à 5 lignes
         panel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(new Color(153, 76, 0), 2),
             "Stationnement"));
@@ -197,6 +199,34 @@ public class Page_Garer_Voirie extends JFrame {
         panelDuree.add(new JLabel("min"));
         
         panel.add(panelDuree);
+        
+        // Abonnement (nouvelle ligne)
+        panel.add(new JLabel("Abonnement:"));
+        JLabel lblAbonnement = new JLabel("Chargement...");
+        lblAbonnement.setFont(new Font("Arial", Font.ITALIC, 12));
+        lblAbonnement.setForeground(Color.GRAY);
+        
+        // Vérifier l'abonnement et mettre à jour le label
+        SwingUtilities.invokeLater(() -> {
+            try {
+                Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+                if (usager != null) {
+                    Abonnement abonnement = AbonnementDAO.getAbonnementActifStatic(usager.getIdUsager());
+                    if (abonnement != null && abonnement.estActif()) {
+                        lblAbonnement.setText("✓ " + abonnement.getLibelleAbonnement());
+                        lblAbonnement.setForeground(new Color(0, 150, 0)); // Vert
+                    } else {
+                        lblAbonnement.setText("Aucun abonnement actif");
+                        lblAbonnement.setForeground(Color.GRAY);
+                    }
+                }
+            } catch (Exception e) {
+                lblAbonnement.setText("Erreur chargement");
+                lblAbonnement.setForeground(Color.RED);
+            }
+        });
+        
+        panel.add(lblAbonnement);
         
         // Coût
         panel.add(new JLabel("Coût estimé:"));

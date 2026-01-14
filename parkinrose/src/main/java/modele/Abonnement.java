@@ -94,14 +94,14 @@ public class Abonnement {
     
     // Méthode pour vérifier si l'abonnement est actif
     public boolean estActif() {
-        LocalDateTime maintenant = LocalDateTime.now();
-        
         // Vérifier le statut
-        if (!"ACTIF".equals(statut)) {
+        if (statut != null && !"ACTIF".equals(statut)) {
             return false;
         }
         
-        // Vérifier les dates
+        LocalDateTime maintenant = LocalDateTime.now();
+        
+        // Vérifier les dates seulement si elles sont définies
         if (dateDebut != null && dateDebut.isAfter(maintenant)) {
             return false; // Pas encore commencé
         }
@@ -110,6 +110,7 @@ public class Abonnement {
             return false; // Expiré
         }
         
+        // Si pas de date de fin (NULL), l'abonnement n'expire jamais
         return true;
     }
     

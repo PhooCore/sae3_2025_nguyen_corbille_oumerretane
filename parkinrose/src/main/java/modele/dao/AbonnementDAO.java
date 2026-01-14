@@ -152,4 +152,92 @@ public class AbonnementDAO extends DaoModele<Abonnement> {
         pstmt.close();
         return existe;
     }
+    
+    /**
+     * Vérifie si un usager a un abonnement actif
+     */
+    public boolean usagerAAbonnementActif(int idUsager) throws SQLException {
+        // Version simplifiée : vérifier juste si une ligne existe dans Appartenir
+        String sql = "SELECT COUNT(*) FROM Appartenir WHERE id_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, idUsager);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                return count > 0;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Récupère l'abonnement actif d'un usager
+     */
+    public Abonnement getAbonnementActif(int idUsager) throws SQLException {
+        // Jointure avec Appartenir pour récupérer aussi les dates
+        String sql = "SELECT a.*, ap.date_debut, ap.date_fin, ap.est_actif " +
+                    "FROM Abonnement a " +
+                    "INNER JOIN Appartenir ap ON a.id_abonnement = ap.id_abonnement " +
+                    "WHERE ap.id_usager = ? " +
+                    "AND ap.est_actif = TRUE " +
+                    "LIMIT 1";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, idUsager);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                Abonnement abonnement = creerInstance(rs);
+                System.out.println("DEBUG: Abonnement trouvé - " + abonnement.getLibelleAbonnement() + 
+                                 " - Tarif: " + abonnement.getTarifAbonnement() +
+                                 " - Gratuit: " + abonnement.estGratuit());
+                return abonnement;
+            } else {
+                System.out.println("DEBUG: Aucun abonnement actif trouvé pour l'usager " + idUsager);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Récupère le tarif de l'abonnement actif d'un usager
+     * Retourne 0.0 si l'abonnement rend le stationnement gratuit
+     */
+    public double getTarifAbonnementActif(int idUsager) throws SQLException {
+        Abonnement abonnement = getAbonnementActif(idUsager);
+        if (abonnement != null) {
+            return abonnement.getTarifAbonnement();
+        }
+        return -1.0; // Pas d'abonnement
+    }
+
+    /**
+     * Version statique pour compatibilité
+     */
+    public static boolean usagerAAbonnementActifStatic(int idUsager) {
+        try {
+            return getInstance().usagerAAbonnementActif(idUsager);
+        } catch (SQLException e) {
+            System.err.println("Erreur vérification abonnement: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Version statique pour récupérer l'abonnement actif
+     */
+    public static Abonnement getAbonnementActifStatic(int idUsager) {
+        try {
+            return getInstance().getAbonnementActif(idUsager);
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération abonnement actif: " + e.getMessage());
+            return null;
+        }
+    }
 }

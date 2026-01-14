@@ -231,19 +231,7 @@ public class ControleurStationnementEnCours implements ActionListener {
         if (!messageTermineAffiche) {
             messageTermineAffiche = true;
             arreterTimer(); // Arrêter le timer pour éviter les vérifications répétées
-            
-            int choix = JOptionPane.showConfirmDialog(vue, 
-                "Le stationnement a été terminé.\n\nVoulez-vous retourner à l'accueil ?", 
-                "Information", 
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.INFORMATION_MESSAGE);
-            
-            if (choix == JOptionPane.YES_OPTION) {
-                retourAccueil();
-            } else {
-                // Rafraîchir l'affichage pour montrer qu'il n'y a plus de stationnement actif
-                vue.afficherInformationsStationnement();
-            }
+            vue.afficherInformationsStationnement();
         }
     }
     

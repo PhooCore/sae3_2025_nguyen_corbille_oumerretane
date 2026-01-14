@@ -9,6 +9,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.util.List;
+
+import modele.Abonnement;
 import modele.Usager;
 import modele.Zone;
 import modele.VehiculeUsager;
@@ -250,19 +252,17 @@ public class ControleurGarerVoirie implements ActionListener {
     
     private double calculerCoutFinal(Zone zone, int heures, int minutes) {
         int dureeTotaleMinutes = (heures * 60) + minutes;
-        double cout = zone.calculerCout(dureeTotaleMinutes);
         
-        // Appliquer le tarif de l'abonnement si l'usager en a un
-        if (stationnementControleur.usagerAUnAbonnementActif(usager.getIdUsager())) {
-            double tarifAbonnement = stationnementControleur.getTarifAbonnement(usager.getIdUsager());
-            if (tarifAbonnement > 0) {
-                cout = tarifAbonnement;
-            } else if (tarifAbonnement == 0.0) {
-                cout = 0.0;
-            }
+        // Vérifier si l'usager a un abonnement actif
+        Abonnement abonnement = modele.dao.AbonnementDAO.getAbonnementActifStatic(usager.getIdUsager());
+        
+        if (abonnement != null) {
+            // Utiliser la méthode avec abonnement
+            return zone.calculerCoutAvecAbonnement(dureeTotaleMinutes, abonnement);
+        } else {
+            // Calcul normal sans abonnement
+            return zone.calculerCout(dureeTotaleMinutes);
         }
-        
-        return cout;
     }
     
     private void demanderConfirmationStationnementGratuit(Zone zone, int heures, int minutes) {
@@ -546,7 +546,15 @@ public class ControleurGarerVoirie implements ActionListener {
             
             Zone zone = vue.getZoneSelectionnee();
             if (zone != null) {
-                double cout = calculerCoutFinal(zone, heures, minutes);
+                // Vérifier si l'usager a un abonnement
+                Abonnement abonnement = modele.dao.AbonnementDAO.getAbonnementActifStatic(usager.getIdUsager());
+                
+                double cout;
+                if (abonnement != null) {
+                    cout = zone.calculerCoutAvecAbonnement(dureeTotaleMinutes, abonnement);
+                } else {
+                    cout = zone.calculerCout(dureeTotaleMinutes);
+                }
                 
                 if (cout == 0.00) {
                     vue.setCoutAvecCouleur("GRATUIT", new Color(0, 150, 0));
