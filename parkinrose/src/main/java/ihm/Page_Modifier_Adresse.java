@@ -115,24 +115,30 @@ public class Page_Modifier_Adresse extends JFrame {
         }
     }
     
-    private String getNomZone(String idZone) {
-        switch (idZone) {
-            case "ZONE_ROUGE": return "Zone Rouge";
-            case "ZONE_ORANGE": return "Zone Orange";
-            case "ZONE_JAUNE": return "Zone Jaune";
-            case "ZONE_VERTE": return "Zone Verte";
-            case "ZONE_BLEUE": return "Zone Bleue";
-            default: return idZone;
-        }
-    }
+    // === GETTERS POUR LE CONTROLEUR ===
     
-    // Getters
-    public String getEmailUtilisateur() { return emailUtilisateur; }
-    public Usager getUsager() { return usager; }
-    public JTextField getTxtAdresse() { return txtAdresse; }
-    public JTextField getTxtCodePostal() { return txtCodePostal; }
-    public JTextField getTxtVille() { return txtVille; }
-    public JLabel getLblZoneAttribuee() { return lblZoneAttribuee; }
-    public JButton getBtnValider() { return btnValider; }
-    public JButton getBtnAnnuler() { return btnAnnuler; }
+    public String getEmailUtilisateur() { 
+    	return emailUtilisateur;
+    }
+    public Usager getUsager() { 
+    	return usager; 
+    }
+    public JTextField getTxtAdresse() { 
+    	return txtAdresse; 
+    }
+    public JTextField getTxtCodePostal() { 
+    	return txtCodePostal; 
+    }
+    public JTextField getTxtVille() { 
+    	return txtVille; 
+    }
+    public JLabel getLblZoneAttribuee() { 
+    	return lblZoneAttribuee; 
+    }
+    public JButton getBtnValider() { 
+    	return btnValider; 
+    }
+    public JButton getBtnAnnuler() { 
+    	return btnAnnuler; 
+    }
 }

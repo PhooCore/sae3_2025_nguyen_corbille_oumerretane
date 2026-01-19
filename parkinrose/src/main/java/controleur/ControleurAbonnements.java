@@ -33,9 +33,12 @@ public class ControleurAbonnements implements ActionListener {
     private Page_Abonnements vue;
     private Etat etat;
     
+    // informations sur l'utilisateur connecté
     private String emailUtilisateur;
     private int idUsager;
     private Usager usager;
+    
+    // listes pour gérer les abonnements affichés
     private List<Abonnement> abonnementsDisponibles;
     private List<Abonnement> abonnementsFiltres;
     private Abonnement abonnementSelectionne;
@@ -48,8 +51,13 @@ public class ControleurAbonnements implements ActionListener {
         initialiserControleur();
     }
     
+    // récupère l'utilisateur depuis la base de données et configure la page
     private void initialiserControleur() {
         this.usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+        
+        // vérifier si l'utilisateur existe avec son mail
+        // connecter les différents boutons de la vue aux actions du controleur
+        // récupérer les abonnements de l'usager
         if (usager != null) {
             this.idUsager = usager.getIdUsager();
             configurerListeners();
@@ -60,20 +68,25 @@ public class ControleurAbonnements implements ActionListener {
         }
     }
     
+    // connecte tous les boutons et éléments interactifs de la vue aux actions appropriées
     private void configurerListeners() {
-        vue.getBtnRetour().addActionListener(e -> retourProfil());
-        
+    	// récupérer le bouton de la vue 
+    	// ajouter un listener qui réagit aux clics
+    	// si cliqué : on retourne à la page de l'utilisateur
+    	vue.getBtnRetour().addActionListener(e -> retourProfil());
+    	
+        // appliquer les filtres de recherche
+        // réagir aux différentes options de filtrage pour relancer le filtrages
         vue.getRechercheBtn().addActionListener(e -> appliquerFiltres());
-        
         vue.getCheckGratuit().addActionListener(e -> appliquerFiltres());
         vue.getCheckMoto().addActionListener(e -> appliquerFiltres());
         vue.getCheckAnnuel().addActionListener(e -> appliquerFiltres());
         vue.getCheckHebdo().addActionListener(e -> appliquerFiltres());
-        
+        // ---------------------------------------------------------------------------------------
         vue.getComboTri().addActionListener(e -> appliquerFiltres());
-        
         vue.getTxtRechercher().addActionListener(e -> appliquerFiltres());
         
+        // gestion du placeholder dans le champ de recherche
         vue.getTxtRechercher().addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
@@ -93,6 +106,7 @@ public class ControleurAbonnements implements ActionListener {
         });
     }
     
+    // charge tous les abonnements disponibles depuis la base de données
     private void chargerAbonnements() {
         etat = Etat.CHARGEMENT_ABONNEMENTS;
         
@@ -146,7 +160,7 @@ public class ControleurAbonnements implements ActionListener {
                 message = "Aucun abonnement ne correspond à vos critères de filtrage";
             }
             
-            JLabel lblAucun = new JLabel("<html><center>" + message + "<br>Tentez d'autres critères de recherche</center></html>", SwingConstants.CENTER);
+            JLabel lblAucun = new JLabel(message + "\nTentez d'autres critères de recherche", SwingConstants.CENTER);
             lblAucun.setFont(new java.awt.Font("Arial", java.awt.Font.ITALIC, 16));
             lblAucun.setForeground(java.awt.Color.GRAY);
             lblAucun.setBorder(BorderFactory.createEmptyBorder(50, 20, 50, 20));
@@ -384,15 +398,12 @@ public class ControleurAbonnements implements ActionListener {
         Object[] options = {"Remplacer", "Conserver mon abonnement actuel"};
         int choix = JOptionPane.showOptionDialog(
             vue,
-            "<html><div style='text-align: center;'>"
-            + "<h3>Abonnement existant détecté</h3>"
-            + "<p>Vous avez déjà un abonnement actif :</p>"
-            + "<p><b>" + abonnementExistant.getLibelleAbonnement() + "</b></p>"
-            + "<br>"
-            + "<p>Souhaitez-vous le remplacer par :</p>"
-            + "<p><b>" + abonnementSelectionne.getLibelleAbonnement() + "</b> ?</p>"
-            + "</div></html>",
-            "Confirmation de remplacement",
+            "Abonnement existant détecté\n\n"
+            + "Vous avez déjà un abonnement actif :"
+            + abonnementExistant.getLibelleAbonnement()
+            + "\nSouhaitez-vous le remplacer par :"
+            + abonnementSelectionne.getLibelleAbonnement(),
+            "\nConfirmation de remplacement",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE,
             null,
@@ -443,7 +454,7 @@ public class ControleurAbonnements implements ActionListener {
                     } else {
                         JOptionPane.showMessageDialog(
                             vue,
-                            "❌ Une erreur est survenue lors de la souscription.",
+                            "Une erreur est survenue lors de la souscription.",
                             "Erreur",
                             JOptionPane.ERROR_MESSAGE
                         );

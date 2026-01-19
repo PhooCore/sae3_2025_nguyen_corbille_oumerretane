@@ -567,6 +567,11 @@ public class StationnementDAO extends DaoModele<Stationnement> {
                 }
             }
             
+            String statutPaiement = stationnement.getStatutPaiement();
+            if (statutPaiement == null || statutPaiement.isEmpty()) {
+                statutPaiement = "NON_PAYE"; // Valeur par défaut seulement si non défini
+            }
+            
             // Créer le stationnement
             String sql = "INSERT INTO Stationnement (id_usager, type_vehicule, plaque_immatriculation, " +
                     "id_parking, heure_arrivee, type_stationnement, statut_paiement, statut, cout) " +
@@ -578,13 +583,14 @@ public class StationnementDAO extends DaoModele<Stationnement> {
                 stmt.setString(3, stationnement.getPlaqueImmatriculation());
                 stmt.setString(4, idParking);
                 stmt.setTimestamp(5, Timestamp.valueOf(LocalDateTime.now()));
-                stmt.setString(6, "NON_PAYE");
+                stmt.setString(6, statutPaiement); // UTILISER LE STATUT PASSÉ EN PARAMÈTRE
                 stmt.setDouble(7, 0.0);
                 
                 int lignesAffectees = stmt.executeUpdate();
             
                 if (lignesAffectees > 0) {
                     conn.commit();
+                    System.out.println("✓ Stationnement créé avec succès, statut = " + statutPaiement);
                     return true;
                 } else {
                     conn.rollback();

@@ -170,80 +170,90 @@ public class StationnementControleur {
     }
 
     public boolean preparerStationnementParking(String typeVehicule, String plaqueImmatriculation,
-                                               String idParking, Page_Garer_Parking pageParking) {
+            String idParking, Page_Garer_Parking pageParking) {
 
-        if (!validerStationnementParking(plaqueImmatriculation, typeVehicule, idParking, pageParking)) {
-            return false;
-        }
+    	if (!validerStationnementParking(plaqueImmatriculation, typeVehicule, idParking, pageParking)) {
+    		return false;
+    	}
 
-        Parking parking = null;
-        try {
-            parking = ParkingDAO.getInstance().getParkingById(idParking);
-        } catch (Exception e) {
-            System.err.println("Erreur récupération parking: " + e.getMessage());
-        }
-        
-        if (parking == null) {
-            JOptionPane.showMessageDialog(pageParking,
-                "Parking non trouvé",
-                "Erreur",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
+    	Parking parking = null;
+    	try {
+    		parking = ParkingDAO.getInstance().getParkingById(idParking);
+    	} catch (Exception e) {
+    		System.err.println("Erreur récupération parking: " + e.getMessage());
+    	}
 
-        if (parking.getPlacesDisponibles() <= 0) {
-            JOptionPane.showMessageDialog(pageParking,
-                "Aucune place disponible dans ce parking",
-                "Parking complet",
-                JOptionPane.WARNING_MESSAGE);
-            return false;
-        }
+    	if (parking == null) {
+    		JOptionPane.showMessageDialog(pageParking,
+    				"Parking non trouvé",
+    				"Erreur",
+    				JOptionPane.ERROR_MESSAGE);
+    		return false;
+    	}
 
-        // Créer l'objet Stationnement
-        Stationnement stationnement = new Stationnement();
-        stationnement.setIdUsager(usager.getIdUsager());
-        stationnement.setTypeVehicule(typeVehicule);
-        stationnement.setPlaqueImmatriculation(plaqueImmatriculation);
-        stationnement.setIdTarification(idParking); // Utiliser idTarification pour stocker l'ID parking
-        stationnement.setTypeStationnement("PARKING");
-        stationnement.setStatut("ACTIF");
-        stationnement.setStatutPaiement("NON_PAYE");
-        stationnement.setCout(0.0);
-        stationnement.setHeureArrivee(LocalDateTime.now());
+    	if (parking.getPlacesDisponibles() <= 0) {
+    		JOptionPane.showMessageDialog(pageParking,
+    				"Aucune place disponible dans ce parking",
+    				"Parking complet",
+    				JOptionPane.WARNING_MESSAGE);
+    		return false;
+    	}
 
-        boolean succes = false;
-        try {
-            succes = StationnementDAO.getInstance().creerStationnementParking(stationnement);
-        } catch (Exception e) {
-            System.err.println("Erreur création stationnement parking: " + e.getMessage());
-            JOptionPane.showMessageDialog(pageParking,
-                "Erreur technique lors de la réservation: " + e.getMessage(),
-                "Erreur",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
+    	boolean estMoto = "Moto".equalsIgnoreCase(typeVehicule);
+    	boolean aAbonnementMoto = false;
 
-        if (succes) {
-            JOptionPane.showMessageDialog(pageParking,
-                "Réservation confirmée !\n\n" +
-                "Votre place est réservée dans le parking " + parking.getLibelleParking() + ".\n" +
-                "N'oubliez pas de valider votre sortie pour le paiement.",
-                "Réservation réussie",
-                JOptionPane.INFORMATION_MESSAGE);
+    	if (estMoto) {
+    		try {
+    			Abonnement abonnement = AbonnementDAO.getInstance().getAbonnementActif(usager.getIdUsager());
+    			if (abonnement != null && "ABO_MOTO_RESIDENT".equals(abonnement.getIdAbonnement())) {
+    				aAbonnementMoto = true;
+    			}
+    		} catch (Exception e) {
+    			System.err.println("Erreur vérification abonnement moto: " + e.getMessage());
+    		}
+    	}
 
-            Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-            pagePrincipale.setVisible(true);
-            pageParking.dispose();
-            return true;
-        } else {
-            JOptionPane.showMessageDialog(pageParking,
-                "Erreur lors de la réservation. Veuillez réessayer.",
-                "Erreur",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
+    	// Créer l'objet Stationnement
+    	Stationnement stationnement = new Stationnement();
+    	stationnement.setIdUsager(usager.getIdUsager());
+    	stationnement.setTypeVehicule(typeVehicule);
+    	stationnement.setPlaqueImmatriculation(plaqueImmatriculation);
+    	stationnement.setIdTarification(idParking);
+    	stationnement.setTypeStationnement("PARKING");
+    	stationnement.setStatut("ACTIF");
+    	stationnement.setCout(0.0);
+    	stationnement.setHeureArrivee(LocalDateTime.now());
+
+    	// Si abonnement moto, mettre GRATUIT, sinon NON_PAYE
+    	if (aAbonnementMoto) {
+    		stationnement.setStatutPaiement("GRATUIT");
+    	} else {
+    		stationnement.setStatutPaiement("NON_PAYE");
+    	}
+
+    	boolean succes = false;
+    	try {
+    		succes = StationnementDAO.getInstance().creerStationnementParking(stationnement);
+    	} catch (Exception e) {
+    		System.err.println("Erreur création stationnement parking: " + e.getMessage());
+    		JOptionPane.showMessageDialog(pageParking,
+    				"Erreur technique lors de la réservation: " + e.getMessage(),
+    				"Erreur",
+    				JOptionPane.ERROR_MESSAGE);
+    		return false;
+    	}
+
+    	if (succes) {
+    		return true;
+    	} else {
+    		JOptionPane.showMessageDialog(pageParking,
+    				"Erreur lors de la réservation. Veuillez réessayer.",
+    				"Erreur",
+    				JOptionPane.ERROR_MESSAGE);
+    		return false;
+    	}
     }
-
+    
     public boolean terminerStationnementVoirie(int idStationnement) {
         try {
             return StationnementDAO.getInstance().terminerStationnement(idStationnement);

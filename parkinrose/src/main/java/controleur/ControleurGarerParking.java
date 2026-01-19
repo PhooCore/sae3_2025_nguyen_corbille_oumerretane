@@ -9,9 +9,12 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.util.ArrayList;
 import java.util.List;
+
+import modele.Abonnement;
 import modele.Parking;
 import modele.Usager;
 import modele.VehiculeUsager;
+import modele.dao.AbonnementDAO;
 import modele.dao.ParkingDAO;
 import modele.dao.TarifParkingDAO;
 import modele.dao.UsagerDAO;
@@ -106,7 +109,8 @@ public class ControleurGarerParking implements ActionListener {
         vue.getBtnModifierPlaque().addActionListener(this);
         
         vue.getComboParking().addItemListener(e -> {
-            if (etat == Etat.SELECTION_PARKING && e.getStateChange() == ItemEvent.SELECTED) {
+            if ((etat == Etat.SELECTION_PARKING || etat == Etat.VERIFICATION_DISPONIBILITE) 
+                && e.getStateChange() == ItemEvent.SELECTED) {
                 int index = vue.getComboParking().getSelectedIndex();
                 if (index >= 0 && index < listeParkings.size()) {
                     parkingSelectionne = listeParkings.get(index);
@@ -115,6 +119,21 @@ public class ControleurGarerParking implements ActionListener {
                 }
             }
         });
+        
+        // AJOUTER DES LISTENERS SUR LES RADIO BUTTONS
+        ActionListener radioListener = e -> {
+            if (etat == Etat.SELECTION_PARKING || etat == Etat.VERIFICATION_DISPONIBILITE) {
+                int index = vue.getComboParking().getSelectedIndex();
+                if (index >= 0 && index < listeParkings.size()) {
+                    mettreAJourInfosParking(index);
+                }
+            }
+        };
+        
+        // Vous devez ajouter des getters dans Page_Garer_Parking pour ces boutons
+        vue.getRadioVoiture().addActionListener(radioListener);
+        vue.getRadioMoto().addActionListener(radioListener);
+        vue.getRadioCamion().addActionListener(radioListener);
     }
     
     private void chargerComboParkings(Parking parkingPreSelectionne) {
@@ -257,7 +276,28 @@ public class ControleurGarerParking implements ActionListener {
             boolean estGratuit = tarifDAO.estParkingGratuit(parking.getIdParking());
             boolean estRelais = parking.isEstRelais();
             
-            if (estGratuit) {
+            // AJOUTER CETTE VÉRIFICATION POUR L'ABONNEMENT MOTO
+            boolean estMoto = "Moto".equals(vue.getTypeVehicule());
+            boolean aAbonnementMoto = false;
+            
+            if (estMoto && parking.hasMoto()) {
+                try {
+                    Abonnement abonnement = AbonnementDAO.getInstance().getAbonnementActif(usager.getIdUsager());
+                    if (abonnement != null && "ABO_MOTO_RESIDENT".equals(abonnement.getIdAbonnement())) {
+                        aAbonnementMoto = true;
+                    }
+                } catch (Exception e) {
+                    System.err.println("Erreur vérification abonnement moto: " + e.getMessage());
+                }
+            }
+            
+            // MODIFIER LA LOGIQUE D'AFFICHAGE
+            if (aAbonnementMoto) {
+                vue.setTarifHoraire("GRATUIT (Abonnement moto)");
+                vue.setTarifSoiree("Stationnement gratuit avec votre abonnement");
+                vue.setTarifSoireeCouleur(new Color(0, 128, 0));
+                vue.setTypeParking("Gratuit - Abonnement moto résident");
+            } else if (estGratuit) {
                 vue.setTarifHoraire("GRATUIT");
                 vue.setTarifSoiree("Parking gratuit");
                 vue.setTarifSoireeCouleur(new Color(0, 128, 0));

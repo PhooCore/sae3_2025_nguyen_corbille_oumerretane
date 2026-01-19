@@ -520,6 +520,18 @@ public class Page_Garer_Parking extends JFrame {
         dialog.setVisible(true);
         return choix[0];
     }
+    
+    public JRadioButton getRadioVoiture() {
+        return radioVoiture;
+    }
+
+    public JRadioButton getRadioMoto() {
+        return radioMoto;
+    }
+
+    public JRadioButton getRadioCamion() {
+        return radioCamion;
+    }
 
 
 

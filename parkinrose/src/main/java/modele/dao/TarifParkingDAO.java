@@ -1,5 +1,6 @@
 package modele.dao;
 
+import modele.Abonnement;
 import modele.Parking;
 import modele.dao.requetes.*;
 import java.sql.*;
@@ -418,6 +419,19 @@ public class TarifParkingDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setDouble(1, hauteurMinimale);
             return ParkingDAO.getInstance().select(stmt);
+        }
+    }
+    
+    /**
+     * Vérifie si l'usager a un abonnement moto actif
+     */
+    public boolean aAbonnementMotoActif(int idUsager) throws SQLException {
+        try {
+            Abonnement abonnement = AbonnementDAO.getInstance().getAbonnementActif(idUsager);
+            return abonnement != null && "ABO_MOTO_RESIDENT".equals(abonnement.getIdAbonnement());
+        } catch (Exception e) {
+            System.err.println("Erreur vérification abonnement moto: " + e.getMessage());
+            return false;
         }
     }
     

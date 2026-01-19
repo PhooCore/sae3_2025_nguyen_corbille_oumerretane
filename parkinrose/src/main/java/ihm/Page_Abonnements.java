@@ -22,6 +22,9 @@ public class Page_Abonnements extends JFrame {
     private JLabel lblTitre;
     private JButton btnRetour;
     
+    /**
+     * constructeur de la page d'abonnements pour un utilisateur donné
+     */
     public Page_Abonnements(String email) {
         this.emailUtilisateur = email;
         this.usager = UsagerDAO.getUsagerByEmail(email);
@@ -35,10 +38,12 @@ public class Page_Abonnements extends JFrame {
         
         initialiserPage();
         
-
         new controleur.ControleurAbonnements(this);
     }
     
+    /**
+     * initialise tous les composants graphiques de la page d'abonnements
+     */
     private void initialiserPage() {
         setTitle("Abonnements disponibles");
         setSize(900, 650);
@@ -63,7 +68,6 @@ public class Page_Abonnements extends JFrame {
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         
-        // Bouton retour
         btnRetour = new JButton("Retour au compte");
         
         JPanel panelBouton = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -74,20 +78,20 @@ public class Page_Abonnements extends JFrame {
         setContentPane(mainPanel);
     }
     
+    /**
+     * crée le panneau d'en-tête avec le titre, la barre de recherche et les filtres
+     */
     private JPanel creerHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout(10, 10));
         headerPanel.setBackground(Color.WHITE);
         
-        // Panel supérieur avec titre et barre de recherche
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
         topPanel.setBackground(Color.WHITE);
         
-        // Titre avec compteur
         lblTitre = new JLabel("Choisissez votre abonnement (0)", SwingConstants.CENTER);
         lblTitre.setFont(new Font("Arial", Font.BOLD, 24));
         topPanel.add(lblTitre, BorderLayout.CENTER);
         
-        // Barre de recherche
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         searchPanel.setBackground(Color.WHITE);
         
@@ -127,10 +131,8 @@ public class Page_Abonnements extends JFrame {
         filtresPanel.add(checkAnnuel);
         filtresPanel.add(checkHebdo);
         
-        
         filtresPanel.add(Box.createRigidArea(new Dimension(30, 0)));
         
-  
         JLabel lblTrier = new JLabel("Trier par:");
         lblTrier.setFont(new Font("Arial", Font.BOLD, 13));
         
@@ -149,81 +151,71 @@ public class Page_Abonnements extends JFrame {
         return headerPanel;
     }
     
-
+    /**
+     * met à jour le titre avec le nombre d'abonnements affichés
+     */
     public void mettreAJourTitre(int nombreAbonnements) {
         lblTitre.setText("Choisissez votre abonnement (" + nombreAbonnements + ")");
     }
     
-
+    // === GETTERS POUR LE CONTROLEUR ===
+    
     public String getEmailUtilisateur() {
         return emailUtilisateur;
     }
-    
     public int getIdUsager() {
         return idUsager;
     }
-    
     public Usager getUsager() {
         return usager;
     }
-    
     public JButton getBtnRetour() {
         return btnRetour;
     }
-    
     public JPanel getPanelAbonnements() {
         return panelAbonnements;
     }
-    
     public JComboBox<String> getComboTri() {
         return comboTri;
     }
-    
     public JCheckBox getCheckGratuit() {
         return checkGratuit;
     }
-    
     public JCheckBox getCheckMoto() {
         return checkMoto;
     }
-    
     public JCheckBox getCheckAnnuel() {
         return checkAnnuel;
     }
-    
     public JCheckBox getCheckHebdo() {
         return checkHebdo;
     }
-    
     public JTextField getTxtRechercher() {
         return txtRechercher;
     }
-    
     public JButton getRechercheBtn() {
         return rechercheBtn;
     }
-    
     public String getRechercheTexte() {
         return txtRechercher.getText().trim();
     }
-    
-    public boolean isCheckGratuitSelected() {
-        return checkGratuit.isSelected();
-    }
-    
-    public boolean isCheckMotoSelected() {
-        return checkMoto.isSelected();
-    }
-    
-    public boolean isCheckAnnuelSelected() {
-        return checkAnnuel.isSelected();
-    }
-    
-    public boolean isCheckHebdoSelected() {
-        return checkHebdo.isSelected();
-    }
-    
     public String getTriSelectionne() {
         return (String) comboTri.getSelectedItem();
     }
+    
+    // === CHECKBOXES POUR LE CONTROLEUR ===
+
+    public boolean isCheckGratuitSelected() {
+        return checkGratuit.isSelected();
+    }
+    public boolean isCheckMotoSelected() {
+        return checkMoto.isSelected();
+    }
+    public boolean isCheckAnnuelSelected() {
+        return checkAnnuel.isSelected();
+    }
+    public boolean isCheckHebdoSelected() {
+        return checkHebdo.isSelected();
+    }
+  
 }

@@ -29,7 +29,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
     private JButton btnRetour;
     private JButton btnProlonger;
 
-    
+    /**
+     * constructeur de la page de stationnement en cours
+     */
     public Page_Stationnement_En_Cours(String email) {
         this.emailUtilisateur = email;
         initialisePage();
@@ -37,6 +39,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         new ControleurStationnementEnCours(this);
     }
     
+    /**
+     * initialise tous les composants graphiques de la page
+     */
     private void initialisePage() {
         this.setTitle("Stationnement en cours");
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -62,14 +67,11 @@ public class Page_Stationnement_En_Cours extends JFrame {
         JScrollPane scrollPane = new JScrollPane(panelInfo);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         
-        // Boutons
         JPanel panelBoutons = new JPanel(new FlowLayout());
-        
-        // Bouton retour
         btnRetour = new JButton("Retour");
         panelBoutons.add(btnRetour);
         
-     // Bouton prolonger (visible uniquement pour voirie)
+        // Bouton prolonger (visible uniquement pour voirie)
         btnProlonger = new JButton("Prolonger le stationnement");
         btnProlonger.setBackground(new Color(0, 153, 255));
         btnProlonger.setForeground(Color.WHITE);
@@ -95,24 +97,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         afficherInformationsStationnement();
     }
     
-    // Getters pour le contrôleur
-    public String getEmailUtilisateur() {
-        return emailUtilisateur;
-    }
-    
-    public Stationnement getStationnementActif() {
-        return stationnementActif;
-    }
-    
-    public JButton getBtnRetour() {
-        return btnRetour;
-    }
-    
-    public JButton getBtnArreter() {
-        return btnArreter;
-    }
-    
-    // Méthodes appelées par le contrôleur
+    /**
+     * charge le stationnement actif de l'utilisateur depuis la base de données
+     */
     public void chargerStationnementActif() {
         Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
         if (usager != null) {
@@ -125,6 +112,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         }
     }
     
+    /**
+     * affiche toutes les informations du stationnement actif dans le panneau
+     */
     public void afficherInformationsStationnement() {
         panelInfo.removeAll();
         
@@ -200,6 +190,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         panelInfo.repaint();
     }
     
+    /**
+     * ajoute une ligne d'information avec un libellé et une valeur dans le panneau
+     */
     private void ajouterLigneInfo(String libelle, String valeur) {
         JPanel ligne = new JPanel(new BorderLayout());
         ligne.setBackground(Color.WHITE);
@@ -217,7 +210,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         panelInfo.add(ligne);
     }
     
-    // Méthode de gestion d'arrêt (gérée par la vue elle-même)
+    /**
+     * gère l'arrêt du stationnement en cours après confirmation de l'utilisateur
+     */
     private void gérerArrêtStationnement() {
         if (stationnementActif == null) {
             JOptionPane.showMessageDialog(this,
@@ -244,6 +239,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         }
     }
     
+    /**
+     * arrête un stationnement de voirie et termine la session
+     */
     private void arrêterStationnementVoirie() {
         boolean succes = StationnementDAO.terminerStationnement(stationnementActif.getIdStationnement());
         
@@ -255,13 +253,48 @@ public class Page_Stationnement_En_Cours extends JFrame {
             retourAccueil();
         } else {
             JOptionPane.showMessageDialog(this,
-                "X Erreur lors de l'arrêt du stationnement",
+                "Erreur lors de l'arrêt du stationnement",
                 "Erreur",
                 JOptionPane.ERROR_MESSAGE);
         }
     }
     
+    /**
+     * demande l'heure de départ et calcule le coût pour un stationnement parking
+     */
     private void demanderHeureDepartEtPayer() {
+    	
+        if ("GRATUIT".equals(stationnementActif.getStatutPaiement())) {
+            System.out.println("Stationnement GRATUIT");
+            // Demander juste l'heure de départ
+            JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
+            
+            JSpinner spinnerHeureDepart = new JSpinner(new SpinnerDateModel());
+            JSpinner.DateEditor editor = new JSpinner.DateEditor(spinnerHeureDepart, "dd/MM/yyyy HH:mm");
+            spinnerHeureDepart.setEditor(editor);
+            spinnerHeureDepart.setValue(new java.util.Date());
+            
+            panel.add(new JLabel("Heure de départ:"));
+            panel.add(spinnerHeureDepart);
+            
+            int result = JOptionPane.showConfirmDialog(this, panel, 
+                "Heure de départ", JOptionPane.OK_CANCEL_OPTION);
+            
+            if (result == JOptionPane.OK_OPTION) {
+                java.util.Date dateDepart = (java.util.Date) spinnerHeureDepart.getValue();
+                LocalDateTime heureDepart = dateDepart.toInstant()
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDateTime();
+                
+                String nomParking = getLibelleParkingFromId(stationnementActif.getIdTarification());
+                
+                // Terminer directement sans paiement
+                terminerStationnementParkingGratuit(heureDepart, 0.0, nomParking);
+            }
+            return; // IMPORTANT : sortir de la méthode
+        }
+        
+        // RESTE DU CODE ORIGINAL POUR LES STATIONNEMENTS PAYANTS
         JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
         
         JSpinner spinnerHeureDepart = new JSpinner(new SpinnerDateModel());
@@ -283,7 +316,7 @@ public class Page_Stationnement_En_Cours extends JFrame {
             
             String nomParking = getLibelleParkingFromId(stationnementActif.getIdTarification());
             
-            // VÉRIFICATION : Si le coût est de 0€, on termine directement sans passer par le paiement
+            // Calculer le coût
             double cout = 0;
             try {
                 cout = TarifParkingDAO.calculerCoutParking(
@@ -299,7 +332,7 @@ public class Page_Stationnement_En_Cours extends JFrame {
                 return;
             }
             
-            if (Math.abs(cout) < 0.01) { // Utilisation de 0.01 pour éviter les problèmes d'arrondi
+            if (Math.abs(cout) < 0.01) {
                 // Terminer le stationnement directement (parking gratuit)
                 terminerStationnementParkingGratuit(heureDepart, cout, nomParking);
             } else {
@@ -322,6 +355,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         }
     }
     
+    /**
+     * termine un stationnement parking gratuit sans passer par le paiement
+     */
     private void terminerStationnementParkingGratuit(LocalDateTime heureDepart, double cout, String nomParking) {
         // Appeler la méthode DAO pour terminer le stationnement
         boolean succes = StationnementDAO.terminerStationnementParking(
@@ -332,11 +368,23 @@ public class Page_Stationnement_En_Cours extends JFrame {
         );
         
         if (succes) {
-            String message = "Stationnement terminé !\nParking gratuit";
+            String message;
+            if ("GRATUIT".equals(stationnementActif.getStatutPaiement())) {
+                // Message spécifique pour abonnement moto
+                message = String.format(
+                    "✓ Stationnement terminé !\n\n" +
+                    "Parking: %s\n" +
+                    "Stationnement GRATUIT grâce à votre abonnement moto résident.\n\n" +
+                    "Vous pouvez maintenant quitter le parking.",
+                    nomParking != null ? nomParking : "Parking"
+                );
+            } else {
+                message = "Stationnement terminé !\nParking gratuit";
+            }
             
             JOptionPane.showMessageDialog(this,
                 message,
-                "Stationnement terminé",
+                "Stationnement terminé - GRATUIT",
                 JOptionPane.INFORMATION_MESSAGE);
             
             // Retour à l'accueil
@@ -349,6 +397,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         }
     }
     
+    /**
+     * retourne le libellé lisible d'un parking à partir de son identifiant
+     */
     private String getLibelleParkingFromId(String idParking) {
         if (idParking == null) return null;
         
@@ -372,23 +423,34 @@ public class Page_Stationnement_En_Cours extends JFrame {
         }
     }
     
+    /**
+     * retourne à la page d'accueil principale
+     */
     private void retourAccueil() {
         Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
         pagePrincipale.setVisible(true);
         dispose();
     }
     
-    // Méthode pour rafraîchir l'affichage
+    /**
+     * rafraîchit l'affichage en rechargeant les données du stationnement
+     */
     public void rafraichirAffichage() {
         chargerStationnementActif();
         afficherInformationsStationnement();
     }
     
+    /**
+     * ferme la fenêtre et libère les ressources
+     */
     @Override
     public void dispose() {
         super.dispose();
     }
     
+    /**
+     * gère la prolongation d'un stationnement en voirie avec sélection de durée
+     */
     private void gérerProlongationStationnement() {
         if (stationnementActif == null || !stationnementActif.estVoirie()) {
             JOptionPane.showMessageDialog(this,
@@ -594,6 +656,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
         }
     }
 
+    /**
+     * ouvre la page de paiement pour une prolongation de stationnement payante
+     */
     private void ouvrirPagePaiementProlongation(Zone zone, int heures, int minutes, 
             int dureeMinutes, double cout) {
     	Page_Paiement pagePaiement = new Page_Paiement(cout, emailUtilisateur, stationnementActif.getTypeVehicule(),
@@ -604,6 +669,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
     	dispose();
     }
 
+    /**
+     * prolonge un stationnement gratuitement sans passer par le paiement
+     */
     private void prolongerStationnementGratuit(int dureeSupplementaireMinutes) {
     	boolean succes = StationnementDAO.prolongerStationnement(
     			stationnementActif.getIdStationnement(), 
@@ -624,6 +692,20 @@ public class Page_Stationnement_En_Cours extends JFrame {
     	}
     }
 
+    // === GETTERS POUR LE CONTROLEUR ===
+    
+    public String getEmailUtilisateur() {
+        return emailUtilisateur;
+    }
+    public Stationnement getStationnementActif() {
+        return stationnementActif;
+    }
+    public JButton getBtnRetour() {
+        return btnRetour;
+    }
+    public JButton getBtnArreter() {
+        return btnArreter;
+    }
     public JButton getBtnProlonger() {
     	return btnProlonger;
     }
