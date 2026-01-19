@@ -18,8 +18,11 @@ import modele.dao.TarifParkingDAO;
 import modele.dao.UsagerDAO;
 import modele.dao.ZoneDAO;
 import controleur.ControleurStationnementEnCours;
+import utils.NotificationManager;
+import utils.NotificationManager.NotificationListener;
+import utils.NotificationManager.NotificationType;
 
-public class Page_Stationnement_En_Cours extends JFrame {
+public class Page_Stationnement_En_Cours extends JFrame implements NotificationListener {
     
     private static final long serialVersionUID = 1L;
     private String emailUtilisateur;
@@ -28,15 +31,38 @@ public class Page_Stationnement_En_Cours extends JFrame {
     private JButton btnArreter;
     private JButton btnRetour;
     private JButton btnProlonger;
+<<<<<<< HEAD
 
     /**
      * constructeur de la page de stationnement en cours
      */
+=======
+    private Timer timerAlerte;
+    private boolean alerteDejaAffichee = false;
+    private boolean fenetreFermee = false;
+    private NotificationManager notificationManager;
+    
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
     public Page_Stationnement_En_Cours(String email) {
         this.emailUtilisateur = email;
+        
+        // Initialiser le gestionnaire de notifications
+        notificationManager = NotificationManager.getInstance();
+        notificationManager.addNotificationListener(this);
+        
         initialisePage();
         
         new ControleurStationnementEnCours(this);
+        
+        // Vérifier immédiatement les notifications
+        SwingUtilities.invokeLater(() -> {
+            if (stationnementActif != null) {
+                notificationManager.verifierStationnement(stationnementActif);
+            }
+        });
+        
+        // Démarrer le timer d'alerte
+        demarrerTimerAlerte();
     }
     
     /**
@@ -53,10 +79,25 @@ public class Page_Stationnement_En_Cours extends JFrame {
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         mainPanel.setBackground(Color.WHITE);
         
-        // Titre
+        // Titre avec icône de notification
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.setBackground(Color.WHITE);
+        
         JLabel lblTitre = new JLabel("Stationnement en cours", SwingConstants.CENTER);
         lblTitre.setFont(new Font("Arial", Font.BOLD, 20));
-        mainPanel.add(lblTitre, BorderLayout.NORTH);
+        
+        // Bouton de configuration des notifications
+        JButton btnConfigNotifications = new JButton("🔔");
+        btnConfigNotifications.setFont(new Font("Arial", Font.PLAIN, 14));
+        btnConfigNotifications.setBackground(Color.WHITE);
+        btnConfigNotifications.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        btnConfigNotifications.setToolTipText("Configuration des notifications");
+        btnConfigNotifications.addActionListener(e -> ouvrirConfigurationNotifications());
+        
+        titlePanel.add(lblTitre, BorderLayout.CENTER);
+        titlePanel.add(btnConfigNotifications, BorderLayout.EAST);
+        
+        mainPanel.add(titlePanel, BorderLayout.NORTH);
         
         // Panel d'informations
         panelInfo = new JPanel();
@@ -71,13 +112,17 @@ public class Page_Stationnement_En_Cours extends JFrame {
         btnRetour = new JButton("Retour");
         panelBoutons.add(btnRetour);
         
+<<<<<<< HEAD
         // Bouton prolonger (visible uniquement pour voirie)
+=======
+        // Bouton prolonger
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
         btnProlonger = new JButton("Prolonger le stationnement");
         btnProlonger.setBackground(new Color(0, 153, 255));
         btnProlonger.setForeground(Color.WHITE);
         btnProlonger.setFocusPainted(false);
         btnProlonger.addActionListener(e -> gérerProlongationStationnement());
-        btnProlonger.setVisible(false); // Caché par défaut
+        btnProlonger.setVisible(false);
         panelBoutons.add(btnProlonger);
         
         // Bouton arrêter
@@ -97,17 +142,49 @@ public class Page_Stationnement_En_Cours extends JFrame {
         afficherInformationsStationnement();
     }
     
+<<<<<<< HEAD
     /**
      * charge le stationnement actif de l'utilisateur depuis la base de données
      */
+=======
+    private void ouvrirConfigurationNotifications() {
+        Page_Configuration_Notifications configPage = new Page_Configuration_Notifications();
+        configPage.setVisible(true);
+    }
+    
+    // Getters pour le contrôleur
+    public String getEmailUtilisateur() {
+        return emailUtilisateur;
+    }
+    
+    public Stationnement getStationnementActif() {
+        return stationnementActif;
+    }
+    
+    public JButton getBtnRetour() {
+        return btnRetour;
+    }
+    
+    public JButton getBtnArreter() {
+        return btnArreter;
+    }
+    
+    public JButton getBtnProlonger() {
+        return btnProlonger;
+    }
+    
+    // Méthodes appelées par le contrôleur
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
     public void chargerStationnementActif() {
         Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
         if (usager != null) {
             List<Stationnement> stationnementsActifs = StationnementDAO.getStationnementsParStatut(usager.getIdUsager(), "ACTIF");
             if (!stationnementsActifs.isEmpty()) {
                 stationnementActif = stationnementsActifs.get(0);
+                alerteDejaAffichee = false;
             } else {
                 stationnementActif = null;
+                alerteDejaAffichee = false;
             }
         }
     }
@@ -143,13 +220,20 @@ public class Page_Stationnement_En_Cours extends JFrame {
                     if (minutesRestantes > 0) {
                         long heures = minutesRestantes / 60;
                         long minutes = minutesRestantes % 60;
-                        ajouterLigneInfo("Temps restant:", String.format("%dh%02d", heures, minutes));
+                        String tempsRestant = String.format("%dh%02d", heures, minutes);
+                        JPanel ligneTemps = creerLigneInfoAlerte("Temps restant:", tempsRestant, minutesRestantes <= 10);
+                        panelInfo.add(ligneTemps);
+                        
+                        // Afficher un avertissement visuel si moins de 10 minutes
+                        if (minutesRestantes <= 10) {
+                            ajouterAvertissementTempsRestant(minutesRestantes);
+                        }
                     } else {
                         ajouterLigneInfo("Temps restant:", "Temps écoulé");
+                        ajouterAvertissementTempsEcoule();
                     }
                 }
                 
-                // Afficher le bouton prolonger pour la voirie
                 btnProlonger.setVisible(true);
                 
             } else if (stationnementActif.estParking()) {
@@ -178,12 +262,16 @@ public class Page_Stationnement_En_Cours extends JFrame {
                     }
                 }
                 
-                // Cacher le bouton prolonger pour le parking
                 btnProlonger.setVisible(false);
             }
             
             ajouterLigneInfo("Statut:", stationnementActif.getStatut());
             btnArreter.setEnabled(true);
+            
+            // Indicateur de notifications
+            if (notificationManager.areNotificationsActives()) {
+                ajouterIndicateurNotifications();
+            }
         }
         
         panelInfo.revalidate();
@@ -210,9 +298,118 @@ public class Page_Stationnement_En_Cours extends JFrame {
         panelInfo.add(ligne);
     }
     
+<<<<<<< HEAD
     /**
      * gère l'arrêt du stationnement en cours après confirmation de l'utilisateur
      */
+=======
+    private JPanel creerLigneInfoAlerte(String libelle, String valeur, boolean alerte) {
+        JPanel ligne = new JPanel(new BorderLayout());
+        ligne.setBackground(Color.WHITE);
+        ligne.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        
+        JLabel lblLibelle = new JLabel(libelle);
+        lblLibelle.setFont(new Font("Arial", Font.BOLD, 14));
+        lblLibelle.setPreferredSize(new Dimension(150, 25));
+        
+        JLabel lblValeur = new JLabel(valeur);
+        lblValeur.setFont(new Font("Arial", Font.BOLD, 14));
+        
+        if (alerte) {
+            lblValeur.setForeground(Color.RED);
+        }
+        
+        ligne.add(lblLibelle, BorderLayout.WEST);
+        ligne.add(lblValeur, BorderLayout.CENTER);
+        return ligne;
+    }
+    
+    private void ajouterAvertissementTempsRestant(long minutesRestantes) {
+        JPanel panelAvertissement = new JPanel();
+        panelAvertissement.setLayout(new BorderLayout());
+        
+        Color couleurFond;
+        Color couleurBordure;
+        String message;
+        
+        if (minutesRestantes <= 3) {
+            couleurFond = new Color(255, 235, 238); // Rouge clair
+            couleurBordure = new Color(244, 67, 54); // Rouge
+            message = "⛔ URGENT : Il reste seulement " + minutesRestantes + " minute(s) !";
+        } else if (minutesRestantes <= 5) {
+            couleurFond = new Color(255, 243, 224); // Orange clair
+            couleurBordure = new Color(255, 152, 0); // Orange
+            message = "⚠ ATTENTION : Il reste " + minutesRestantes + " minutes";
+        } else {
+            couleurFond = new Color(232, 245, 233); // Vert clair
+            couleurBordure = new Color(76, 175, 80); // Vert
+            message = "⏰ RAPPEL : Il reste " + minutesRestantes + " minutes";
+        }
+        
+        panelAvertissement.setBackground(couleurFond);
+        panelAvertissement.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(couleurBordure, 2),
+            BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
+        
+        JLabel lblAvertissement = new JLabel(message);
+        lblAvertissement.setFont(new Font("Arial", Font.BOLD, 13));
+        lblAvertissement.setForeground(couleurBordure);
+        
+        panelAvertissement.add(lblAvertissement, BorderLayout.CENTER);
+        
+        // Ajouter un espace avant l'avertissement
+        panelInfo.add(Box.createRigidArea(new Dimension(0, 15)));
+        panelInfo.add(panelAvertissement);
+        panelInfo.add(Box.createRigidArea(new Dimension(0, 15)));
+    }
+    
+    private void ajouterAvertissementTempsEcoule() {
+        JPanel panelAvertissement = new JPanel();
+        panelAvertissement.setLayout(new BorderLayout());
+        panelAvertissement.setBackground(new Color(255, 235, 238));
+        panelAvertissement.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(244, 67, 54), 2),
+            BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
+        
+        JLabel lblAvertissement = new JLabel(
+            "<html><b>⛔ TEMPS ÉCOULÉ :</b> Votre stationnement est expiré !<br>" +
+            "Veuillez arrêter votre stationnement ou renouveler.</html>");
+        lblAvertissement.setFont(new Font("Arial", Font.BOLD, 13));
+        lblAvertissement.setForeground(new Color(244, 67, 54));
+        
+        panelAvertissement.add(lblAvertissement, BorderLayout.CENTER);
+        
+        // Ajouter un espace avant l'avertissement
+        panelInfo.add(Box.createRigidArea(new Dimension(0, 15)));
+        panelInfo.add(panelAvertissement);
+        panelInfo.add(Box.createRigidArea(new Dimension(0, 15)));
+    }
+    
+    private void ajouterIndicateurNotifications() {
+        JPanel panelNotifications = new JPanel();
+        panelNotifications.setLayout(new BorderLayout());
+        panelNotifications.setBackground(new Color(225, 245, 254));
+        panelNotifications.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(3, 169, 244), 1),
+            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        
+        JLabel lblNotifications = new JLabel("🔔 Notifications activées");
+        lblNotifications.setFont(new Font("Arial", Font.PLAIN, 12));
+        lblNotifications.setForeground(new Color(3, 169, 244));
+        
+        panelNotifications.add(lblNotifications, BorderLayout.CENTER);
+        
+        // Ajouter un espace avant l'indicateur
+        panelInfo.add(Box.createRigidArea(new Dimension(0, 10)));
+        panelInfo.add(panelNotifications);
+        panelInfo.add(Box.createRigidArea(new Dimension(0, 10)));
+    }
+    
+    // Méthode de gestion d'arrêt
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
     private void gérerArrêtStationnement() {
         if (stationnementActif == null) {
             JOptionPane.showMessageDialog(this,
@@ -246,6 +443,7 @@ public class Page_Stationnement_En_Cours extends JFrame {
         boolean succes = StationnementDAO.terminerStationnement(stationnementActif.getIdStationnement());
         
         if (succes) {
+            arreterTousLesTimers();
             JOptionPane.showMessageDialog(this, 
                 "Stationnement arrêté avec succès !", 
                 "Succès", 
@@ -316,7 +514,10 @@ public class Page_Stationnement_En_Cours extends JFrame {
             
             String nomParking = getLibelleParkingFromId(stationnementActif.getIdTarification());
             
+<<<<<<< HEAD
             // Calculer le coût
+=======
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
             double cout = 0;
             try {
                 cout = TarifParkingDAO.calculerCoutParking(
@@ -333,10 +534,12 @@ public class Page_Stationnement_En_Cours extends JFrame {
             }
             
             if (Math.abs(cout) < 0.01) {
+<<<<<<< HEAD
                 // Terminer le stationnement directement (parking gratuit)
+=======
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
                 terminerStationnementParkingGratuit(heureDepart, cout, nomParking);
             } else {
-                // Ouvrir la page de paiement seulement si le coût > 0
                 Page_Paiement pagePaiement = new Page_Paiement(
                     cout,
                     emailUtilisateur,
@@ -359,12 +562,13 @@ public class Page_Stationnement_En_Cours extends JFrame {
      * termine un stationnement parking gratuit sans passer par le paiement
      */
     private void terminerStationnementParkingGratuit(LocalDateTime heureDepart, double cout, String nomParking) {
-        // Appeler la méthode DAO pour terminer le stationnement
+        arreterTousLesTimers();
+        
         boolean succes = StationnementDAO.terminerStationnementParking(
             stationnementActif.getIdStationnement(),
             heureDepart,
-            cout,  // Doit être 0.0 pour les parkings gratuits
-            null   // Pas besoin d'ID de paiement
+            cout,
+            null
         );
         
         if (succes) {
@@ -387,7 +591,6 @@ public class Page_Stationnement_En_Cours extends JFrame {
                 "Stationnement terminé - GRATUIT",
                 JOptionPane.INFORMATION_MESSAGE);
             
-            // Retour à l'accueil
             retourAccueil();
         } else {
             JOptionPane.showMessageDialog(this,
@@ -427,30 +630,48 @@ public class Page_Stationnement_En_Cours extends JFrame {
      * retourne à la page d'accueil principale
      */
     private void retourAccueil() {
+        arreterTousLesTimers();
         Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
         pagePrincipale.setVisible(true);
         dispose();
     }
     
+<<<<<<< HEAD
     /**
      * rafraîchit l'affichage en rechargeant les données du stationnement
      */
+=======
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
     public void rafraichirAffichage() {
         chargerStationnementActif();
         afficherInformationsStationnement();
+        
+        // Vérifier les notifications
+        if (stationnementActif != null) {
+            notificationManager.verifierStationnement(stationnementActif);
+        }
     }
     
+<<<<<<< HEAD
     /**
      * ferme la fenêtre et libère les ressources
      */
+=======
+    // Implémentation de NotificationListener
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
     @Override
-    public void dispose() {
-        super.dispose();
+    public void onNotification(String titre, String message, NotificationType type) {
+        // Afficher la notification via le gestionnaire (version simple)
+        notificationManager.afficherPopupNotificationSimple(titre, message, type);
     }
     
+<<<<<<< HEAD
     /**
      * gère la prolongation d'un stationnement en voirie avec sélection de durée
      */
+=======
+    // PROLONGATION DU STATIONNEMENT
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
     private void gérerProlongationStationnement() {
         if (stationnementActif == null || !stationnementActif.estVoirie()) {
             JOptionPane.showMessageDialog(this,
@@ -461,7 +682,6 @@ public class Page_Stationnement_En_Cours extends JFrame {
         }
         
         try {
-            // Récupérer les informations de la zone
             Zone zone = ZoneDAO.getInstance().getZoneById(stationnementActif.getIdTarification());
             if (zone == null) {
                 JOptionPane.showMessageDialog(this,
@@ -471,11 +691,9 @@ public class Page_Stationnement_En_Cours extends JFrame {
                 return;
             }
             
-            // Créer un panel principal avec BorderLayout
             JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
             mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
             
-            // Panel du haut : Informations sur les tarifs de la zone
             JPanel infoZonePanel = new JPanel(new BorderLayout());
             infoZonePanel.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(new Color(0, 102, 204), 2),
@@ -493,7 +711,6 @@ public class Page_Stationnement_En_Cours extends JFrame {
             
             mainPanel.add(infoZonePanel, BorderLayout.NORTH);
             
-            // Panel du centre : Sélection de la durée
             JPanel selectionPanel = new JPanel(new GridLayout(4, 2, 10, 10));
             selectionPanel.setBorder(BorderFactory.createTitledBorder("Durée supplémentaire"));
             
@@ -505,7 +722,7 @@ public class Page_Stationnement_En_Cours extends JFrame {
             
             JComboBox<String> comboHeures = new JComboBox<>(heures);
             JComboBox<String> comboMinutes = new JComboBox<>(minutes);
-            comboMinutes.setSelectedItem("15"); // Sélectionner 15 min par défaut
+            comboMinutes.setSelectedItem("15");
             
             JPanel dureePan = new JPanel(new FlowLayout(FlowLayout.LEFT));
             dureePan.add(comboHeures);
@@ -516,7 +733,6 @@ public class Page_Stationnement_En_Cours extends JFrame {
             selectionPanel.add(new JLabel("Durée:"));
             selectionPanel.add(dureePan);
             
-            // Label pour afficher le coût en temps réel
             JLabel lblCoutCalcule = new JLabel("0.00 €");
             lblCoutCalcule.setFont(new Font("Arial", Font.BOLD, 14));
             lblCoutCalcule.setForeground(new Color(0, 100, 0));
@@ -526,7 +742,6 @@ public class Page_Stationnement_En_Cours extends JFrame {
             
             mainPanel.add(selectionPanel, BorderLayout.CENTER);
             
-            // Listener pour recalculer le coût en temps réel
             ItemListener calculCoutListener = e -> {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
                     int h = Integer.parseInt((String) comboHeures.getSelectedItem());
@@ -549,6 +764,7 @@ public class Page_Stationnement_En_Cours extends JFrame {
                             cout = zone.calculerCout(dureeMin);
                         }
                         
+
                         if (cout == 0.0) {
                             lblCoutCalcule.setText("GRATUIT");
                             lblCoutCalcule.setForeground(new Color(0, 150, 0));
@@ -566,7 +782,6 @@ public class Page_Stationnement_En_Cours extends JFrame {
             comboHeures.addItemListener(calculCoutListener);
             comboMinutes.addItemListener(calculCoutListener);
             
-            // Calculer le coût initial (15 minutes par défaut) avec abonnement
             int dureeInitiale = 15;
             Usager usagerInitial = UsagerDAO.getUsagerByEmail(emailUtilisateur);
             Abonnement abonnementInitial = null;
@@ -581,6 +796,7 @@ public class Page_Stationnement_En_Cours extends JFrame {
                 coutInitial = zone.calculerCout(dureeInitiale);
             }
             
+
             if (coutInitial == 0.0) {
                 lblCoutCalcule.setText("GRATUIT");
                 lblCoutCalcule.setForeground(new Color(0, 150, 0));
@@ -589,7 +805,6 @@ public class Page_Stationnement_En_Cours extends JFrame {
                 lblCoutCalcule.setForeground(new Color(0, 100, 0));
             }
             
-            // Afficher le dialogue
             int result = JOptionPane.showConfirmDialog(this, mainPanel,
                 "Prolonger le stationnement", JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.PLAIN_MESSAGE);
@@ -607,7 +822,6 @@ public class Page_Stationnement_En_Cours extends JFrame {
                 }
                 
                 int dureeSupplementaireMinutes = (heuresSupp * 60) + minutesSupp;
-                
                 Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
                 Abonnement abonnement = null;
                 if (usager != null) {
@@ -620,8 +834,7 @@ public class Page_Stationnement_En_Cours extends JFrame {
                 } else {
                     coutSupplementaire = zone.calculerCout(dureeSupplementaireMinutes);
                 }
-                
-                // Demander confirmation avec le coût
+
                 String messageConfirmation = String.format(
                     "Confirmez-vous la prolongation ?\n\n" +
                     "Durée supplémentaire: %dh%02dmin\n" +
@@ -667,13 +880,14 @@ public class Page_Stationnement_En_Cours extends JFrame {
     												stationnementActif.getIdStationnement(), null);
     	pagePaiement.setVisible(true);
     	dispose();
+
     }
 
     /**
      * prolonge un stationnement gratuitement sans passer par le paiement
      */
     private void prolongerStationnementGratuit(int dureeSupplementaireMinutes) {
-    	boolean succes = StationnementDAO.prolongerStationnement(
+       	boolean succes = StationnementDAO.prolongerStationnement(
     			stationnementActif.getIdStationnement(), 
     			dureeSupplementaireMinutes
     			);
@@ -690,8 +904,10 @@ public class Page_Stationnement_En_Cours extends JFrame {
     				"Erreur",
     				JOptionPane.ERROR_MESSAGE);
     	}
+
     }
 
+<<<<<<< HEAD
     // === GETTERS POUR LE CONTROLEUR ===
     
     public String getEmailUtilisateur() {
@@ -708,5 +924,67 @@ public class Page_Stationnement_En_Cours extends JFrame {
     }
     public JButton getBtnProlonger() {
     	return btnProlonger;
+=======
+    private void demarrerTimerAlerte() {
+        timerAlerte = new Timer(60000, e -> {
+            if (!fenetreFermee && isDisplayable()) {
+                verifierAlerteTempsRestant();
+            } else {
+                if (timerAlerte != null) {
+                    timerAlerte.stop();
+                }
+            }
+        });
+        timerAlerte.start();
+    }
+    
+    private void arreterTousLesTimers() {
+        if (timerAlerte != null) {
+            timerAlerte.stop();
+            timerAlerte = null;
+        }
+    }
+    
+    private void verifierAlerteTempsRestant() {
+        if (stationnementActif != null && stationnementActif.estVoirie() && 
+            stationnementActif.estActif() && !alerteDejaAffichee) {
+            
+            long minutesRestantes = java.time.Duration.between(LocalDateTime.now(), stationnementActif.getDateFin()).toMinutes();
+            
+            if (minutesRestantes > 0 && minutesRestantes <= 10) {
+                afficherAlerteSimple(minutesRestantes);
+            }
+        }
+    }
+    
+    private void afficherAlerteSimple(long minutesRestantes) {
+        alerteDejaAffichee = true;
+        
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(this,
+                "<html><div style='text-align: center;'>" +
+                "<b>⚠️ Attention ! ⚠️</b><br><br>" +
+                "Il reste <font color='red'><b>" + minutesRestantes + " minute" + 
+                (minutesRestantes > 1 ? "s" : "") + "</b></font> avant la fin de votre stationnement en voirie.<br><br>" +
+                "<i>Véhicule: " + stationnementActif.getTypeVehicule() + 
+                " - " + stationnementActif.getPlaqueImmatriculation() + "</i><br><br>" +
+                "Pensez à arrêter votre stationnement à temps pour éviter une infraction." +
+                "</div></html>",
+                "Alerte - Stationnement en Voirie",
+                JOptionPane.WARNING_MESSAGE);
+        });
+    }
+    
+    @Override
+    public void dispose() {
+        fenetreFermee = true;
+        arreterTousLesTimers();
+        
+        // Nettoyer à la fermeture
+        if (notificationManager != null) {
+            notificationManager.removeNotificationListener(this);
+        }
+        super.dispose();
+>>>>>>> cf0da7a09a838cc17d2e2ff12e47c619b77daf41
     }
 }

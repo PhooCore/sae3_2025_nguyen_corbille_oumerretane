@@ -148,7 +148,6 @@ public class ControleurGestionUtilisateurs implements ActionListener {
     private void chargerUtilisateurs() {
         try {
             vue.chargerUtilisateurs();
-            vue.afficherInformation("Liste des utilisateurs chargée avec succès");
         } catch (Exception e) {
             gererErreur("Erreur chargement utilisateurs", e.getMessage());
         }

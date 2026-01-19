@@ -230,19 +230,9 @@ public class ControleurPaiement implements ActionListener {
             // Traiter selon le type
             boolean succes;
             if (vue.getIdStationnement() == null) {
-                // Nouveau stationnement voirie
                 succes = traiterPaiementVoirie();
             } else {
-                // Vérifier si c'est une prolongation ou une fin de parking
-                Stationnement stationnement = StationnementDAO.getStationnementById(vue.getIdStationnement());
-                
-                if (stationnement != null && stationnement.estVoirie()) {
-                    // C'est une prolongation de voirie
-                    succes = traiterProlongationVoirie();
-                } else {
-                    // C'est une fin de parking
-                    succes = traiterPaiementParking();
-                }
+                succes = traiterPaiementParking();
             }
             
             if (succes) {
@@ -257,7 +247,6 @@ public class ControleurPaiement implements ActionListener {
             gererErreur("Erreur paiement: " + e.getMessage());
         }
     }
-
     
     private boolean traiterPaiementVoirie() {
         try {
@@ -335,7 +324,7 @@ public class ControleurPaiement implements ActionListener {
         String message;
         
         if (vue.getIdStationnement() == null) {
-            // Nouveau stationnement voirie
+            // Paiement voirie
             message = String.format(
                 "<html><div style='text-align: center;'>"
                 + "<h2 style='color: green;'>Paiement effectué !</h2>"
@@ -357,59 +346,24 @@ public class ControleurPaiement implements ActionListener {
                 vue.getMontant()
             );
         } else {
-            // Vérifier si c'est une prolongation ou une fin de parking
-            try {
-                Stationnement stationnement = StationnementDAO.getStationnementById(vue.getIdStationnement());
-                
-                if (stationnement != null && stationnement.estVoirie()) {
-                    // Prolongation de voirie
-                    message = String.format(
-                        "<html><div style='text-align: center;'>"
-                        + "<h2 style='color: green;'>Prolongation effectuée !</h2>"
-                        + "<p>Votre stationnement en voirie a été prolongé.</p>"
-                        + "<br>"
-                        + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
-                        + "<p><b>Zone:</b> %s</p>"
-                        + "<p><b>Véhicule:</b> %s - %s</p>"
-                        + "<p><b>Durée ajoutée:</b> %dh%02dmin</p>"
-                        + "<p><b>Montant:</b> %.2f €</p>"
-                        + "</div>"
-                        + "<p style='color: #666;'>Votre nouveau temps de stationnement a été mis à jour.</p>"
-                        + "</div></html>",
-                        vue.getNomZone(),
-                        vue.getTypeVehicule(),
-                        vue.getPlaqueImmatriculation(),
-                        vue.getDureeHeures(),
-                        vue.getDureeMinutes(),
-                        vue.getMontant()
-                    );
-                } else {
-                    // Fin de parking
-                    message = String.format(
-                        "<html><div style='text-align: center;'>"
-                        + "<h2 style='color: green;'>Paiement effectué !</h2>"
-                        + "<p>Votre stationnement en parking est maintenant terminé.</p>"
-                        + "<br>"
-                        + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
-                        + "<p><b>Parking:</b> %s</p>"
-                        + "<p><b>Véhicule:</b> %s - %s</p>"
-                        + "<p><b>Montant:</b> %.2f €</p>"
-                        + "</div>"
-                        + "<p style='color: #666;'>Vous pouvez maintenant quitter le parking.</p>"
-                        + "</div></html>",
-                        vue.getNomZone(),
-                        vue.getTypeVehicule(),
-                        vue.getPlaqueImmatriculation(),
-                        vue.getMontant()
-                    );
-                }
-            } catch (Exception e) {
-                // Message par défaut en cas d'erreur
-                message = "<html><div style='text-align: center;'>"
-                        + "<h2 style='color: green;'>Paiement effectué !</h2>"
-                        + "<p>L'opération a été réalisée avec succès.</p>"
-                        + "</div></html>";
-            }
+            // Paiement parking
+            message = String.format(
+                "<html><div style='text-align: center;'>"
+                + "<h2 style='color: green;'>Paiement effectué !</h2>"
+                + "<p>Votre stationnement en parking est maintenant terminé.</p>"
+                + "<br>"
+                + "<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; text-align: left;'>"
+                + "<p><b>Parking:</b> %s</p>"
+                + "<p><b>Véhicule:</b> %s - %s</p>"
+                + "<p><b>Montant:</b> %.2f €</p>"
+                + "</div>"
+                + "<p style='color: #666;'>Vous pouvez maintenant quitter le parking.</p>"
+                + "</div></html>",
+                vue.getNomZone(),
+                vue.getTypeVehicule(),
+                vue.getPlaqueImmatriculation(),
+                vue.getMontant()
+            );
         }
         
         JOptionPane.showMessageDialog(
@@ -498,30 +452,5 @@ public class ControleurPaiement implements ActionListener {
     // Getters pour débogage
     public Etat getEtat() {
         return etat;
-    }
-    
-    private boolean traiterProlongationVoirie() {
-        try {
-            // Enregistrer le paiement
-            PaiementDAO paiementDAO = PaiementDAO.getInstance();
-            paiementDAO.create(paiement);
-
-            // Calculer la durée supplémentaire en minutes
-            int dureeSupplementaireMinutes = (vue.getDureeHeures() * 60) + vue.getDureeMinutes();
-            
-            // Prolonger le stationnement
-            boolean prolongationReussie = StationnementDAO.prolongerStationnementAvecPaiement(
-                vue.getIdStationnement(),
-                dureeSupplementaireMinutes,
-                vue.getMontant(),
-                paiement.getIdPaiement()
-            );
-            
-            return prolongationReussie;
-            
-        } catch (SQLException e) {
-            afficherMessageErreur("Erreur prolongation: " + e.getMessage(), "Erreur système");
-            return false;
-        }
     }
 }

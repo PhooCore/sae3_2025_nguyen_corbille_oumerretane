@@ -21,6 +21,31 @@ public abstract class DaoModele<T> implements Dao<T> {
         return resultat;
     }
     
+    // Méthode find avec Requete<T> et paramètres
+    protected List<T> find(Requete<T> req, String... id) throws SQLException {
+        Connection conn = MySQLConnection.getConnection();
+        PreparedStatement prSt = conn.prepareStatement(req.requete());
+        req.parametres(prSt, id);
+        return select(prSt);
+    }
+    
+    // Méthode find avec Requete<T> seulement (sans paramètres)
+    protected List<T> find(Requete<T> req) throws SQLException {
+        Connection conn = MySQLConnection.getConnection();
+        PreparedStatement prSt = conn.prepareStatement(req.requete());
+        return select(prSt);
+    }
+    
+    // Méthode findById avec Requete<T>
+    protected T findById(Requete<T> req, String... id) throws SQLException {
+        List<T> resultats = find(req, id);
+        if (resultats.isEmpty()) {
+            return null;
+        }
+        return resultats.get(0);
+    }
+    
+    // Méthode miseAJour avec Requete<T> et données
     protected int miseAJour(Requete<T> req, T donnee) throws SQLException {
         Connection conn = MySQLConnection.getConnection();
         PreparedStatement prSt = conn.prepareStatement(req.requete());
@@ -30,27 +55,14 @@ public abstract class DaoModele<T> implements Dao<T> {
         return rowsAffected;
     }
     
-    protected List<T> find(Requete<T> req, String... id) throws SQLException {
-        Connection conn = MySQLConnection.getConnection();
-        PreparedStatement prSt = conn.prepareStatement(req.requete());
-        req.parametres(prSt, id);
-        return select(prSt);
-    }
-    
-    protected T findById(Requete<T> req, String... id) throws SQLException {
-        List<T> resultats = find(req, id);
-        if (resultats.isEmpty()) {
-            return null;
-        }
-        return resultats.get(0);
-    }
-    
+   
     protected int miseAJourReturnId(Requete<T> req, T donnee) throws SQLException {
         Connection conn = MySQLConnection.getConnection();
         PreparedStatement prSt = conn.prepareStatement(req.requete(), Statement.RETURN_GENERATED_KEYS);
         req.parametres(prSt, donnee);
         int rowsAffected = prSt.executeUpdate();
         
+        // Récupérer l'ID généré pour les feedbacks
         if (donnee instanceof modele.Feedback) {
             ResultSet rs = prSt.getGeneratedKeys();
             if (rs.next()) {

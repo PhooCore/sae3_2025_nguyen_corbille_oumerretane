@@ -26,6 +26,7 @@ public class CarteOSMPanel extends JPanel {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
         
+        // Initialiser JavaFX si ce n'est pas déjà fait
         JavaFXInitializer.initializeJavaFX();
         
         JLabel lblChargement = new JLabel("Chargement de la carte...", SwingConstants.CENTER);

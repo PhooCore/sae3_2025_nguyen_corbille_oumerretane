@@ -21,7 +21,7 @@ public class ControleurAdministration implements ActionListener {
         ADMINISTRATION,
         GESTION_UTILISATEURS,
         GESTION_PARKINGS,
-        GESTION_FEEDBACKS, 
+        GESTION_FEEDBACKS,  // AJOUTÉ
         RETOUR
     }
     
@@ -205,6 +205,7 @@ public class ControleurAdministration implements ActionListener {
     
     
     private void ouvrirGestionFeedbacks() {
+        // Ouvrir la page de gestion des feedbacks
         Page_Gestion_Feedback pageFeedback = new Page_Gestion_Feedback(emailAdmin);
         pageFeedback.setVisible(true);
         vue.dispose();
@@ -220,7 +221,7 @@ public class ControleurAdministration implements ActionListener {
         return emailAdmin != null && (emailAdmin.contains("admin") || emailAdmin.equals("admin@pr.com"));
     }
     
-
+    // Getters pour le débogage
     public Etat getEtat() {
         return etat;
     }

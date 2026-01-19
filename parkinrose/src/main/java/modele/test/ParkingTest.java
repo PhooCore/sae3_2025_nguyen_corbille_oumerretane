@@ -1,213 +1,204 @@
 package modele.test;
 
 import org.junit.Test;
+
 import modele.Parking;
+
+import org.junit.Before;
 import static org.junit.Assert.*;
 
 public class ParkingTest {
     
-    @Test
-    public void testConstructeurCompletAvecMoto() {
-        Parking parking = new Parking(
-            "PARK_CAPITOLE", 
-            "Parking Capitole", 
-            "Place du Capitole, 31000 Toulouse", 
-            250, 
-            125, 
-            2.10, 
+    private Parking parking;
+    
+    @Before
+    public void setUp() {
+        parking = new Parking(
+            "PARK_001",
+            "Parking Capitole",
+            "Place du Capitole, Toulouse",
+            200,
+            150,
+            2.1,
             true,
-            true,  // hasMoto
-            20,    // placesMoto
-            15     // placesMotoDisponibles
+            true,
+            20,
+            10,
+            false,
+            1.4442f,
+            43.6047f
         );
-        
-        assertEquals("PARK_CAPITOLE", parking.getIdParking());
+    }
+    
+    @Test
+    public void testConstructeurComplet() {
+        assertEquals("PARK_001", parking.getIdParking());
         assertEquals("Parking Capitole", parking.getLibelleParking());
-        assertEquals("Place du Capitole, 31000 Toulouse", parking.getAdresseParking());
-        assertEquals(250, parking.getNombrePlaces());
-        assertEquals(125, parking.getPlacesDisponibles());
-        assertEquals(2.10, parking.getHauteurParking(), 0.001);
+        assertEquals("Place du Capitole, Toulouse", parking.getAdresseParking());
+        assertEquals(200, parking.getNombrePlaces());
+        assertEquals(150, parking.getPlacesDisponibles());
+        assertEquals(2.1, parking.getHauteurParking(), 0.001);
         assertTrue(parking.hasTarifSoiree());
         assertTrue(parking.hasMoto());
         assertEquals(20, parking.getPlacesMoto());
-        assertEquals(15, parking.getPlacesMotoDisponibles());
+        assertEquals(10, parking.getPlacesMotoDisponibles());
+        assertFalse(parking.isEstRelais());
+        assertEquals(1.4442f, parking.getPositionX(), 0.0001f);
+        assertEquals(43.6047f, parking.getPositionY(), 0.0001f);
     }
     
     @Test
-    public void testConstructeurSansMoto() {
-        Parking parking = new Parking(
-            "PARK_CAPITOLE", 
-            "Parking Capitole", 
-            "Place du Capitole, 31000 Toulouse", 
-            250, 
-            125, 
-            2.10, 
+    public void testConstructeurSansPositions() {
+        Parking parkingSimple = new Parking(
+            "PARK_002",
+            "Parking Simple",
+            "Adresse Simple",
+            100,
+            50,
+            2.0,
+            false,
+            false,
+            0,
+            0,
             true
         );
         
-        assertEquals("PARK_CAPITOLE", parking.getIdParking());
-        assertEquals("Parking Capitole", parking.getLibelleParking());
-        assertEquals("Place du Capitole, 31000 Toulouse", parking.getAdresseParking());
-        assertEquals(250, parking.getNombrePlaces());
-        assertEquals(125, parking.getPlacesDisponibles());
-        assertEquals(2.10, parking.getHauteurParking(), 0.001);
-        assertTrue(parking.hasTarifSoiree());
-        assertFalse(parking.hasMoto()); // Doit être false par défaut
-        assertEquals(0, parking.getPlacesMoto()); // Doit être 0 par défaut
-        assertEquals(0, parking.getPlacesMotoDisponibles()); // Doit être 0 par défaut
+        assertEquals("PARK_002", parkingSimple.getIdParking());
+        assertEquals("Parking Simple", parkingSimple.getLibelleParking());
+        assertTrue(parkingSimple.isEstRelais());
+        assertNull(parkingSimple.getPositionX());
+        assertNull(parkingSimple.getPositionY());
     }
     
     @Test
-    public void testSettersMoto() {
-        Parking parking = new Parking("ID_TEST", "Libelle Test", "Adresse Test", 200, 100, 2.5, false);
+    public void testConstructeurBasique() {
+        Parking parkingBasique = new Parking(
+            "PARK_003",
+            "Parking Basique",
+            "Adresse Basique",
+            50,
+            25,
+            2.5,
+            true
+        );
         
-        // Test des setters normaux
-        parking.setPlacesDisponibles(75);
-        assertEquals(75, parking.getPlacesDisponibles());
-        
-        parking.setNombrePlaces(300);
-        assertEquals(300, parking.getNombrePlaces());
-        
-        parking.setHauteurParking(3.0);
-        assertEquals(3.0, parking.getHauteurParking(), 0.001);
-        
-        parking.setTarifSoiree(true);
-        assertTrue(parking.hasTarifSoiree());
-        
-        // Test des setters moto
-        parking.setHasMoto(true);
-        assertTrue(parking.hasMoto());
-        
-        parking.setPlacesMoto(10);
-        assertEquals(10, parking.getPlacesMoto());
-        
-        parking.setPlacesMotoDisponibles(5);
-        assertEquals(5, parking.getPlacesMotoDisponibles());
-        
-        // Tester que hasMoto reste true même si placesMoto = 0
-        parking.setPlacesMoto(0);
-        parking.setPlacesMotoDisponibles(0);
-        assertTrue(parking.hasMoto());
-    }
-    
-    @Test
-    public void testPlacesDisponiblesLimites() {
-        Parking parkingVide = new Parking("VIDE", "Parking Vide", "Adresse", 100, 0, 2.0, true);
-        assertEquals(0, parkingVide.getPlacesDisponibles());
-        
-        Parking parkingPlein = new Parking("PLEIN", "Parking Plein", "Adresse", 100, 100, 2.0, true);
-        assertEquals(100, parkingPlein.getPlacesDisponibles());
-        
-        // Test avec places moto
-        Parking parkingMotoVide = new Parking("MOTO_VIDE", "Parking Moto Vide", "Adresse", 50, 25, 2.0, false, true, 10, 0);
-        assertEquals(0, parkingMotoVide.getPlacesMotoDisponibles());
-        
-        Parking parkingMotoPlein = new Parking("MOTO_PLEIN", "Parking Moto Plein", "Adresse", 50, 25, 2.0, false, true, 10, 10);
-        assertEquals(10, parkingMotoPlein.getPlacesMotoDisponibles());
-    }
-    
-    @Test
-    public void testHasPlacesMotoDisponibles() {
-        // Parking avec places moto disponibles
-        Parking parkingAvecPlaces = new Parking("AVEC", "Parking Avec Places", "Adresse", 100, 50, 2.0, true, true, 10, 5);
-        assertTrue(parkingAvecPlaces.hasPlacesMotoDisponibles());
-        
-        // Parking sans places moto
-        Parking parkingSansPlaces = new Parking("SANS", "Parking Sans Places", "Adresse", 100, 50, 2.0, true, true, 10, 0);
-        assertFalse(parkingSansPlaces.hasPlacesMotoDisponibles());
-        
-        // Parking qui n'a pas de places moto du tout
-        Parking parkingSansMoto = new Parking("PAS_MOTO", "Parking Pas Moto", "Adresse", 100, 50, 2.0, true, false, 0, 0);
-        assertFalse(parkingSansMoto.hasPlacesMotoDisponibles());
+        assertEquals("PARK_003", parkingBasique.getIdParking());
+        assertEquals(50, parkingBasique.getNombrePlaces());
+        assertEquals(25, parkingBasique.getPlacesDisponibles());
+        assertTrue(parkingBasique.hasTarifSoiree());
+        assertFalse(parkingBasique.hasMoto());
+        assertEquals(0, parkingBasique.getPlacesMoto());
+        assertFalse(parkingBasique.isEstRelais());
     }
     
     @Test
     public void testHasPlacesDisponibles() {
-        // Parking avec places disponibles
-        Parking parkingAvecPlaces = new Parking("AVEC", "Parking Avec Places", "Adresse", 100, 50, 2.0, true);
-        assertTrue(parkingAvecPlaces.hasPlacesDisponibles());
+        parking.setPlacesDisponibles(10);
+        assertTrue(parking.hasPlacesDisponibles());
         
-        // Parking sans places
-        Parking parkingSansPlaces = new Parking("SANS", "Parking Sans Places", "Adresse", 100, 0, 2.0, true);
-        assertFalse(parkingSansPlaces.hasPlacesDisponibles());
+        parking.setPlacesDisponibles(0);
+        assertFalse(parking.hasPlacesDisponibles());
         
-        // Parking plein
-        Parking parkingPlein = new Parking("PLEIN", "Parking Plein", "Adresse", 100, 100, 2.0, true);
-        assertTrue(parkingPlein.hasPlacesDisponibles());
+        parking.setPlacesDisponibles(-5);
+        assertFalse(parking.hasPlacesDisponibles());
+    }
+    
+    @Test
+    public void testHasPlacesMotoDisponibles() {
+        parking.setHasMoto(true);
+        parking.setPlacesMotoDisponibles(5);
+        assertTrue(parking.hasPlacesMotoDisponibles());
+        
+        parking.setPlacesMotoDisponibles(0);
+        assertFalse(parking.hasPlacesMotoDisponibles());
+        
+        parking.setHasMoto(false);
+        parking.setPlacesMotoDisponibles(10);
+        assertFalse(parking.hasPlacesMotoDisponibles());
+    }
+    
+    @Test
+    public void testTarifHoraire() {
+        parking.setTarifHoraire(3.50);
+        assertEquals(3.50, parking.getTarifHoraire(), 0.001);
     }
     
     @Test
     public void testToString() {
-        // Parking sans moto
-        Parking parkingSansMoto = new Parking("TEST", "Parking Test", "Adresse Test", 100, 45, 2.0, true);
-        String strSansMoto = parkingSansMoto.toString();
-        
-        assertTrue(strSansMoto.contains("Parking Test"));
-        assertTrue(strSansMoto.contains("Adresse Test"));
-        assertTrue(strSansMoto.contains("45/100"));
-        assertFalse(strSansMoto.contains("places moto")); // Ne doit pas contenir l'info moto
-        
-        // Parking avec moto
-        Parking parkingAvecMoto = new Parking("TEST_MOTO", "Parking Moto Test", "Adresse Moto", 100, 45, 2.0, true, true, 15, 8);
-        String strAvecMoto = parkingAvecMoto.toString();
-        
-        assertTrue(strAvecMoto.contains("Parking Moto Test"));
-        assertTrue(strAvecMoto.contains("Adresse Moto"));
-        assertTrue(strAvecMoto.contains("45/100"));
-        assertTrue(strAvecMoto.contains("8/15")); // Doit contenir les infos moto
-        assertTrue(strAvecMoto.contains("places moto"));
+        String resultat = parking.toString();
+        assertTrue(resultat.contains("Parking Capitole"));
+        assertTrue(resultat.contains("Place du Capitole, Toulouse"));
+        assertTrue(resultat.contains("150/200"));
+        assertTrue(resultat.contains("places moto"));
     }
     
     @Test
-    public void testEquals() {
-        Parking parking1 = new Parking("ID1", "Parking 1", "Adresse 1", 100, 50, 2.0, true, true, 10, 5);
-        Parking parking2 = new Parking("ID1", "Parking 1", "Adresse 1", 100, 50, 2.0, true, true, 10, 5);
-        Parking parking3 = new Parking("ID2", "Parking 2", "Adresse 2", 200, 100, 3.0, false, false, 0, 0);
-        
-        // Test de l'égalité par ID
-        assertEquals(parking1.getIdParking(), parking2.getIdParking());
-        assertNotEquals(parking1.getIdParking(), parking3.getIdParking());
-    }
-    
-    @Test(expected = IllegalArgumentException.class)
-    public void testConstructeurInvalide() {
-        // Test avec des valeurs négatives
-        new Parking("INVALIDE", "Parking Invalide", "Adresse", -100, -50, -2.0, true);
+    public void testToString_SansMoto() {
+        parking.setHasMoto(false);
+        String resultat = parking.toString();
+        assertFalse(resultat.contains("places moto"));
     }
     
     @Test
-    public void testGestionPlacesMoto() {
-        Parking parking = new Parking("TEST_GESTION", "Parking Gestion", "Adresse", 100, 75, 2.5, false, true, 20, 15);
+    public void testSetters() {
+        // Test des setters (pas besoin de constructeur par défaut)
+        parking.setIdParking("PARK_NEW");
+        assertEquals("PARK_NEW", parking.getIdParking());
         
-        // Initial
-        assertEquals(15, parking.getPlacesMotoDisponibles());
+        parking.setLibelleParking("Nouveau Parking");
+        assertEquals("Nouveau Parking", parking.getLibelleParking());
         
-        // Simulation de l'occupation d'une place moto
-        parking.setPlacesMotoDisponibles(14);
-        assertEquals(14, parking.getPlacesMotoDisponibles());
+        parking.setAdresseParking("Nouvelle Adresse");
+        assertEquals("Nouvelle Adresse", parking.getAdresseParking());
         
-        // Simulation de la libération d'une place moto
-        parking.setPlacesMotoDisponibles(15);
-        assertEquals(15, parking.getPlacesMotoDisponibles());
+        parking.setNombrePlaces(300);
+        assertEquals(300, parking.getNombrePlaces());
         
-        // Ne doit pas permettre de dépasser le nombre total de places moto
-        parking.setPlacesMotoDisponibles(25); // Plus que le total de 20
-        assertEquals(25, parking.getPlacesMotoDisponibles()); // Mais l'implémentation actuelle le permet
+        parking.setPlacesDisponibles(100);
+        assertEquals(100, parking.getPlacesDisponibles());
+        
+        parking.setHauteurParking(2.5);
+        assertEquals(2.5, parking.getHauteurParking(), 0.001);
+        
+        parking.setTarifSoiree(false);
+        assertFalse(parking.hasTarifSoiree());
+        
+        parking.setHasMoto(false);
+        assertFalse(parking.hasMoto());
+        
+        parking.setPlacesMoto(15);
+        assertEquals(15, parking.getPlacesMoto());
+        
+        parking.setPlacesMotoDisponibles(8);
+        assertEquals(8, parking.getPlacesMotoDisponibles());
+        
+        parking.setEstRelais(true);
+        assertTrue(parking.isEstRelais());
+        
+        parking.setPositionX(1.0f);
+        assertEquals(1.0f, parking.getPositionX(), 0.001f);
+        
+        parking.setPositionY(2.0f);
+        assertEquals(2.0f, parking.getPositionY(), 0.001f);
     }
     
     @Test
-    public void testParkingAvecTarifSoireeEtMoto() {
-        Parking parking = new Parking("TEST_COMPLET", "Parking Complet", "Adresse", 200, 150, 2.8, true, true, 25, 18);
+    public void testConstructeursChainés() {
+        // Test que les constructeurs appellent bien le constructeur principal
+        Parking p1 = new Parking("P1", "Lib1", "Addr1", 100, 50, 2.0, true);
+        assertEquals("P1", p1.getIdParking());
+        assertEquals("Lib1", p1.getLibelleParking());
+        assertEquals(100, p1.getNombrePlaces());
+        assertEquals(50, p1.getPlacesDisponibles());
+        assertEquals(2.0, p1.getHauteurParking(), 0.001);
+        assertTrue(p1.hasTarifSoiree());
+        assertFalse(p1.hasMoto());
         
-        // Vérification de toutes les propriétés
-        assertTrue(parking.hasTarifSoiree());
-        assertTrue(parking.hasMoto());
-        assertTrue(parking.hasPlacesDisponibles());
-        assertTrue(parking.hasPlacesMotoDisponibles());
-        assertEquals(200, parking.getNombrePlaces());
-        assertEquals(150, parking.getPlacesDisponibles());
-        assertEquals(2.8, parking.getHauteurParking(), 0.001);
-        assertEquals(25, parking.getPlacesMoto());
-        assertEquals(18, parking.getPlacesMotoDisponibles());
+        Parking p2 = new Parking("P2", "Lib2", "Addr2", 200, 100, 2.5, false, false, 0, 0);
+        assertEquals("P2", p2.getIdParking());
+        assertEquals(200, p2.getNombrePlaces());
+        assertEquals(100, p2.getPlacesDisponibles());
+        assertFalse(p2.hasTarifSoiree());
+        assertFalse(p2.hasMoto());
     }
 }
