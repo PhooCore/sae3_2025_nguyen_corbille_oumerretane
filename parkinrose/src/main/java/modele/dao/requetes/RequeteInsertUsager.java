@@ -1,0 +1,23 @@
+package modele.dao.requetes;
+
+import modele.Usager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public class RequeteInsertUsager extends Requete<Usager> {
+    @Override
+    public String requete() {
+        return "INSERT INTO Usager (nom_usager, prenom_usager, mail_usager, mot_de_passe, numero_carte_tisseo, is_admin) " +
+               "VALUES (?, ?, ?, ?, ?, ?)";
+    }
+
+    @Override
+    public void parametres(PreparedStatement prSt, Usager donnee) throws SQLException {
+        prSt.setString(1, donnee.getNomUsager());
+        prSt.setString(2, donnee.getPrenomUsager());
+        prSt.setString(3, donnee.getMailUsager());
+        prSt.setString(4, donnee.getMotDePasse());
+        prSt.setString(5, donnee.getNumeroCarteTisseo());
+        prSt.setBoolean(6, donnee.isAdmin());
+    }
+}

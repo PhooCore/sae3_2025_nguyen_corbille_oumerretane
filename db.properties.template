@@ -1,0 +1,7 @@
+# Configuration de la base de données
+# Copiez ce fichier en db.properties et remplissez avec vos informations
+db.host=VOTRE_HOST
+db.database=VOTRE_DATABASE
+db.port=3306
+db.user=VOTRE_USER
+db.password=VOTRE_PASSWORD

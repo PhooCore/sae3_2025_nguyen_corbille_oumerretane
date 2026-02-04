@@ -1,270 +1,429 @@
 package ihm;
 
 import javax.swing.*;
-import controleur.StationnementControleur;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
+import controleur.ControleurGarerVoirie;
 import modele.Zone;
-import modele.dao.UsagerDAO;
 import modele.dao.ZoneDAO;
+import modele.dao.AbonnementDAO;
+import modele.dao.UsagerDAO;
+import modele.Abonnement;
 import modele.Usager;
 import java.util.List;
 
 public class Page_Garer_Voirie extends JFrame {
     private static final long serialVersionUID = 1L;
     
-    private JPanel contentPanel;
-    private JLabel lblNom, lblPrenom, lblEmail, lblPlaque;
-    private JComboBox<String> comboZone, comboHeures, comboMinutes;
-    private JLabel lblCout;
-    private JRadioButton radioVoiture, radioMoto, radioCamion;
-    private ButtonGroup groupeTypeVehicule;
-    private List<Zone> zones;
+    // Composants UI (privés)
     private String emailUtilisateur;
-    private Usager usager;
-    private StationnementControleur controleur;
-
+    private JComboBox<String> comboZone;
+    private JComboBox<String> comboHeures;
+    private JComboBox<String> comboMinutes;
+    private JLabel lblPlaque;
+    private JLabel lblCout;
+    private JRadioButton radioVoiture;
+    private JRadioButton radioMoto;
+    private JRadioButton radioCamion;
+    private JButton btnAnnuler;
+    private JButton btnValider;
+    private JButton btnModifierPlaque;
+    
+    // Labels pour les informations utilisateur
+    private JLabel lblNom;
+    private JLabel lblPrenom;
+    private JLabel lblEmail;
+    
+    // Données
+    private List<Zone> zones;
+    
     public Page_Garer_Voirie(String email) {
         this.emailUtilisateur = email;
-        this.usager = UsagerDAO.getUsagerByEmail(email);
-        this.controleur = new StationnementControleur(email);
-        initialisePage();
-        initialiseDonnees();
-        initializeEventListeners();
+        initialiseUI();
+        
+        // Créer le contrôleur
+        new ControleurGarerVoirie(this);
+        
+        setVisible(true);
     }
     
-    private void initialisePage() {
-        this.setTitle("Stationnement en Voirie");
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setSize(800, 600);
-        this.setLocationRelativeTo(null);
-        this.setResizable(false);
+    private void initialiseUI() {
+        setTitle("Stationnement en Voirie");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(800, 600);
+        setLocationRelativeTo(null);
+        setResizable(false);
         
-        contentPanel = new JPanel();
+        JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BorderLayout());
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        this.setContentPane(contentPanel);
+        setContentPane(contentPanel);
         
-        JLabel lblTitre = new JLabel("Préparer un Stationnement en voirie", SwingConstants.CENTER);
-        lblTitre.setFont(new Font("Arial", Font.BOLD, 18));
+        // Titre
+        JLabel lblTitre = new JLabel("Stationnement en Voirie", SwingConstants.CENTER);
+        lblTitre.setFont(new Font("Arial", Font.BOLD, 20));
+        lblTitre.setForeground(new Color(0, 51, 102));
         contentPanel.add(lblTitre, BorderLayout.NORTH);
         
+        // Panneau principal
         JPanel panelPrincipal = new JPanel();
         panelPrincipal.setLayout(new BoxLayout(panelPrincipal, BoxLayout.Y_AXIS));
+        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
         
-        JPanel panelInfos = new JPanel();
-        panelInfos.setLayout(new GridLayout(3, 2, 10, 10));
-        panelInfos.setBorder(BorderFactory.createTitledBorder("Vos informations"));
-        
-        panelInfos.add(new JLabel("Nom:"));
-        lblNom = new JLabel(usager != null ? usager.getNomUsager() : "Non connecté");
-        lblNom.setFont(new Font("Arial", Font.BOLD, 14));
-        panelInfos.add(lblNom);
-        
-        panelInfos.add(new JLabel("Prénom:"));
-        lblPrenom = new JLabel(usager != null ? usager.getPrenomUsager() : "Non connecté");
-        lblPrenom.setFont(new Font("Arial", Font.BOLD, 14));
-        panelInfos.add(lblPrenom);
-        
-        panelInfos.add(new JLabel("Email:"));
-        lblEmail = new JLabel(usager != null ? usager.getMailUsager() : "Non connecté");
-        lblEmail.setFont(new Font("Arial", Font.BOLD, 14));
-        panelInfos.add(lblEmail);
-        
-        panelPrincipal.add(panelInfos);
+        // 1. Informations utilisateur
+        panelPrincipal.add(creerPanelInfosUtilisateur());
         panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
         
-        JPanel panelVehicule = new JPanel();
-        panelVehicule.setLayout(new BorderLayout());
-        panelVehicule.setBorder(BorderFactory.createTitledBorder("Véhicule"));
+        // 2. Véhicule
+        panelPrincipal.add(creerPanelVehicule());
+        panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
         
+        // 3. Stationnement
+        panelPrincipal.add(creerPanelStationnement());
+        
+        contentPanel.add(new JScrollPane(panelPrincipal), BorderLayout.CENTER);
+        
+        // 4. Boutons
+        contentPanel.add(creerPanelBoutons(), BorderLayout.SOUTH);
+    }
+    
+    private JPanel creerPanelInfosUtilisateur() {
+        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+        panel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(0, 102, 204), 2),
+            "Vos informations"));
+        
+        panel.add(new JLabel("Nom:"));
+        lblNom = new JLabel("Chargement...");
+        lblNom.setFont(new Font("Arial", Font.BOLD, 14));
+        panel.add(lblNom);
+        
+        panel.add(new JLabel("Prénom:"));
+        lblPrenom = new JLabel("Chargement...");
+        lblPrenom.setFont(new Font("Arial", Font.BOLD, 14));
+        panel.add(lblPrenom);
+        
+        panel.add(new JLabel("Email:"));
+        lblEmail = new JLabel(emailUtilisateur);
+        lblEmail.setFont(new Font("Arial", Font.BOLD, 14));
+        panel.add(lblEmail);
+        
+        return panel;
+    }
+    
+    private JPanel creerPanelVehicule() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(0, 153, 76), 2),
+            "Véhicule"));
+        
+        // Type de véhicule
         JPanel panelType = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        groupeTypeVehicule = new ButtonGroup();
+        ButtonGroup groupeType = new ButtonGroup();
         
         radioVoiture = new JRadioButton("Voiture", true);
         radioMoto = new JRadioButton("Moto");
         radioCamion = new JRadioButton("Camion");
         
-        groupeTypeVehicule.add(radioVoiture);
-        groupeTypeVehicule.add(radioMoto);
-        groupeTypeVehicule.add(radioCamion);
+        // Style des boutons radio
+        Font radioFont = new Font("Arial", Font.PLAIN, 13);
+        radioVoiture.setFont(radioFont);
+        radioMoto.setFont(radioFont);
+        radioCamion.setFont(radioFont);
+        
+        groupeType.add(radioVoiture);
+        groupeType.add(radioMoto);
+        groupeType.add(radioCamion);
         
         panelType.add(radioVoiture);
         panelType.add(radioMoto);
         panelType.add(radioCamion);
         
-        panelVehicule.add(panelType, BorderLayout.NORTH);
+        panel.add(panelType, BorderLayout.NORTH);
         
-        JPanel panelPlaque = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // Plaque
+        JPanel panelPlaque = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panelPlaque.add(new JLabel("Plaque d'immatriculation:"));
-        lblPlaque = new JLabel();
-        lblPlaque.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        lblPlaque = new JLabel("Chargement...");
+        lblPlaque.setFont(new Font("Arial", Font.BOLD, 14));
+        lblPlaque.setForeground(Color.BLUE);
+        lblPlaque.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1));
+        lblPlaque.setOpaque(true);
+        lblPlaque.setBackground(new Color(240, 240, 240));
+        lblPlaque.setPreferredSize(new Dimension(150, 25));
+        lblPlaque.setHorizontalAlignment(SwingConstants.CENTER);
         panelPlaque.add(lblPlaque);
         
-        JButton btnModifierPlaque = new JButton("Modifier");
-        btnModifierPlaque.addActionListener(e -> modifierPlaque());
+        btnModifierPlaque = new JButton("Modifier");
+        btnModifierPlaque.setFont(new Font("Arial", Font.PLAIN, 12));
+        btnModifierPlaque.setPreferredSize(new Dimension(80, 25));
         panelPlaque.add(btnModifierPlaque);
         
-        panelVehicule.add(panelPlaque, BorderLayout.SOUTH);
+        panel.add(panelPlaque, BorderLayout.CENTER);
         
-        panelPrincipal.add(panelVehicule);
-        panelPrincipal.add(Box.createRigidArea(new Dimension(0, 15)));
+        return panel;
+    }
+    
+    private JPanel creerPanelStationnement() {
+        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10)); // Changé de 4 à 5 lignes
+        panel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(153, 76, 0), 2),
+            "Stationnement"));
         
-        JPanel panelStationnement = new JPanel();
-        panelStationnement.setLayout(new GridLayout(3, 2, 10, 10));
-        panelStationnement.setBorder(BorderFactory.createTitledBorder("Stationnement"));
-        
-        panelStationnement.add(new JLabel("Zone:"));
+        // Zone
+        panel.add(new JLabel("Zone:"));
         comboZone = new JComboBox<>();
-        panelStationnement.add(comboZone);
+        comboZone.setFont(new Font("Arial", Font.PLAIN, 12));
+        comboZone.setPreferredSize(new Dimension(300, 25));
+        panel.add(comboZone);
         
-        panelStationnement.add(new JLabel("Durée:"));
-        JPanel panelDuree = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // Durée
+        panel.add(new JLabel("Durée:"));
+        JPanel panelDuree = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        
         String[] heures = {"0", "1", "2", "3", "4", "5", "6", "7", "8"};
         String[] minutes = {"0", "15", "30", "45"};
         
         comboHeures = new JComboBox<>(heures);
+        comboHeures.setFont(new Font("Arial", Font.PLAIN, 12));
+        comboHeures.setPreferredSize(new Dimension(60, 25));
+        
         comboMinutes = new JComboBox<>(minutes);
+        comboMinutes.setFont(new Font("Arial", Font.PLAIN, 12));
+        comboMinutes.setPreferredSize(new Dimension(60, 25));
         
         panelDuree.add(comboHeures);
         panelDuree.add(new JLabel("h"));
         panelDuree.add(comboMinutes);
         panelDuree.add(new JLabel("min"));
-        panelStationnement.add(panelDuree);
         
-        panelStationnement.add(new JLabel("Coût:"));
+        panel.add(panelDuree);
+        
+        // Abonnement (nouvelle ligne)
+        panel.add(new JLabel("Abonnement:"));
+        JLabel lblAbonnement = new JLabel("Chargement...");
+        lblAbonnement.setFont(new Font("Arial", Font.ITALIC, 12));
+        lblAbonnement.setForeground(Color.GRAY);
+        
+        // Vérifier l'abonnement et mettre à jour le label
+        SwingUtilities.invokeLater(() -> {
+            try {
+                Usager usager = UsagerDAO.getUsagerByEmail(emailUtilisateur);
+                if (usager != null) {
+                    Abonnement abonnement = AbonnementDAO.getAbonnementActifStatic(usager.getIdUsager());
+                    if (abonnement != null && abonnement.estActif()) {
+                        lblAbonnement.setText("✓ " + abonnement.getLibelleAbonnement());
+                        lblAbonnement.setForeground(new Color(0, 150, 0)); // Vert
+                    } else {
+                        lblAbonnement.setText("Aucun abonnement actif");
+                        lblAbonnement.setForeground(Color.GRAY);
+                    }
+                }
+            } catch (Exception e) {
+                lblAbonnement.setText("Erreur chargement");
+                lblAbonnement.setForeground(Color.RED);
+            }
+        });
+        
+        panel.add(lblAbonnement);
+        
+        // Coût
+        panel.add(new JLabel("Coût estimé:"));
         lblCout = new JLabel("0.00 €");
-        lblCout.setFont(new Font("Arial", Font.BOLD, 14));
-        panelStationnement.add(lblCout);
+        lblCout.setFont(new Font("Arial", Font.BOLD, 16));
+        lblCout.setForeground(new Color(0, 100, 0));
+        panel.add(lblCout);
         
-        panelPrincipal.add(panelStationnement);
+        // Informations sur les zones
+        JLabel lblInfoZones = new JLabel("Note:");
+        lblInfoZones.setFont(new Font("Arial", Font.ITALIC, 11));
+        panel.add(lblInfoZones);
         
-        contentPanel.add(panelPrincipal, BorderLayout.CENTER);
+        JLabel lblDetailsZones = new JLabel("Les zones bleues sont gratuites");
+        lblDetailsZones.setFont(new Font("Arial", Font.ITALIC, 11));
+        lblDetailsZones.setForeground(Color.GRAY);
+        panel.add(lblDetailsZones);
         
-        JPanel panelBoutons = new JPanel(new FlowLayout());
-        
-        JButton btnAnnuler = new JButton("Annuler");
-        JButton btnValider = new JButton("Valider");
-        
-        panelBoutons.add(btnAnnuler);
-        panelBoutons.add(btnValider);
-        
-        contentPanel.add(panelBoutons, BorderLayout.SOUTH);
+        return panel;
     }
     
-    private void modifierPlaque() {
-        String nouvellePlaque = JOptionPane.showInputDialog(this, 
-            "Entrez la plaque d'immatriculation (format: AA-123-AA):", 
-            lblPlaque.getText());
+    private JPanel creerPanelBoutons() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 10));
+        panel.setBackground(new Color(240, 240, 240));
+        panel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Color.GRAY));
         
-        if (nouvellePlaque != null && !nouvellePlaque.trim().isEmpty()) {
-            String plaqueNettoyee = nouvellePlaque.trim().toUpperCase();
-            
-            if (controleur.validerPlaque(plaqueNettoyee)) {
-                lblPlaque.setText(plaqueNettoyee);
-            }
-        }
-    }
-
-    private void initialiseDonnees() {
-        this.zones = ZoneDAO.getAllZones();
-        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+        btnAnnuler = new JButton("Annuler");
+        btnAnnuler.setFont(new Font("Arial", Font.BOLD, 14));
+        btnAnnuler.setPreferredSize(new Dimension(120, 35));
+        btnAnnuler.setBackground(new Color(220, 220, 220));
         
-        for (Zone zone : zones) {
-            model.addElement(zone.getAffichage());
-        }
-        comboZone.setModel(model);
+        btnValider = new JButton("Valider");
+        btnValider.setFont(new Font("Arial", Font.BOLD, 14));
+        btnValider.setPreferredSize(new Dimension(120, 35));
+        btnValider.setBackground(new Color(0, 153, 0));
+        btnValider.setForeground(Color.WHITE);
         
-        if (lblPlaque.getText() == null || lblPlaque.getText().isEmpty()) {
-            lblPlaque.setText("Non définie");
-        }
+        panel.add(btnAnnuler);
+        panel.add(btnValider);
         
-        calculerCout();
+        return panel;
     }
     
-    private void initializeEventListeners() {
-        ItemListener calculateurCout = new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                calculerCout();
-            }
-        };
-        
-        comboZone.addItemListener(calculateurCout);
-        comboHeures.addItemListener(calculateurCout);
-        comboMinutes.addItemListener(calculateurCout);
-        
-        JButton btnAnnuler = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(0);
-        btnAnnuler.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                Page_Principale pagePrincipale = new Page_Principale(emailUtilisateur);
-                pagePrincipale.setVisible(true);
-                dispose();
-            }
-        });
-        
-        JButton btnValider = (JButton) ((JPanel) contentPanel.getComponent(2)).getComponent(1);
-        btnValider.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                validerStationnement();
-            }
-        });
+    // ============================================
+    // Getters pour le contrôleur
+    // ============================================
+    
+    public String getEmailUtilisateur() {
+        return emailUtilisateur;
     }
     
-    private void calculerCout() {
-        try {
-            int heures = Integer.parseInt(comboHeures.getSelectedItem().toString());
-            int minutes = Integer.parseInt(comboMinutes.getSelectedItem().toString());
-            int dureeTotaleMinutes = (heures * 60) + minutes;
-            
-            int index = comboZone.getSelectedIndex();
-            if (index >= 0 && index < zones.size()) {
-                Zone zone = zones.get(index);
-                double cout = zone.calculerCout(dureeTotaleMinutes);
-                lblCout.setText(String.format("%.2f €", cout));
-            }
-        } catch (Exception e) {
-            lblCout.setText("0.00 €");
-        }
+    public JComboBox<String> getComboZone() {
+        return comboZone;
     }
     
-    private void validerStationnement() {
-        int index = comboZone.getSelectedIndex();
-        String idZone = "";
-        String nomZone = "";
-        
-        if (index >= 0 && index < zones.size()) {
-            Zone zoneSelectionnee = zones.get(index);
-            idZone = zoneSelectionnee.getIdZone();
-            nomZone = zoneSelectionnee.getLibelleZone();
-        }
-        
-        boolean succes = controleur.preparerStationnementVoirie(
-            getTypeVehicule(),
-            lblPlaque.getText(),
-            idZone,
-            Integer.parseInt(comboHeures.getSelectedItem().toString()),
-            Integer.parseInt(comboMinutes.getSelectedItem().toString()),
-            this
-        );
+    public JComboBox<String> getComboHeures() {
+        return comboHeures;
     }
     
-    private String getTypeVehicule() {
+    public JComboBox<String> getComboMinutes() {
+        return comboMinutes;
+    }
+    
+    public JButton getBtnAnnuler() {
+        return btnAnnuler;
+    }
+    
+    public JButton getBtnValider() {
+        return btnValider;
+    }
+    
+    public JButton getBtnModifierPlaque() {
+        return btnModifierPlaque;
+    }
+    
+    public String getTypeVehicule() {
         if (radioVoiture.isSelected()) return "Voiture";
         if (radioMoto.isSelected()) return "Moto";
-        return "Camion";
+        if (radioCamion.isSelected()) return "Camion";
+        return null;
+    }
+    
+    public String getPlaque() {
+        return lblPlaque.getText();
+    }
+    
+    // ============================================
+    // Setters pour le contrôleur
+    // ============================================
+    
+    public void setNomUsager(String nom) {
+        lblNom.setText(nom);
+    }
+    
+    public void setPrenomUsager(String prenom) {
+        lblPrenom.setText(prenom);
+    }
+    
+    public void setEmailUsager(String email) {
+        lblEmail.setText(email);
+    }
+    
+    public void setPlaque(String plaque) {
+        lblPlaque.setText(plaque);
+    }
+    
+    public void setTypeVehicule(String type) {
+        if ("Voiture".equals(type)) {
+            radioVoiture.setSelected(true);
+        } else if ("Moto".equals(type)) {
+            radioMoto.setSelected(true);
+        } else if ("Camion".equals(type)) {
+            radioCamion.setSelected(true);
+        }
+    }
+    
+    public void setCout(String cout) {
+        if ("GRATUIT".equalsIgnoreCase(cout) || "0.00 €".equals(cout)) {
+            lblCout.setText("GRATUIT");
+            lblCout.setForeground(new Color(0, 150, 0)); // Vert
+        } else {
+            lblCout.setText(cout);
+            lblCout.setForeground(Color.BLACK);
+        }
+    }
+    
+    public void setCoutAvecCouleur(String cout, Color couleur) {
+        lblCout.setText(cout);
+        lblCout.setForeground(couleur);
+    }
+    
+    // ============================================
+    // Méthodes utilitaires
+    // ============================================
+    
+    public void chargerZones() {
+        try {
+            this.zones = ZoneDAO.getAllZones();
+            DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+            
+            for (Zone zone : zones) {
+                String texte = zone.getAffichage();
+                
+                // Ajouter des indicateurs visuels
+                if (zone.getLibelleZone().toLowerCase().contains("bleu")) {
+                    texte += " G";
+                } else if (zone.getLibelleZone().toLowerCase().contains("orange")) {
+                    texte += " O";
+                } else if (zone.getLibelleZone().toLowerCase().contains("vert")) {
+                    texte += " V";
+                }
+                
+                model.addElement(texte);
+            }
+            
+            comboZone.setModel(model);
+            
+        } catch (Exception e) {
+            afficherMessageErreur("Erreur chargement zones", 
+                "Impossible de charger les zones: " + e.getMessage());
+        }
+    }
+    
+    public Zone getZoneSelectionnee() {
+        int index = comboZone.getSelectedIndex();
+        if (index >= 0 && zones != null && index < zones.size()) {
+            return zones.get(index);
+        }
+        return null;
+    }
+    
+    public List<Zone> getZones() {
+        return zones;
+    }
+    
+    public void afficherMessageErreur(String titre, String message) {
+        JOptionPane.showMessageDialog(this, message, titre, JOptionPane.ERROR_MESSAGE);
+    }
+    
+    public void afficherMessageInformation(String titre, String message) {
+        JOptionPane.showMessageDialog(this, message, titre, JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    public int demanderConfirmation(String titre, String message) {
+        return JOptionPane.showConfirmDialog(this, message, titre, 
+            JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
     }
     
     public static void main(String[] args) {
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    new Page_Bienvenue().setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // Pour tester, utilisez un email de test
+                String emailTest = "test@example.com";
+                Page_Garer_Voirie frame = new Page_Garer_Voirie(emailTest);
+                frame.setVisible(true);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
     }

@@ -2,16 +2,24 @@ package modele.test;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
-@SuiteClasses({
-    ZoneTest.class,
-    UsagerTest.class,
-    StationnementTest.class,
+@Suite.SuiteClasses({
+    AbonnementTest.class,
+    PaiementTest.class,
     ParkingTest.class,
-    PaiementTest.class
+    StationnementTest.class,
+    UsagerTest.class,
+    VehiculeUsagerTest.class,
+    ZoneTest.class,
+    AbonnementDAOTest.class,
+    ParkingDAOTest.class,
+    PaiementDAOTest.class,
+    StationnementDAOTest.class,
+    UsagerDAOTest.class,
+    TarifParkingDAOTest.class,
+    ModifMdpDAOTest.class
 })
 public class AllTests {
-   
+    // Classe conteneur pour exécuter tous les tests
 }

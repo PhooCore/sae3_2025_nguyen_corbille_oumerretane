@@ -1,54 +1,192 @@
 package modele.dao;
+
 import modele.Usager;
+import modele.dao.requetes.RequeteSelectUsager;
+import modele.dao.requetes.RequeteSelectUsagerByEmail;
+import modele.dao.requetes.RequeteInsertUsager;
+import modele.dao.requetes.RequeteUpdateUsager;
+import modele.dao.requetes.RequeteUpdateMotDePasse;
+import modele.dao.requetes.RequeteUpdateCarteTisseo;
+import modele.dao.requetes.RequeteSelectCarteTisseo;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
 
-public class UsagerDAO {
-    
+public class UsagerDAO extends DaoModele<Usager> implements Dao<Usager> {
+
+    private static UsagerDAO instance;
+
+    // Singleton
+    public static UsagerDAO getInstance() {
+        if (instance == null) {
+            instance = new UsagerDAO();
+        }
+        return instance;
+    }
+
+    // Constructeur privé pour singleton
+    private UsagerDAO() {}
+
+    @Override
+    public List<Usager> findAll() throws SQLException {
+        RequeteSelectUsager req = new RequeteSelectUsager();
+        return find(req);
+    }
+
+    @Override
+    public Usager findById(String... id) throws SQLException {
+        RequeteSelectUsagerByEmail req = new RequeteSelectUsagerByEmail();
+        return findById(req, id);
+    }
+
+    @Override
+    public void create(Usager usager) throws SQLException {
+        RequeteInsertUsager req = new RequeteInsertUsager();
+        miseAJour(req, usager);
+    }
+
+    @Override
+    public void update(Usager usager) throws SQLException {
+        RequeteUpdateUsager req = new RequeteUpdateUsager();
+        miseAJour(req, usager);
+    }
+
+    @Override
+    public void delete(Usager usager) throws SQLException {
+        throw new UnsupportedOperationException("Delete non implémenté pour Usager");
+    }
+
+    @Override
+    protected Usager creerInstance(ResultSet curseur) throws SQLException {
+        Usager usager = new Usager();
+        usager.setIdUsager(curseur.getInt("id_usager"));
+        usager.setNomUsager(curseur.getString("nom_usager"));
+        usager.setPrenomUsager(curseur.getString("prenom_usager"));
+        usager.setMailUsager(curseur.getString("mail_usager"));
+        usager.setMotDePasse(curseur.getString("mot_de_passe"));
+        usager.setNumeroCarteTisseo(curseur.getString("numero_carte_tisseo"));
+        usager.setAdmin(curseur.getBoolean("is_admin"));
+        return usager;
+    }
+
     /**
-     * Ajoute un nouvel utilisateur dans la base de données
-     * Utilisé lors de l'inscription d'un nouvel utilisateur
-     * 
-     * @param usager l'objet Usager contenant les informations du nouvel utilisateur
-     * @return true si l'ajout a réussi, false sinon
+     * Vérifie si un email existe déjà
      */
-    public static boolean ajouterUsager(Usager usager) {
-        String sql = "INSERT INTO Usager (nom_usager, prenom_usager, mail_usager, mot_de_passe, is_admin) VALUES (?, ?, ?, ?, ?)";
-        try (
-            // Connexion à la base de données
-            Connection conn = MySQLConnection.getConnection();
+    public boolean emailExiste(String email) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Usager WHERE mail_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            // Préparation de la requête avec retour des clés générées (pour récupérer l'ID auto-incrémenté)
-            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
-        ) {
-            // Remplissage des paramètres de la requête
-            stmt.setString(1, usager.getNomUsager());        // 1er ? : nom de l'usager
-            stmt.setString(2, usager.getPrenomUsager());     // 2ème ? : prénom de l'usager
-            stmt.setString(3, usager.getMailUsager());       // 3ème ? : email de l'usager
-            stmt.setString(4, usager.getMotDePasse());       // 4ème ? : mot de passe (en clair - à hasher en production)
-            stmt.setBoolean(5, usager.isAdmin());
-            // Exécution de la requête d'insertion
-            int ligneinseree = stmt.executeUpdate();
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
             
-            // Vérification que l'insertion a réussi
-            if (ligneinseree > 0) {
-                // Récupération de l'ID auto-généré par la base de données
-                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        // Attribution de l'ID à l'objet Usager
-                        usager.setIdUsager(generatedKeys.getInt(1));
-                    }
-                }
-                return true; // Succès de l'insertion
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
             }
+            
+        }
+        return false;
+    }
 
+    /**
+     * Modifie le mot de passe d'un utilisateur
+     */
+    public boolean modifierMotDePasse(String email, String nouveauMotDePasse) throws SQLException {
+        RequeteUpdateMotDePasse req = new RequeteUpdateMotDePasse();
+        Usager usagerTemp = new Usager();
+        usagerTemp.setMailUsager(email);
+        usagerTemp.setMotDePasse(nouveauMotDePasse);
+        int result = miseAJour(req, usagerTemp);
+        return result > 0;
+    }
+
+    /**
+     * Récupère la carte Tisséo d'un utilisateur
+     */
+    public String getCarteTisseoByUsager(int idUsager) throws SQLException {
+        String sql = "SELECT numero_carte_tisseo FROM Usager WHERE id_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, idUsager);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getString("numero_carte_tisseo");
+            }
+            
+        }
+        return null;
+    }
+
+    /**
+     * Enregistre la carte Tisséo d'un utilisateur (version statique)
+     */
+    public static boolean enregistrerCarteTisseo(int idUsager, String numeroCarte) {
+        String sql = "UPDATE Usager SET numero_carte_tisseo = ? WHERE id_usager = ?";
+        
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, numeroCarte);
+            stmt.setInt(2, idUsager);
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+            
         } catch (SQLException e) {
-            System.err.println("Erreur lors de l'ajout de l'usager: " + e.getMessage());
+            System.err.println("Erreur enregistrement carte Tisséo: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
-        return false; // Échec de l'insertion
     }
+
+    /**
+     * Récupère tous les utilisateurs (méthode static pour compatibilité)
+     */
+    public static List<Usager> getAllUsagers() {
+        try {
+            return getInstance().findAll();
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération utilisateurs: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Ajoute un nouvel utilisateur (méthode static pour compatibilité)
+     */
+    public static boolean ajouterUsager(Usager usager) {
+        try {
+            getInstance().create(usager);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Erreur ajout utilisateur: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Modifie un utilisateur existant (méthode static pour compatibilité)
+     */
+    public static boolean modifierUsager(Usager usager) {
+        try {
+            getInstance().update(usager);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Erreur modification utilisateur: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 
     /**
      * Vérifie si un email existe déjà dans la base de données
@@ -79,73 +217,29 @@ public class UsagerDAO {
     }
 
     /**
-     * Récupère un utilisateur par son adresse email
-     * Utilisé pour la connexion et pour récupérer les informations de l'utilisateur connecté
-     * 
-     * @param email l'adresse email de l'utilisateur recherché
-     * @return l'objet Usager correspondant, ou null si non trouvé
+     * Mappe un ResultSet vers un objet Usager
+     */
+    private static Usager mapResultSetToUsager(ResultSet rs) throws SQLException {
+        Usager usager = new Usager();
+        usager.setIdUsager(rs.getInt("id_usager"));
+        usager.setNomUsager(rs.getString("nom_usager"));
+        usager.setPrenomUsager(rs.getString("prenom_usager"));
+        usager.setMailUsager(rs.getString("mail_usager"));
+        usager.setMotDePasse(rs.getString("mot_de_passe"));
+        usager.setNumeroCarteTisseo(rs.getString("numero_carte_tisseo"));
+        usager.setAdmin(rs.getBoolean("is_admin"));
+        return usager;
+    }
+    /**
+     * Récupère un utilisateur par son adresse email (version statique)
      */
     public static Usager getUsagerByEmail(String email) {
-        // Requête SQL pour sélectionner un utilisateur par son email
-        String sql = "SELECT * FROM Usager WHERE mail_usager = ?";
-        
-        try (
-            Connection conn = MySQLConnection.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
-        ) {
-            stmt.setString(1, email); // 1er ? : email de l'utilisateur recherché
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    // Création d'un nouvel objet Usager
-                    Usager usager = new Usager();
-                    
-                    // Remplissage de l'objet avec les données de la base
-                    usager.setIdUsager(rs.getInt("id_usager"));              // ID auto-généré
-                    usager.setNomUsager(rs.getString("nom_usager"));         // Nom de famille
-                    usager.setPrenomUsager(rs.getString("prenom_usager"));   // Prénom
-                    usager.setMailUsager(rs.getString("mail_usager"));       // Email
-                    usager.setMotDePasse(rs.getString("mot_de_passe"));      // Mot de passe
-                    usager.setAdmin(rs.getBoolean("is_admin"));
-                    
-                    return usager;
-                }
-            }
-            
+        try {
+            return getInstance().findById(email);
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération de l'usager: " + e.getMessage());
+            System.err.println("Erreur récupération utilisateur par email: " + e.getMessage());
             e.printStackTrace();
+            return null;
         }
-        return null; // Aucun utilisateur trouvé
-    }
-    
-    /**
-     * Vérifie si un utilisateur est administrateur à partir de son email
-     * 
-     * @param email l'adresse email de l'utilisateur à vérifier
-     * @return true si l'utilisateur est administrateur, false sinon ou si non trouvé
-     */
-    public static boolean estAdmin(String email) {
-        // Requête SQL pour vérifier le statut admin d'un utilisateur
-        String sql = "SELECT is_admin FROM Usager WHERE mail_usager = ?";
-        
-        try (
-            Connection conn = MySQLConnection.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)
-        ) {
-            stmt.setString(1, email); // 1er ? : email de l'utilisateur
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    // Retourne la valeur de la colonne is_admin
-                    return rs.getBoolean("is_admin");
-                }
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur lors de la vérification du statut admin: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return false; // Par défaut, non admin ou utilisateur non trouvé
-    }
+    }	
 }

@@ -2,272 +2,89 @@ package ihm;
 
 import java.awt.*;
 import javax.swing.*;
-
-import controleur.InscriptionControleur;
-import modele.Usager;
-import modele.dao.UsagerDAO;
+import controleur.ControleurInscription;
 
 public class Page_Inscription extends JFrame {
-
     private static final long serialVersionUID = 1L;
     
-    // Déclaration des composants de formulaire
+    // Déclaration des composants
     private JTextField textFieldNom;
     private JTextField textFieldPrenom;
     private JTextField textFieldEmail;
     private JPasswordField passwordField;
     private JPasswordField passwordFieldConfirm;
+    private JButton btnRetour;
+    private JButton btnCreerCompte;
 
-    /**
-     * Constructeur de la page d'inscription
-     * Interface pour créer un nouveau compte utilisateur
-     */
     public Page_Inscription() {
         setTitle("Création de compte");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(800, 600);
-        setLocationRelativeTo(null); // Centre la fenêtre
-
-        // Panel principal avec layout BorderLayout
+        setLocationRelativeTo(null);
+        
+        initialisePage();
+        
+        // Créer et lier le contrôleur
+        new ControleurInscription(this);
+    }
+    
+    private void initialisePage() {
         JPanel mainPanel = new JPanel();
         mainPanel.setBackground(Color.WHITE);
         mainPanel.setLayout(new BorderLayout(0, 0));
         setContentPane(mainPanel);
 
-        // Panel de retour en haut
+        // Panel retour
         JPanel panelRetour = new JPanel();
         panelRetour.setBackground(Color.WHITE);
         FlowLayout flowLayout = (FlowLayout) panelRetour.getLayout();
-        flowLayout.setAlignment(FlowLayout.LEFT); 
+        flowLayout.setAlignment(FlowLayout.LEFT);
         mainPanel.add(panelRetour, BorderLayout.NORTH);
         
-        // Bouton retour vers la page de connexion
-        JButton btnRetour = new JButton("← Retour");
-        btnRetour.addActionListener(e -> retourLogin());
+        // Bouton retour
+        btnRetour = new JButton("← Retour");
         btnRetour.setFont(new Font("Arial", Font.PLAIN, 14));
         btnRetour.setBackground(Color.WHITE);
-        btnRetour.setFocusPainted(false); 
+        btnRetour.setFocusPainted(false);
         panelRetour.add(btnRetour);
 
-        // Panel central pour le formulaire
+        // Panel formulaire
         JPanel formPanel = new JPanel();
         formPanel.setBackground(Color.WHITE);
         mainPanel.add(formPanel, BorderLayout.CENTER);
-        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS)); 
-        
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
 
-        // Titre de la page
+        // Titre
         JLabel lblTitre = new JLabel("Créer un compte");
-        lblTitre.setAlignmentX(Component.CENTER_ALIGNMENT); 
+        lblTitre.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblTitre.setFont(new Font("Arial", Font.BOLD, 28));
         formPanel.add(lblTitre);
         
-        // Espacement après le titre
-        Component verticalStrut = Box.createRigidArea(new Dimension(0, 30));
-        formPanel.add(verticalStrut);
-        
+        formPanel.add(Box.createRigidArea(new Dimension(0, 30)));
 
-        // Panel pour le champ Nom
-        JPanel panelNom = new JPanel();
-        panelNom.setBackground(Color.WHITE);
-        panelNom.setMaximumSize(new Dimension(500, 50)); 
-        formPanel.add(panelNom);
-        panelNom.setLayout(new BoxLayout(panelNom, BoxLayout.X_AXIS)); 
-        
-        // Espacement gauche
-        Component horizontalStrut = Box.createRigidArea(new Dimension(10, 0));
-        panelNom.add(horizontalStrut);
-        
-        // Label "Nom"
-        JLabel lblNom = new JLabel("Nom");
-        lblNom.setPreferredSize(new Dimension(120, 30));
-        lblNom.setMinimumSize(new Dimension(120, 30));
-        lblNom.setMaximumSize(new Dimension(120, 30)); 
-        lblNom.setFont(new Font("Arial", Font.PLAIN, 16));
-        panelNom.add(lblNom);
-        
-        // Espacement entre label et champ
-        Component horizontalStrut_1 = Box.createRigidArea(new Dimension(20, 0));
-        panelNom.add(horizontalStrut_1);
-        
-        // Champ de saisie pour le nom
-        textFieldNom = new JTextField();
-        textFieldNom.setPreferredSize(new Dimension(300, 40));
-        textFieldNom.setMinimumSize(new Dimension(300, 40));
-        textFieldNom.setMaximumSize(new Dimension(300, 40)); 
-        textFieldNom.setFont(new Font("Arial", Font.PLAIN, 16));
-        textFieldNom.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY), 
-            BorderFactory.createEmptyBorder(8, 12, 8, 12) 
-        ));
-        panelNom.add(textFieldNom);
-        
-        // Espacement droit
-        Component horizontalStrut_2 = Box.createRigidArea(new Dimension(10, 0));
-        panelNom.add(horizontalStrut_2);
-        
-        // Espacement vertical entre les champs
-        Component verticalStrut_1 = Box.createRigidArea(new Dimension(0, 15));
-        formPanel.add(verticalStrut_1);
-        
+        // Champ Nom
+        formPanel.add(creerChampPanel("Nom", 0));
+        formPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Panel pour le champ Prénom (structure identique au champ Nom)
-        JPanel panelPrenom = new JPanel();
-        panelPrenom.setBackground(Color.WHITE);
-        panelPrenom.setMaximumSize(new Dimension(500, 50));
-        formPanel.add(panelPrenom);
-        panelPrenom.setLayout(new BoxLayout(panelPrenom, BoxLayout.X_AXIS));
-        
-        Component horizontalStrut_3 = Box.createRigidArea(new Dimension(10, 0));
-        panelPrenom.add(horizontalStrut_3);
-        
-        JLabel lblPrenom = new JLabel("Prénom");
-        lblPrenom.setPreferredSize(new Dimension(120, 30));
-        lblPrenom.setMinimumSize(new Dimension(120, 30));
-        lblPrenom.setMaximumSize(new Dimension(120, 30));
-        lblPrenom.setFont(new Font("Arial", Font.PLAIN, 16));
-        panelPrenom.add(lblPrenom);
-        
-        Component horizontalStrut_4 = Box.createRigidArea(new Dimension(20, 0));
-        panelPrenom.add(horizontalStrut_4);
-        
-        textFieldPrenom = new JTextField();
-        textFieldPrenom.setPreferredSize(new Dimension(300, 40));
-        textFieldPrenom.setMinimumSize(new Dimension(300, 40));
-        textFieldPrenom.setMaximumSize(new Dimension(300, 40));
-        textFieldPrenom.setFont(new Font("Arial", Font.PLAIN, 16));
-        textFieldPrenom.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY),
-            BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
-        panelPrenom.add(textFieldPrenom);
-        
-        Component horizontalStrut_5 = Box.createRigidArea(new Dimension(10, 0));
-        panelPrenom.add(horizontalStrut_5);
-        
-        Component verticalStrut_2 = Box.createRigidArea(new Dimension(0, 15));
-        formPanel.add(verticalStrut_2);
-        
+        // Champ Prénom
+        formPanel.add(creerChampPanel("Prénom", 1));
+        formPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Panel pour le champ Email
-        JPanel panelEmail = new JPanel();
-        panelEmail.setBackground(Color.WHITE);
-        panelEmail.setMaximumSize(new Dimension(500, 50));
-        formPanel.add(panelEmail);
-        panelEmail.setLayout(new BoxLayout(panelEmail, BoxLayout.X_AXIS));
-        
-        Component horizontalStrut_6 = Box.createRigidArea(new Dimension(10, 0));
-        panelEmail.add(horizontalStrut_6);
-        
-        JLabel lblEmail = new JLabel("Email");
-        lblEmail.setPreferredSize(new Dimension(120, 30));
-        lblEmail.setMinimumSize(new Dimension(120, 30));
-        lblEmail.setMaximumSize(new Dimension(120, 30));
-        lblEmail.setFont(new Font("Arial", Font.PLAIN, 16));
-        panelEmail.add(lblEmail);
-        
-        Component horizontalStrut_7 = Box.createRigidArea(new Dimension(20, 0));
-        panelEmail.add(horizontalStrut_7);
-        
-        textFieldEmail = new JTextField();
-        textFieldEmail.setPreferredSize(new Dimension(300, 40));
-        textFieldEmail.setMinimumSize(new Dimension(300, 40));
-        textFieldEmail.setMaximumSize(new Dimension(300, 40));
-        textFieldEmail.setFont(new Font("Arial", Font.PLAIN, 16));
-        textFieldEmail.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY),
-            BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
-        panelEmail.add(textFieldEmail);
-        
-        Component horizontalStrut_8 = Box.createRigidArea(new Dimension(10, 0));
-        panelEmail.add(horizontalStrut_8);
-        
-        Component verticalStrut_3 = Box.createRigidArea(new Dimension(0, 15));
-        formPanel.add(verticalStrut_3);
-        
+        // Champ Email
+        formPanel.add(creerChampPanel("Email", 2));
+        formPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Panel pour le champ Mot de passe
-        JPanel panelPassword = new JPanel();
-        panelPassword.setBackground(Color.WHITE);
-        panelPassword.setMaximumSize(new Dimension(500, 50));
-        formPanel.add(panelPassword);
-        panelPassword.setLayout(new BoxLayout(panelPassword, BoxLayout.X_AXIS));
-        
-        Component horizontalStrut_9 = Box.createRigidArea(new Dimension(10, 0));
-        panelPassword.add(horizontalStrut_9);
-        
-        JLabel lblPassword = new JLabel("Mot de passe");
-        lblPassword.setPreferredSize(new Dimension(120, 30));
-        lblPassword.setMinimumSize(new Dimension(120, 30));
-        lblPassword.setMaximumSize(new Dimension(120, 30));
-        lblPassword.setFont(new Font("Arial", Font.PLAIN, 16));
-        panelPassword.add(lblPassword);
-        
-        Component horizontalStrut_10 = Box.createRigidArea(new Dimension(20, 0));
-        panelPassword.add(horizontalStrut_10);
-        
-        passwordField = new JPasswordField(); 
-        passwordField.setPreferredSize(new Dimension(300, 40));
-        passwordField.setMinimumSize(new Dimension(300, 40));
-        passwordField.setMaximumSize(new Dimension(300, 40));
-        passwordField.setFont(new Font("Arial", Font.PLAIN, 16));
-        passwordField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY),
-            BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
-        panelPassword.add(passwordField);
-        
-        Component horizontalStrut_11 = Box.createRigidArea(new Dimension(10, 0));
-        panelPassword.add(horizontalStrut_11);
-        
-        Component verticalStrut_4 = Box.createRigidArea(new Dimension(0, 15));
-        formPanel.add(verticalStrut_4);
-        
+        // Champ Mot de passe
+        formPanel.add(creerChampMotDePasse("Mot de passe", 3));
+        formPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Panel pour la confirmation du mot de passe
-        JPanel panelConfirm = new JPanel();
-        panelConfirm.setBackground(Color.WHITE);
-        panelConfirm.setMaximumSize(new Dimension(500, 50));
-        formPanel.add(panelConfirm);
-        panelConfirm.setLayout(new BoxLayout(panelConfirm, BoxLayout.X_AXIS));
-        
-        Component horizontalStrut_12 = Box.createRigidArea(new Dimension(10, 0));
-        panelConfirm.add(horizontalStrut_12);
-        
-        JLabel lblConfirm = new JLabel("Confirmation");
-        lblConfirm.setPreferredSize(new Dimension(120, 30));
-        lblConfirm.setMinimumSize(new Dimension(120, 30));
-        lblConfirm.setMaximumSize(new Dimension(120, 30));
-        lblConfirm.setFont(new Font("Arial", Font.PLAIN, 16));
-        panelConfirm.add(lblConfirm);
-        
-        Component horizontalStrut_13 = Box.createRigidArea(new Dimension(20, 0));
-        panelConfirm.add(horizontalStrut_13);
-        
-        passwordFieldConfirm = new JPasswordField();
-        passwordFieldConfirm.setPreferredSize(new Dimension(300, 40));
-        passwordFieldConfirm.setMinimumSize(new Dimension(300, 40));
-        passwordFieldConfirm.setMaximumSize(new Dimension(300, 40));
-        passwordFieldConfirm.setFont(new Font("Arial", Font.PLAIN, 16));
-        passwordFieldConfirm.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY),
-            BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
-        panelConfirm.add(passwordFieldConfirm);
-        
-        Component horizontalStrut_14 = Box.createRigidArea(new Dimension(10, 0));
-        panelConfirm.add(horizontalStrut_14);
-        
-        // Espacement avant le bouton
-        Component verticalStrut_5 = Box.createRigidArea(new Dimension(0, 30));
-        formPanel.add(verticalStrut_5);
-        
+        // Champ Confirmation
+        formPanel.add(creerChampMotDePasse("Confirmation", 4));
+        formPanel.add(Box.createRigidArea(new Dimension(0, 30)));
 
-        // Bouton de création de compte
-        JButton btnCreerCompte = new JButton("CRÉER MON COMPTE");
-        btnCreerCompte.setAlignmentX(Component.CENTER_ALIGNMENT); 
-        btnCreerCompte.addActionListener(e -> creerCompte()); 
+        // Bouton Créer compte
+        btnCreerCompte = new JButton("CRÉER MON COMPTE");
+        btnCreerCompte.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnCreerCompte.setFont(new Font("Arial", Font.BOLD, 18));
         btnCreerCompte.setBackground(new Color(80, 80, 80));
         btnCreerCompte.setForeground(Color.WHITE);
@@ -275,43 +92,115 @@ public class Page_Inscription extends JFrame {
         btnCreerCompte.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30));
         formPanel.add(btnCreerCompte);
         
-        // Espace flexible pour pousser le contenu vers le haut
-        Component verticalGlue = Box.createVerticalGlue();
-        formPanel.add(verticalGlue);
+        formPanel.add(Box.createVerticalGlue());
     }
-
-    /**
-     * Retourne à la page de connexion
-     */
-    private void retourLogin() {
-        InscriptionControleur controleur = new InscriptionControleur();
-        controleur.redirigerVersAuthentification(this);
-    }
-
-    /**
-     * Crée un nouveau compte utilisateur après validation
-     */
-    private void creerCompte() {
-        InscriptionControleur controleur = new InscriptionControleur();
+    
+    private JPanel creerChampPanel(String label, int index) {
+        JPanel panel = new JPanel();
+        panel.setBackground(Color.WHITE);
+        panel.setMaximumSize(new Dimension(500, 50));
+        panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
         
-        String nom = textFieldNom.getText().trim();
-        String prenom = textFieldPrenom.getText().trim();
-        String email = textFieldEmail.getText().trim();
-        String motDePasse = new String(passwordField.getPassword());
-        String confirmation = new String(passwordFieldConfirm.getPassword());
-
-        controleur.creerCompte(nom, prenom, email, motDePasse, confirmation, this);
+        panel.add(Box.createRigidArea(new Dimension(10, 0)));
+        
+        JLabel lbl = new JLabel(label);
+        lbl.setPreferredSize(new Dimension(120, 30));
+        lbl.setMinimumSize(new Dimension(120, 30));
+        lbl.setMaximumSize(new Dimension(120, 30));
+        lbl.setFont(new Font("Arial", Font.PLAIN, 16));
+        panel.add(lbl);
+        
+        panel.add(Box.createRigidArea(new Dimension(20, 0)));
+        
+        JTextField textField = new JTextField();
+        textField.setPreferredSize(new Dimension(300, 40));
+        textField.setMinimumSize(new Dimension(300, 40));
+        textField.setMaximumSize(new Dimension(300, 40));
+        textField.setFont(new Font("Arial", Font.PLAIN, 16));
+        textField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.GRAY),
+            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        panel.add(textField);
+        
+        panel.add(Box.createRigidArea(new Dimension(10, 0)));
+        
+        // Stocker la référence
+        switch(index) {
+            case 0: textFieldNom = textField; break;
+            case 1: textFieldPrenom = textField; break;
+            case 2: textFieldEmail = textField; break;
+        }
+        
+        return panel;
     }
-
-    public static void main(String[] args) {
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    new Page_Bienvenue().setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+    
+    private JPanel creerChampMotDePasse(String label, int index) {
+        JPanel panel = new JPanel();
+        panel.setBackground(Color.WHITE);
+        panel.setMaximumSize(new Dimension(500, 50));
+        panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
+        
+        panel.add(Box.createRigidArea(new Dimension(10, 0)));
+        
+        JLabel lbl = new JLabel(label);
+        lbl.setPreferredSize(new Dimension(120, 30));
+        lbl.setMinimumSize(new Dimension(120, 30));
+        lbl.setMaximumSize(new Dimension(120, 30));
+        lbl.setFont(new Font("Arial", Font.PLAIN, 16));
+        panel.add(lbl);
+        
+        panel.add(Box.createRigidArea(new Dimension(20, 0)));
+        
+        JPasswordField pwdField = new JPasswordField();
+        pwdField.setPreferredSize(new Dimension(300, 40));
+        pwdField.setMinimumSize(new Dimension(300, 40));
+        pwdField.setMaximumSize(new Dimension(300, 40));
+        pwdField.setFont(new Font("Arial", Font.PLAIN, 16));
+        pwdField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.GRAY),
+            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        panel.add(pwdField);
+        
+        panel.add(Box.createRigidArea(new Dimension(10, 0)));
+        
+        // Stocker la référence
+        if (index == 3) {
+            passwordField = pwdField;
+        } else if (index == 4) {
+            passwordFieldConfirm = pwdField;
+        }
+        
+        return panel;
+    }
+    
+    // Getters pour le contrôleur
+    public JTextField getTextFieldNom() {
+        return textFieldNom;
+    }
+    
+    public JTextField getTextFieldPrenom() {
+        return textFieldPrenom;
+    }
+    
+    public JTextField getTextFieldEmail() {
+        return textFieldEmail;
+    }
+    
+    public JPasswordField getPasswordField() {
+        return passwordField;
+    }
+    
+    public JPasswordField getPasswordFieldConfirm() {
+        return passwordFieldConfirm;
+    }
+    
+    public JButton getBtnRetour() {
+        return btnRetour;
+    }
+    
+    public JButton getBtnCreerCompte() {
+        return btnCreerCompte;
     }
 }
